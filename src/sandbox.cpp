@@ -39,6 +39,8 @@ int main() {
     }
     std::cout << "Listening on port " << PORT << std::endl;
 
+	// need to poll loop here? To listen to the clients request and create new client_fd
+
     // Step 5: Accept incoming connections
     int client_fd = accept(server_fd, nullptr, nullptr);
     if (client_fd < 0) {
@@ -71,3 +73,34 @@ int main() {
 
     return 0;
 }
+
+/*
+1. Networking and Connection Handling
+Responsibilities:
+Implement the socket creation, binding, listening, and accepting client connections.
+Handle non-blocking I/O using poll() or an equivalent mechanism.
+Manage multiple clients simultaneously.
+Key Functions: socket(), bind(), listen(), accept(), poll().
+Who Should Take This?
+A student with an interest in low-level programming or networking concepts.
+
+2. HTTP Request and Response Handling
+Responsibilities:
+Parse HTTP requests: Extract method, URL, headers, and body.
+Build HTTP responses: Status line, headers, and body.
+Handle error responses (e.g., 404 Not Found, 500 Internal Server Error).
+Support HTTP methods (GET, POST, DELETE).
+Key Functions: recv(), send().
+Who Should Take This?
+A student interested in parsing protocols and working with strings.
+
+3. File Handling and Static Content
+Responsibilities:
+CGI
+Serve static files (e.g., HTML, CSS, images).
+Handle directory traversal and listing (if required).
+Manage file uploads (write files to disk).
+Implement configuration file parsing to set server parameters.
+Key Functions: open(), read(), write(), opendir(), readdir(), close().
+Who Should Take This?
+A student comfortable working with file systems and configuration files.*/
