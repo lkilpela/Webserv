@@ -1,10 +1,22 @@
 NAME = webserv
-HEADERS = -I ./include
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++20
+CXXFLAGS = -g -Wall -Wextra -Werror -Iinclude -std=c++20
 DEBUG_CXXFLAGS = -g
-SRCS = 	src/sandbox.cpp
+
+BUILD_DIR := build
+
+VPATH :=	src \
+			src/config \
+			src/http \
+			src/server
+
+SRCS =	main.cpp \
+		Configuration.cpp \
+		Request.cpp \
+		Response.cpp \
+		Server.cpp
+
 OBJS = $(SRCS:.cpp=.o)
 DEBUG_OBJS = $(SRCS:.cpp=.debug.o)
 RM = rm -f
@@ -15,15 +27,19 @@ $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
 	@echo "$(NAME) Program Made"
 
+$(BUILD_DIR):
+	@mkdir -p $@
+	@echo "Compiling ..."
+
 debug: $(DEBUG_OBJS)
-	$(CXX) $(DEBUG_OBJS) $(HEADERS) $(DEBUG_CXXFLAGS) $(CXXFLAGS) -o $(NAME)_debug
+	$(CXX) $(DEBUG_OBJS) $(DEBUG_CXXFLAGS) $(CXXFLAGS) -o $(NAME)_debug
 	@echo "$(NAME) Debug Program Made"
 
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@ $(HEADERS)
+$(BUILD_DIR)/%.o: %.cpp
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 %.debug.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(DEBUG_CXXFLAGS) -c $< -o $@ $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(DEBUG_CXXFLAGS) -c $< -o $@
 
 clean:
 	$(RM) $(OBJS) $(DEBUG_OBJS)
