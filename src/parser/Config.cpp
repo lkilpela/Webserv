@@ -39,6 +39,7 @@ Http ConfigParser::parse(const string& configText) {
         }
         if (line == "}") {
             currentBlock = "";
+            currentRoute = "";
             continue;
         }
 
