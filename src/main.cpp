@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Configuration.hpp"
+#include "Config.hpp"
 #include "Server.hpp"
 
 int main(int argc, char **argv) {
