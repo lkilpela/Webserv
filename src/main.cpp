@@ -1,6 +1,6 @@
 #include <iostream>
 #include "Config.hpp"
-#include "Server.hpp"
+//#include "Server.hpp"
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -9,9 +9,10 @@ int main(int argc, char **argv) {
 	}
 
 	try {
-		Configuration config = Configuration::load(argv[1]);
-		Server server(config);
-		server.listen();
+		Config config = Config::load(argv[1]);
+		config.print();
+		//Server server(config);
+		///server.listen();
 	} catch (std::exception& e) {
 		std::cerr << e.what() << std::endl;
 		return 1;

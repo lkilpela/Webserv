@@ -1,21 +1,21 @@
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -g -Wall -Wextra -Werror -Iinclude -std=c++20
+CXXFLAGS = -g -Wall -Wextra -Werror -Iinclude -std=c++17
 DEBUG_CXXFLAGS = -g
 
 BUILD_DIR := build
 
 VPATH :=	src \
 			src/config \
-			src/http \
-			src/server
+#src/http \
+#src/server
 
 SRCS =	main.cpp \
-		Configuration.cpp \
-		Request.cpp \
-		Response.cpp \
-		Server.cpp
+		Config.cpp \
+#Request.cpp \
+#Response.cpp \
+#Server.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 DEBUG_OBJS = $(SRCS:.cpp=.debug.o)
