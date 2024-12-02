@@ -2,73 +2,93 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <regex>
 
 
-void Config::parseLine(const std::vector<std::string>& tokens, ConfigData& config, std::string& currentRoute) {
-    if (tokens.empty()) {
-        return;
-    }
-    if (tokens[0] == "route") {
-        if (tokens.size() < 2) {
-            throw std::runtime_error("Route directive requires a path");
+// Function to parse the configuration text
+Http ConfigParser::parse(const string& configText) {
+    Http httpConfig;
+    stringstream ss(configText);
+    string line;
+    string currentBlock;
+    string currentRoute;
+
+    while (getline(ss, line)) {
+        line = trim(line);
+        if (line.empty() || isComment(line)) {
+            continue;
         }
-        currentRoute = tokens[1];
-        config.routes[currentRoute] = Config();
-    } else if (tokens[0] == "end") {
-        currentRoute = "";
-    } else {
-        if (currentRoute.empty()) {
-            if (tokens.size() < 2) {
-                throw std::runtime_error("Directive requires a value");
+
+        // Check if starting a new block
+        if (line.find("http {") != string::npos) {
+            currentBlock = "http";
+            continue;
+        }
+        if (line.find("server {") != string::npos) {
+            currentBlock = "server";
+            continue;
+        }
+        if (line.find("route") != string::npos) {
+            regex routeRegex(R"(route\s+([^\s]+)\s*{)");
+            smatch match;
+            if (regex_search(line, match, routeRegex)) {
+                currentRoute = match[1];
+                httpConfig.servers[currentBlock].routes[currentRoute] = Route();
             }
-            config.directives[tokens[0]] = tokens[1];
-        } else {
-            parseLine(tokens, config.routes[currentRoute].data, currentRoute);
+            continue;
         }
-    }
-}
+        if (line == "}") {
+            currentBlock = "";
+            continue;
+        }
 
-std::vector<std::string> Config::tokenize(const std::string& line) {
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream tokenStream(line);
-    while (std::getline(tokenStream, token, ' ')) {
-        if (!token.empty()) {
-            tokens.push_back(token);
-        }
-    }
-    return tokens;
-}
+        // Process directive (key-value pair)
+        if (currentBlock == "server") {
+            regex directiveRegex(R"((\w+)\s+([^\s;]+);)");
+            smatch match;
+            if (regex_search(line, match, directiveRegex)) {
+                string directive = match[1];
+                string value = match[2];
 
-void Config::printConfig(const ConfigData& config, int indent) const {
-        std::string indentStr(indent, ' ');
-        for (const auto& [key, value] : config.directives) {
-            std::cout << indentStr << key << ": " << value << std::endl;
-        }
-        for (const auto& [route, routeConfig] : config.routes) {
-            std::cout << indentStr << "route " << route << " {" << std::endl;
-            printConfig(routeConfig.data, indent + 4);
-            std::cout << indentStr << "}" << std::endl;
+                // Check if it's a route or regular directive
+                if (currentRoute.empty()) {
+                    httpConfig.servers[currentBlock].directives[directive] = value;
+                } else {
+                    httpConfig.servers[currentBlock].routes[currentRoute].directives[directive] = value;
+                }
+            }
         }
     }
 
-void Config::print() const {
-    printConfig(data);
+    return httpConfig;
 }
 
-Config Config::load(const std::string& filePath) {
-    Config config;
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-        throw std::runtime_error("Could not open file: " + filePath);
-    }
-    std::string line;
-    std::string currentRoute = "";
-    while (std::getline(file, line)) {
-        auto tokens = config.tokenize(line);
-        config.parseLine(tokens, config.data, currentRoute);
-    }
-    return config;
+void ConfigParser::printConfig(const Http& config) {
+	for (const auto& serverPair : config.servers) {
+		const Server& server = serverPair.second;
+		cout << "Server block: \n";
+		for (const auto& directive : server.directives) {
+			cout << "  " << directive.first << ": " << directive.second << endl;
+		}
+		for (const auto& routePair : server.routes) {
+			const Route& route = routePair.second;
+			cout << "  Route: " << routePair.first << "\n";
+			for (const auto& routeDirective : route.directives) {
+				cout << "    " << routeDirective.first << ": " << routeDirective.second << endl;
+			}
+		}
+	}
 }
 
+ConfigParser ConfigParser::load(const std::string& filePath) {
+    ifstream configFile(filePath);
+    stringstream buffer;
+    buffer << configFile.rdbuf();
+    string configText = buffer.str();
+
+    ConfigParser parser;
+    Http config = parser.parse(configText);
+    parser.printConfig(config);
+    return parser;
+}
 

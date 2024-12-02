@@ -4,24 +4,45 @@
 #include <map>
 #include <vector>
 
-class Config;
+using namespace std;
 
-struct ConfigData {
-    std::map<std::string, std::string> directives;
-    std::map<std::string, Config> routes;
+
+// Define the structure to hold the configuration
+struct Route {
+	map<string, string> directives;
 };
 
-class Config {
+struct Server {
+	map<string, string> directives;
+	map<string, Route> routes;
+};
+
+struct Http {
+	map<string, Server> servers;
+};
+
+
+class ConfigParser {
 private:
-	ConfigData data;
+    // Helper functions
+    string trim(const string& str) {
+        size_t first = str.find_first_not_of(" \t");
+        size_t last = str.find_last_not_of(" \t");
+        return (first == string::npos) ? "" : str.substr(first, (last - first + 1));
+    }
+
+    bool isComment(const string& line) {
+        return line.find("#") == 0;
+    }
+
 
 public:
 
-	std::vector<std::string> tokenize(const std::string& line);
-	void parseLine(const std::vector<std::string>& tokens,
-					ConfigData& config, std::string& currentRoute);
-	static Config load(const std::string& filePath);
-	void printConfig(const ConfigData& config, int indent = 0) const;
-	void print() const;
-	
+	ConfigParser() = default;
+
+    // Function to parse the configuration text
+    Http parse(const string& configText);
+	static ConfigParser load(const std::string& filePath);
+
+	void printConfig(const Http& config);
 };
