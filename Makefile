@@ -7,7 +7,7 @@ DEBUG_CXXFLAGS = -g
 BUILD_DIR := build
 
 VPATH :=	src \
-			src/config \
+			src/parser \
 #src/http \
 #src/server
 

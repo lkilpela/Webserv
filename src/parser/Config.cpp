@@ -66,7 +66,7 @@ Config Config::load(const std::string& filePath) {
     std::string currentRoute = "";
     while (std::getline(file, line)) {
         auto tokens = config.tokenize(line);
-        //config.parseLine(tokens, config.data, currentRoute);
+        config.parseLine(tokens, config.data, currentRoute);
     }
     return config;
 }
