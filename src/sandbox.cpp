@@ -1,5 +1,15 @@
 #include "Socket.hpp"
 
+
+/*running the server
+	-execute program
+	-open another terminal and type in command:
+		telnet localhost 8080
+	- use GET request
+		GET / HTTP/1.1
+		Host: localhost
+	- push enter twice
+	 */
 int main() {
     // Step 1: Create the socket
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -40,6 +50,7 @@ int main() {
     // Step 6: Read the client's message
     char buffer[1024] = {0};
     ssize_t valread = read(client_fd, buffer, sizeof(buffer));
+	std::cout << "here" << std::endl;
     if (valread < 0) {
         perror("Read failed");
         return -1;
