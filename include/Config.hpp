@@ -8,6 +8,9 @@ using std::string;
 using std::map;
 using std::pair;
 
+# define YELLOW "\033[0;33m"
+# define RESET "\033[0m"
+
 // Define the structure to hold the configuration
 struct Route {
 	map<string, string> directives;
