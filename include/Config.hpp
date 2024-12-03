@@ -6,10 +6,9 @@
 
 using namespace std;
 
-
 // Define the structure to hold the configuration
-struct Route {
-	map<string, string> directives;
+struct Http {
+	map<string, Server> servers;
 };
 
 struct Server {
@@ -17,10 +16,9 @@ struct Server {
 	map<string, Route> routes;
 };
 
-struct Http {
-	map<string, Server> servers;
+struct Route {
+	map<string, string> directives;
 };
-
 
 class ConfigParser {
 private:
