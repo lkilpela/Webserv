@@ -4,6 +4,11 @@
 #include <sstream>
 #include <regex>
 
+using std::ifstream;
+using std::stringstream;
+using std::cout;
+using std::endl;
+
 // Function to parse the configuration text
 Server ConfigParser::parse(const string& configFilePath) {
     Server server;
@@ -42,23 +47,19 @@ void ConfigParser::printConfig(const Server& server) {
     for (const auto& directive : server.directives) {
         cout << "  " << directive.first << ": " << directive.second << endl;
     }
+    cout << "Routes:\n";
     for (const auto& routePair : server.routes) {
         const Route& route = routePair.second;
-        cout << "  Route: " << routePair.first << "\n";
+        cout << "  Location: " << routePair.first << "\n";
         for (const auto& routeDirective : route.directives) {
             cout << "    " << routeDirective.first << ": " << routeDirective.second << endl;
         }
     }
 }
 
-ConfigParser ConfigParser::load(const std::string& filePath) {
-    ifstream configFile(filePath);
-    stringstream buffer;
-    buffer << configFile.rdbuf();
-    string configText = buffer.str();
-
+ConfigParser ConfigParser::load(const string& filePath) {
     ConfigParser parser;
-    Server config = parser.parse(configText);
+    Server config = parser.parse(filePath);
     parser.printConfig(config);
     return parser;
 }

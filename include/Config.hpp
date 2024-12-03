@@ -4,7 +4,9 @@
 #include <map>
 #include <vector>
 
-using namespace std;
+using std::string;
+using std::map;
+using std::pair;
 
 // Define the structure to hold the configuration
 struct Route {
