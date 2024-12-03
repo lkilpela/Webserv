@@ -27,6 +27,10 @@ private:
         return (first == string::npos) ? "" : str.substr(first, (last - first + 1));
     }
 
+    bool isComment(const string& line) {
+        return line.find("#") == 0;
+    }
+
     pair<string, string> parseDirective(const string& line) {
         size_t pos = line.find(' ');
         string key = line.substr(0, pos);
