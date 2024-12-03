@@ -5,6 +5,8 @@
         "format": "cpp",
         "fstream": "cpp",
         "iostream": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "sstream": "cpp",
+        "stdexcept": "cpp"
     }
 }

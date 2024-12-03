@@ -22,65 +22,86 @@ bool isValidPort(const std::string& port) {
 }
 
 // Function to parse the configuration text
-Server ConfigParser::parse(const string& configFilePath) {
-    Server server;
-    ifstream configFile(configFilePath);
-    string line;
-    string currentSection;
+ServerConfig ConfigParser::parse(const string& filename) {
+    ServerConfig config;
+    std::ifstream file(filename);
+    std::string line;
+    Location currentLocation;
+    bool inLocationBlock = false;
 
-    while (getline(configFile, line)) {
-        line = trim(line);
-        if (line.empty() || isComment(line)) continue;
-        if (line.find("server {") != string::npos) {
-            currentSection = "server";
-        } else if (line.find("location") != string::npos) {
-            currentSection = "location";
-            string locationPath = extractLocationPath(line);
-            server.routes[locationPath] = Route();
-        } else if (line.find("}") != string::npos) {
-            currentSection = "";
-        } else {
-            if (currentSection == "server") {
-                auto directive = parseDirective(line);
-                if (directive.first == "listen") {
-                    size_t colonPos = directive.second.find(':');
-                    if (colonPos != string::npos) {
-                        string ip = directive.second.substr(0, colonPos);
-                        string port = directive.second.substr(colonPos + 1);
-                        if (!isValidIpAddress(ip) || !isValidPort(port)) {
-                            throw std::runtime_error("Invalid listen directive: " + directive.second);
-                        }
-                    }
-                }
-                server.directives[directive.first] = directive.second;
-            } else if (currentSection == "location") {
-                auto directive = parseDirective(line);
-                server.routes.rbegin()->second.directives[directive.first] = directive.second;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string key;
+        iss >> key;
+
+        if (key == "listen") {
+            iss >> config.listen;
+        } else if (key == "server_name") {
+            iss >> config.server_name;
+        } else if (key == "error_page") {
+            std::string error_code, path;
+            iss >> error_code >> path;
+            if (error_code == "404") {
+                config.error_page_404 = path;
+            } else if (error_code == "500") {
+                config.error_page_500 = path;
+            }
+        } else if (key == "client_max_body_size") {
+            iss >> config.client_max_body_size;
+        } else if (key == "location") {
+            if (inLocationBlock) {
+                config.locations.push_back(currentLocation);
+                currentLocation = Location();
+            }
+            iss >> currentLocation.path;
+            inLocationBlock = true;
+        } else if (key == "root") {
+            iss >> currentLocation.root;
+        } else if (key == "index") {
+            iss >> currentLocation.index;
+        } else if (key == "autoindex") {
+            std::string value;
+            iss >> value;
+            currentLocation.autoindex = (value == "on");
+        } else if (key == "methods") {
+            std::string method;
+            while (iss >> method) {
+                currentLocation.methods.push_back(method);
             }
         }
     }
 
-    return server;
+    if (inLocationBlock) {
+        config.locations.push_back(currentLocation);
+    }
+
+    return config;
 }
 
-void ConfigParser::printConfig(const Server& server) {
-    cout << YELLOW "Server block: \n" RESET;
-    for (const auto& directive : server.directives) {
-        cout << "  " << directive.first << ": " << directive.second << endl;
-    }
-    cout << YELLOW  "Routes:\n" RESET;
-    for (const auto& routePair : server.routes) {
-        const Route& route = routePair.second;
-        cout << "  Location: " << routePair.first << "\n";
-        for (const auto& routeDirective : route.directives) {
-            cout << "    " << routeDirective.first << ": " << routeDirective.second << endl;
+void ConfigParser::printConfig(const ServerConfig& config) {
+    // Output parsed values for verification
+    std::cout << "Listen: " << config.listen << std::endl;
+    std::cout << "Server Name: " << config.server_name << std::endl;
+    std::cout << "Error Page 404: " << config.error_page_404 << std::endl;
+    std::cout << "Error Page 500: " << config.error_page_500 << std::endl;
+    std::cout << "Client Max Body Size: " << config.client_max_body_size << std::endl;
+
+    for (const auto& location : config.locations) {
+        std::cout << "Location Path: " << location.path << std::endl;
+        std::cout << "Root: " << location.root << std::endl;
+        std::cout << "Index: " << location.index << std::endl;
+        std::cout << "Autoindex: " << (location.autoindex ? "on" : "off") << std::endl;
+        std::cout << "Methods: ";
+        for (const auto& method : location.methods) {
+            std::cout << method << " ";
         }
+        std::cout << std::endl;
     }
 }
 
 ConfigParser ConfigParser::load(const string& filePath) {
     ConfigParser parser;
-    Server config = parser.parse(filePath);
+    ServerConfig config = parser.parse(filePath);
     parser.printConfig(config);
     return parser;
 }

@@ -1,24 +1,29 @@
 #pragma once
 
 #include <string>
-#include <map>
 #include <vector>
 
 using std::string;
-using std::map;
 using std::pair;
 
 # define YELLOW "\033[0;33m"
 # define RESET "\033[0m"
 
-// Define the structure to hold the configuration
-struct Route {
-	map<string, string> directives;
+struct Location {
+    std::string path;
+    std::string root;
+    std::string index;
+    bool autoindex;
+    std::vector<std::string> methods;
 };
 
-struct Server {
-	map<string, string> directives;
-	map<string, Route> routes;
+struct ServerConfig {
+    std::string listen;
+    std::string server_name;
+    std::string error_page_404;
+    std::string error_page_500;
+    size_t client_max_body_size;
+    std::vector<Location> locations;
 };
 
 class ConfigParser {
@@ -52,7 +57,7 @@ public:
 	ConfigParser() = default;
 
     // Function to parse the configuration text
-    Server parse(const string& configFilePath);
+    ServerConfig parse(const string& filename);
 	static ConfigParser load(const std::string& filePath);
-	void printConfig(const Server& server);
+	void printConfig(const ServerConfig& config);
 };
