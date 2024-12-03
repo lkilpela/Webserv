@@ -26,16 +26,17 @@ bool isValidPort(const std::string& port) {
 ServerConfig ConfigParser::parse(const string& filename) {
     ServerConfig config;
     std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
     std::string line;
     Location currentLocation;
     bool inLocationBlock = false;
 
     while (std::getline(file, line)) {
-        if (line.empty() || isComment(line)) {
-            continue;
-        }
-        line = removeComments(line);
-        line = trim(line);
+        line = trim(removeComments(line));
+        if (line.empty() || isComment(line)) continue;
+        
         std::istringstream iss(line);
         std::string key;
         iss >> key;
