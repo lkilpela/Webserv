@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <regex>
+#include <string>
 
 using std::ifstream;
 using std::stringstream;
@@ -30,21 +31,28 @@ ServerConfig ConfigParser::parse(const string& filename) {
     bool inLocationBlock = false;
 
     while (std::getline(file, line)) {
+        if (line.empty() || isComment(line)) {
+            continue;
+        }
+        line = removeComments(line);
+        line = trim(line);
         std::istringstream iss(line);
         std::string key;
         iss >> key;
 
-        if (key == "listen") {
-            iss >> config.listen;
+        if (key == "host") {
+            iss >> config.host;
+        } else if (key == "port") {
+            iss >> config.port;
         } else if (key == "server_name") {
             iss >> config.server_name;
-        } else if (key == "error_page") {
-            std::string error_code, path;
-            iss >> error_code >> path;
-            if (error_code == "404") {
-                config.error_page_404 = path;
-            } else if (error_code == "500") {
-                config.error_page_500 = path;
+        } else if (key == "error_page_404" || key == "error_page_500") {
+            std::string value;
+            iss >> value;
+            if (key == "error_page_404") {
+                config.error_page_404 = value;
+            } else {
+                config.error_page_500 = value;
             }
         } else if (key == "client_max_body_size") {
             iss >> config.client_max_body_size;
@@ -80,7 +88,7 @@ ServerConfig ConfigParser::parse(const string& filename) {
 
 void ConfigParser::printConfig(const ServerConfig& config) {
     // Output parsed values for verification
-    std::cout << "Listen: " << config.listen << std::endl;
+    std::cout << "Listen: " << config.host << ":" << config.port << std::endl;
     std::cout << "Server Name: " << config.server_name << std::endl;
     std::cout << "Error Page 404: " << config.error_page_404 << std::endl;
     std::cout << "Error Page 500: " << config.error_page_500 << std::endl;
@@ -105,4 +113,3 @@ ConfigParser ConfigParser::load(const string& filePath) {
     parser.printConfig(config);
     return parser;
 }
-

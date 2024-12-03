@@ -18,7 +18,8 @@ struct Location {
 };
 
 struct ServerConfig {
-    std::string listen;
+    std::string host;
+    unsigned int port;
     std::string server_name;
     std::string error_page_404;
     std::string error_page_500;
@@ -30,13 +31,21 @@ class ConfigParser {
 private:
     // Helper functions
     string trim(const string& str) {
-        size_t first = str.find_first_not_of(" \t");
-        size_t last = str.find_last_not_of(" \t");
+        size_t first = str.find_first_not_of(" \t;");
+        size_t last = str.find_last_not_of(" \t;");
         return (first == string::npos) ? "" : str.substr(first, (last - first + 1));
     }
 
     bool isComment(const string& line) {
         return line.find("#") == 0;
+    }
+
+    std::string removeComments(const std::string& str) {
+    size_t commentPos = str.find('#');
+    if (commentPos != std::string::npos) {
+        return str.substr(0, commentPos);
+        }
+        return str;
     }
 
     pair<string, string> parseDirective(const string& line) {
