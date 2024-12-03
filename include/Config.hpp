@@ -14,18 +14,17 @@ struct Location {
     string root;
     string index;
     bool autoindex;
-    vector<std::string> methods;
+    vector<string> methods;
     string cgi_extension;
     string upload_dir;
-    string return_url;
+    vector<string> return_url;
 };
 
 struct ServerConfig {
     string host;
     unsigned int port;
     string server_name;
-    string error_page_404;
-    string error_page_500;
+    vector<string> error_page;
     string client_max_body_size;
     vector<Location> locations;
 };
@@ -53,6 +52,8 @@ public:
 
     // Function to parse the configuration text
     void parseConfig(const string &filename, ServerConfig &config);
+    void parseGlobalConfig(const string &line, ServerConfig &config);
+    void parseLocationConfig(const string &line, Location &currentLocation);
 	void load(const string& filePath);
 	void printConfig(const ServerConfig& config);
 };

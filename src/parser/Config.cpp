@@ -63,7 +63,7 @@ bool isValidSize(const string &size) {
 }
 
 // Function to parse global configuration lines
-void parseGlobalConfig(const string &line, ServerConfig &config) {
+void ConfigParser::parseGlobalConfig(const string &line, ServerConfig &config) {
     static const ParserMap globalParsers = {
         {"host", [&](const string &value) {
             if (!isValidIP(value)) {
@@ -77,17 +77,17 @@ void parseGlobalConfig(const string &line, ServerConfig &config) {
         {"server_name", [&](const string &value) {
             config.server_name = value;
         }},
-        {"error_page_404", [&](const string &value) {
-            if (!isValidFilePath(value)) {
+        {"error_page", [&](const string &value) {
+            istringstream iss(value);
+            vector<string> errorPage;
+            string part;
+            while (iss >> part) {
+                errorPage.push_back(part);
+            }
+            if (errorPage.size() != 2|| !isValidFilePath(errorPage[1])) {
                 throw std::invalid_argument("Invalid file path: " + value);
             }
-            config.error_page_404 = value;
-        }},
-        {"error_page_500", [&](const string &value) {
-            if (!isValidFilePath(value)) {
-                throw std::invalid_argument("Invalid file path: " + value);
-            }
-            config.error_page_500 = value;
+            config.error_page = errorPage;
         }},
         {"client_max_body_size", [&](const string &value) {
             if (!isValidSize(value)) {
@@ -99,7 +99,9 @@ void parseGlobalConfig(const string &line, ServerConfig &config) {
 
     istringstream iss(line);
     string key, value;
-    if (iss >> key >> value) {
+    if (iss >> key) {
+        getline(iss, value);
+        value = trim(removeComments(value));
         auto it = globalParsers.find(key);
         if (it != globalParsers.end()) {
             it->second(value);
@@ -107,7 +109,7 @@ void parseGlobalConfig(const string &line, ServerConfig &config) {
     }
 }
 
-void parseLocationConfig(const string &line, Location &currentLocation) {
+void ConfigParser::parseLocationConfig(const string &line, Location &currentLocation) {
     static const ParserMap locationParsers = {
         {"root", [&](const string &value) {
             if (!isValidFilePath(value)) {
@@ -144,16 +146,24 @@ void parseLocationConfig(const string &line, Location &currentLocation) {
             currentLocation.upload_dir = value;
         }},
         {"return", [&](const string &value) {
-            if (!isValidURL(value)) {
-                throw std::invalid_argument("Invalid URL: " + value);
+            istringstream iss(value);
+            vector<string> returnParts;
+            string part;
+            while (iss >> part) {
+                returnParts.push_back(part);
             }
-            currentLocation.return_url = value;
+            if (returnParts.size() != 2 || !isValidURL(returnParts[1])) {
+                throw std::invalid_argument("Invalid return directive: " + value);
+            }
+            currentLocation.return_url = returnParts;
         }}
     };
 
     istringstream iss(line);
     string key, value;
-    if (iss >> key >> value) {
+    if (iss >> key) {
+        getline(iss, value);
+        value = trim(removeComments(value));
         auto it = locationParsers.find(key);
         if (it != locationParsers.end()) {
             it->second(value);
@@ -197,6 +207,7 @@ void ConfigParser::parseConfig(const string &filename, ServerConfig &config) {
             }
         } catch (const std::exception &e) {
             std::cerr << "Error parsing line: " << line << "\n" << e.what() << "\n";
+            exit(1);
         }
     }
     if (inLocationBlock) {
@@ -205,33 +216,40 @@ void ConfigParser::parseConfig(const string &filename, ServerConfig &config) {
 }
 
 void ConfigParser::printConfig(const ServerConfig& config) {
-    std::cout << "Host: " << config.host << "\n";
-    std::cout << "Port: " << config.port << "\n";
-    std::cout << "Server Name: " << config.server_name << "\n";
-    std::cout << "Error Page 404: " << config.error_page_404 << "\n";
-    std::cout << "Error Page 500: " << config.error_page_500 << "\n";
-    std::cout << "Client Max Body Size: " << config.client_max_body_size << "\n";
+    cout << "Host: " << config.host << endl;
+    cout << "Port: " << config.port << endl;
+    cout << "Server Name: " << config.server_name << endl;
+    cout << "Error Page: ";
+    for (const auto& page : config.error_page) {
+        cout << page << " ";
+    }
+    cout << endl;
+    cout << "Client Max Body Size: " << config.client_max_body_size << endl;
 
     for (const auto& location : config.locations) {
-        std::cout << "Location Path: " << location.path << "\n";
-        std::cout << "Root: " << location.root << "\n";
-        std::cout << "Index: " << location.index << "\n";
-        std::cout << "Autoindex: " << (location.autoindex ? "on" : "off") << "\n";
-        std::cout << "Methods: ";
+        cout << "Location Path: " << location.path << endl;
+        cout << "Root: " << location.root << endl;
+        cout << "Index: " << location.index << endl;
+        cout << "Autoindex: " << (location.autoindex ? "on" : "off") << endl;
+        cout << "Methods: ";
         for (const auto& method : location.methods) {
-            std::cout << method << " ";
+            cout << method << " ";
         }
-        std::cout << "\n";
+        cout << endl;
         if (!location.cgi_extension.empty()) {
-            std::cout << "CGI Extension: " << location.cgi_extension << "\n";
+            cout << "CGI Extension: " << location.cgi_extension << endl;
         }
         if (!location.upload_dir.empty()) {
-            std::cout << "Upload Dir: " << location.upload_dir << "\n";
+            cout << "Upload Dir: " << location.upload_dir << endl;
         }
         if (!location.return_url.empty()) {
-            std::cout << "Return URL: " << location.return_url << "\n";
+            cout << "Return URL: ";
+            for (const auto& part : location.return_url) {
+                cout << part << " ";
+            }
+            cout << endl;
         }
-        std::cout << "\n";
+        cout << endl;
     }
 }
 
