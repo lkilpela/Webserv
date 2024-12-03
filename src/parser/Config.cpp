@@ -4,81 +4,51 @@
 #include <sstream>
 #include <regex>
 
-
 // Function to parse the configuration text
-Http ConfigParser::parse(const string& configText) {
-    Http httpConfig;
-    stringstream ss(configText);
+Server ConfigParser::parse(const string& configFilePath) {
+    Server server;
+    ifstream configFile(configFilePath);
     string line;
-    string currentBlock;
-    string currentRoute;
+    string currentSection;
 
-    while (getline(ss, line)) {
+    while (getline(configFile, line)) {
         line = trim(line);
-        if (line.empty() || isComment(line)) {
-            continue;
-        }
+        if (line.empty() || line[0] == '#') continue;
 
-        // Check if starting a new block
-        if (line.find("http {") != string::npos) {
-            currentBlock = "http";
-            continue;
-        }
         if (line.find("server {") != string::npos) {
-            currentBlock = "server";
-            continue;
-        }
-        if (line.find("route") != string::npos) {
-            regex routeRegex(R"(route\s+([^\s]+)\s*{)");
-            smatch match;
-            if (regex_search(line, match, routeRegex)) {
-                currentRoute = match[1];
-                httpConfig.servers[currentBlock].routes[currentRoute] = Route();
-            }
-            continue;
-        }
-        if (line == "}") {
-            currentBlock = "";
-            currentRoute = "";
-            continue;
-        }
-
-        // Process directive (key-value pair)
-        if (currentBlock == "server") {
-            regex directiveRegex(R"((\w+)\s+([^\s;]+);)");
-            smatch match;
-            if (regex_search(line, match, directiveRegex)) {
-                string directive = match[1];
-                string value = match[2];
-
-                // Check if it's a route or regular directive
-                if (currentRoute.empty()) {
-                    httpConfig.servers[currentBlock].directives[directive] = value;
-                } else {
-                    httpConfig.servers[currentBlock].routes[currentRoute].directives[directive] = value;
-                }
+            currentSection = "server";
+        } else if (line.find("location") != string::npos) {
+            currentSection = "location";
+            string locationPath = extractLocationPath(line);
+            server.routes[locationPath] = Route();
+        } else if (line.find("}") != string::npos) {
+            currentSection = "";
+        } else {
+            if (currentSection == "server") {
+                auto directive = parseDirective(line);
+                server.directives[directive.first] = directive.second;
+            } else if (currentSection == "location") {
+                auto directive = parseDirective(line);
+                server.routes.rbegin()->second.directives[directive.first] = directive.second;
             }
         }
     }
 
-    return httpConfig;
+    return server;
 }
 
-void ConfigParser::printConfig(const Http& config) {
-	for (const auto& serverPair : config.servers) {
-		const Server& server = serverPair.second;
-		cout << "Server block: \n";
-		for (const auto& directive : server.directives) {
-			cout << "  " << directive.first << ": " << directive.second << endl;
-		}
-		for (const auto& routePair : server.routes) {
-			const Route& route = routePair.second;
-			cout << "  Route: " << routePair.first << "\n";
-			for (const auto& routeDirective : route.directives) {
-				cout << "    " << routeDirective.first << ": " << routeDirective.second << endl;
-			}
-		}
-	}
+void ConfigParser::printConfig(const Server& server) {
+    cout << "Server block: \n";
+    for (const auto& directive : server.directives) {
+        cout << "  " << directive.first << ": " << directive.second << endl;
+    }
+    for (const auto& routePair : server.routes) {
+        const Route& route = routePair.second;
+        cout << "  Route: " << routePair.first << "\n";
+        for (const auto& routeDirective : route.directives) {
+            cout << "    " << routeDirective.first << ": " << routeDirective.second << endl;
+        }
+    }
 }
 
 ConfigParser ConfigParser::load(const std::string& filePath) {
@@ -88,7 +58,7 @@ ConfigParser ConfigParser::load(const std::string& filePath) {
     string configText = buffer.str();
 
     ConfigParser parser;
-    Http config = parser.parse(configText);
+    Server config = parser.parse(configText);
     parser.printConfig(config);
     return parser;
 }
