@@ -7,5 +7,16 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <cstring>
+#include <vector>
+
+class Socket{
+
+	public:
+		Socket(){}
+		~Socket(){}
+		std::vector<int> getPorts(){return ports;}
+	private:
+		std::vector<int> ports = {8080, 8081};
+};
 
 #endif

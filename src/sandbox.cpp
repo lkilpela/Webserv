@@ -52,6 +52,7 @@ int main() {
     char buffer[1024] = {0};
     ssize_t valread = read(client_fd, buffer, sizeof(buffer));
 
+	std::cout << "buffer:" << buffer << std::endl;
     if (valread < 0) {
         perror("Read failed");
         return -1;
