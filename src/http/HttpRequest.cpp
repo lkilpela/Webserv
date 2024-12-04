@@ -8,6 +8,12 @@ HttpRequest::HttpRequest(const std::string& rawRequest) {
 	std::getline(stream, line);
 	std::istringstream requestLine(line);
 	requestLine >> _method >> _uri >> _version;
+
+	while (std::getline(stream, line) && line != "\r")
+	{
+		/* code */
+	}
+
 }
 // HttpRequest::HttpRequest(const HttpRequest& request);
 // HttpRequest::HttpRequest& operator=(const HttpRequest& request);
