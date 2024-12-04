@@ -13,19 +13,19 @@ struct Location {
     string path;
     string root;
     string index;
-    bool autoindex;
+    bool isAutoIndex;
     vector<string> methods;
-    string cgi_extension;
-    string upload_dir;
-    vector<string> return_url;
+    string cgiExtension;
+    string uploadDir;
+    vector<string> returnUrl;
 };
 
 struct ServerConfig {
     string host;
     unsigned int port;
-    string server_name;
-    vector<string> error_page;
-    string client_max_body_size;
+    string serverName;
+    vector<string> errorPages;
+    string clientMaxBodySize;
     vector<Location> locations;
 };
 

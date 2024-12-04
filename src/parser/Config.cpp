@@ -75,7 +75,7 @@ void ConfigParser::parseGlobalConfig(const string &line, ServerConfig &config) {
             config.port = parsePort(value);
         }},
         {"server_name", [&](const string &value) {
-            config.server_name = value;
+            config.serverName = value;
         }},
         {"error_page", [&](const string &value) {
             istringstream iss(value);
@@ -87,13 +87,13 @@ void ConfigParser::parseGlobalConfig(const string &line, ServerConfig &config) {
             if (errorPage.size() != 2|| !isValidFilePath(errorPage[1])) {
                 throw std::invalid_argument("Invalid file path: " + value);
             }
-            config.error_page = errorPage;
+            config.errorPages = errorPage;
         }},
         {"client_max_body_size", [&](const string &value) {
             if (!isValidSize(value)) {
                 throw std::invalid_argument("Invalid size format: " + value);
             }
-            config.client_max_body_size = value;
+            config.clientMaxBodySize = value;
         }}
     };
 
@@ -124,7 +124,7 @@ void ConfigParser::parseLocationConfig(const string &line, Location &currentLoca
             currentLocation.index = value;
         }},
         {"autoindex", [&](const string &value) {
-            currentLocation.autoindex = parseBool(value);
+            currentLocation.isAutoIndex = parseBool(value);
         }},
         {"methods", [&](const string &value) {
             istringstream iss(value);
@@ -137,13 +137,13 @@ void ConfigParser::parseLocationConfig(const string &line, Location &currentLoca
             currentLocation.methods = methods;
         }},
         {"cgi_extension", [&](const string &value) {
-            currentLocation.cgi_extension = value;
+            currentLocation.cgiExtension = value;
         }},
         {"upload_dir", [&](const string &value) {
             if (!isValidFilePath(value)) {
                 throw std::invalid_argument("Invalid file path: " + value);
             }
-            currentLocation.upload_dir = value;
+            currentLocation.uploadDir = value;
         }},
         {"return", [&](const string &value) {
             istringstream iss(value);
@@ -155,7 +155,7 @@ void ConfigParser::parseLocationConfig(const string &line, Location &currentLoca
             if (returnParts.size() != 2 || !isValidURL(returnParts[1])) {
                 throw std::invalid_argument("Invalid return directive: " + value);
             }
-            currentLocation.return_url = returnParts;
+            currentLocation.returnUrl = returnParts;
         }}
     };
 
@@ -218,33 +218,33 @@ void ConfigParser::parseConfig(const string &filename, ServerConfig &config) {
 void ConfigParser::printConfig(const ServerConfig& config) {
     cout << "Host: " << config.host << endl;
     cout << "Port: " << config.port << endl;
-    cout << "Server Name: " << config.server_name << endl;
+    cout << "Server Name: " << config.serverName << endl;
     cout << "Error Page: ";
-    for (const auto& page : config.error_page) {
+    for (const auto& page : config.errorPages) {
         cout << page << " ";
     }
     cout << endl;
-    cout << "Client Max Body Size: " << config.client_max_body_size << endl;
+    cout << "Client Max Body Size: " << config.clientMaxBodySize << endl;
 
     for (const auto& location : config.locations) {
         cout << "Location Path: " << location.path << endl;
         cout << "Root: " << location.root << endl;
         cout << "Index: " << location.index << endl;
-        cout << "Autoindex: " << (location.autoindex ? "on" : "off") << endl;
+        cout << "Autoindex: " << (location.isAutoIndex ? "on" : "off") << endl;
         cout << "Methods: ";
         for (const auto& method : location.methods) {
             cout << method << " ";
         }
         cout << endl;
-        if (!location.cgi_extension.empty()) {
-            cout << "CGI Extension: " << location.cgi_extension << endl;
+        if (!location.cgiExtension.empty()) {
+            cout << "CGI Extension: " << location.cgiExtension << endl;
         }
-        if (!location.upload_dir.empty()) {
-            cout << "Upload Dir: " << location.upload_dir << endl;
+        if (!location.uploadDir.empty()) {
+            cout << "Upload Dir: " << location.uploadDir << endl;
         }
-        if (!location.return_url.empty()) {
+        if (!location.returnUrl.empty()) {
             cout << "Return URL: ";
-            for (const auto& part : location.return_url) {
+            for (const auto& part : location.returnUrl) {
                 cout << part << " ";
             }
             cout << endl;
