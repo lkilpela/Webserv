@@ -1,54 +1,67 @@
-NAME = webserv
 
-CXX = c++
-CXXFLAGS = -g -Wall -Wextra -Werror -Iinclude -std=c++17
-DEBUG_CXXFLAGS = -g
+################################################################################
+# COMPILATION
+################################################################################
+CXX				=	c++
+CXX_STRICT		=	-Wall -Wextra -Werror -std=c++17
+DB_FLAGS		=	-g
+HEADERS			=	-I $(INCLUDES)
+CXX_FULL			=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 
-BUILD_DIR := build
+################################################################################
+# MANDATORY
+################################################################################
+NAME			=	webserv
+INCLUDES		=	./include
+M_HEADERS		=	$(INCLUDES)/Config.hpp
+OBJ_DIR			=	./obj
+SRC_DIR			=	./src
+SRCS			=	Config.cpp \
+					main.cpp
 
-VPATH :=	src \
-			src/parser \
-#src/http \
-#src/server
+OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
-SRCS =	main.cpp \
-		Config.cpp \
-#Request.cpp \
-#Response.cpp \
-#Server.cpp
-
-OBJS = $(SRCS:.cpp=.o)
-DEBUG_OBJS = $(SRCS:.cpp=.debug.o)
-RM = rm -f
+################################################################################
+# RULES
+################################################################################
+vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser
 
 all: $(NAME)
 
-$(NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
-	@echo "$(NAME) Program Made"
+$(NAME): $(OBJECTS)
+	@echo "--------------------------------------------"
+	@$(CXX_FULL) $(OBJECTS) -o $(NAME)
+	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
+	@echo "--------------------------------------------"
 
-$(BUILD_DIR):
-	@mkdir -p $@
-	@echo "Compiling ..."
-
-debug: $(DEBUG_OBJS)
-	$(CXX) $(DEBUG_OBJS) $(DEBUG_CXXFLAGS) $(CXXFLAGS) -o $(NAME)_debug
-	@echo "$(NAME) Debug Program Made"
-
-$(BUILD_DIR)/%.o: %.cpp
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
-
-%.debug.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(DEBUG_CXXFLAGS) -c $< -o $@
+$(OBJ_DIR)/%.o: %.cpp $(M_HEADERS)
+	@mkdir -p $(OBJ_DIR)
+	@echo "Compiling $< to $@"
+	@$(CXX_FULL) -c $< -o $@
+	@echo "$(G)Compiled: $< $(RC)"
 
 clean:
-	$(RM) $(OBJS) $(DEBUG_OBJS)
-	@echo "Cleaned object files"
+	@rm -rf $(NAME).dSYM/ $(OBJ_DIR)/
+	@echo "[$(NAME)] Object files cleaned."
 
 fclean: clean
-	$(RM) $(NAME) $(NAME)_debug
-	@echo "Fully Cleaned"
+	@rm -f $(NAME)
+	@echo "[$(NAME)] Everything deleted."
 
 re: fclean all
+	@echo "[$(NAME)] Everything rebuilt."
 
-.PHONY: all clean fclean re debug
+
+################################################################################
+# PHONY
+################################################################################
+.PHONY: all re clean fclean
+
+################################################################################
+# Colors
+################################################################################
+# Green, Blue
+R = \033[0;31m
+B = \033[0;34m
+# Reset Color
+RC = \033[0m
