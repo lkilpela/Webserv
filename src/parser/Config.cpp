@@ -1,9 +1,9 @@
 #include "Config.hpp"
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <regex>
-#include <string>
+#include <fstream> // std::ifstream, std::getline
+#include <iostream> // std::cout, std::endl
+#include <sstream> // std::istringstream
+#include <regex> // std::regex, std::regex_match
+#include <string> // std::string
 
 // Define namespaces
 using std::ifstream;
@@ -30,8 +30,8 @@ int parsePort(const string &value) {
     return port;
 }
 
-void validateMethods(const std::vector<string> &methods) {
-    std::vector<string> validMethods = {"GET", "POST", "PUT", "DELETE"};
+void validateMethods(const vector<string> &methods) {
+    vector<string> validMethods = {"GET", "POST", "PUT", "DELETE"};
     for (const auto &method : methods) {
         if (std::find(validMethods.begin(), validMethods.end(), method) == validMethods.end()) {
             throw std::invalid_argument("Invalid HTTP method: " + method);

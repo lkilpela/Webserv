@@ -42,9 +42,6 @@ private:
 
 
 public:
-
-	ConfigParser() = default;
-
     // Function to parse the configuration text
     void parseConfig(const string &filename, Config &config);
     void parseGlobal(const string &line, ServerConfig &config);
