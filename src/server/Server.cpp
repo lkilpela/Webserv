@@ -1,14 +1,15 @@
-#include "Socket.hpp"
+#include "Server.hpp"
+
+void closeSockets(std::vector<int> severFd){
+    std::for_each(severFd.begin(), severFd.end(), [](int fd) {close(fd);});
+}
 
 std::vector<int> makeSocket(const std::vector<int>& ports) {
     std::vector<int> sockets;
-
     for (int port : ports) {
         int sock = socket(AF_INET, SOCK_STREAM, 0);
-		sock = -1;
         if (sock == -1) {
-			for (int s : sockets)
-				close(s);
+			closeSockets(sockets);
             throw std::runtime_error("Failed to create socket");
         }
 
@@ -18,8 +19,7 @@ std::vector<int> makeSocket(const std::vector<int>& ports) {
         address.sin_port = htons(port);
 
         if (bind(sock, (struct sockaddr*)&address, sizeof(address)) == -1) {
-            for (int s : sockets)
-				close(s);
+            closeSockets(sockets);
             throw std::runtime_error("Failed to bind socket on port " + std::to_string(port));
         }
         sockets.push_back(sock);
@@ -29,7 +29,7 @@ std::vector<int> makeSocket(const std::vector<int>& ports) {
 
 int main() {
 
-	Socket sockets;
+	Server sockets;
     try {
         std::vector<int> socketsArray = makeSocket(sockets.getPorts());
         for (int sock : socketsArray) {

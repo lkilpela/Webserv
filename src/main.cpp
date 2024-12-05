@@ -10,15 +10,15 @@
 // 		return(1);
 // 	}
 
-	try {
-		ConfigParser parser;
-		parser.load(argv[1]);
+// 	try {
+// 		ConfigParser parser;
+// 		parser.load(argv[1]);
 		
-		//Server server(config);
-		///server.listen();
-	} catch (std::exception& e) {
-		std::cerr << e.what() << std::endl;
-		return 1;
-	}
-	return 0;
-}
+// 		//Server server(config);
+// 		///server.listen();
+// 	} catch (std::exception& e) {
+// 		std::cerr << e.what() << std::endl;
+// 		return 1;
+// 	}
+// 	return 0;
+// }
