@@ -6,25 +6,25 @@ CXX				=	c++
 CXX_STRICT		=	-Wall -Wextra -Werror -std=c++17
 DB_FLAGS		=	-g
 HEADERS			=	-I $(INCLUDES)
-CXX_FULL			=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
+CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 
 ################################################################################
 # MANDATORY
 ################################################################################
 NAME			=	webserv
 INCLUDES		=	./include
-M_HEADERS		=	$(INCLUDES)/Config.hpp
+M_HEADERS		=	$(INCLUDES)/Config.hpp # Add more headers here
 OBJ_DIR			=	./obj
 SRC_DIR			=	./src
 SRCS			=	Config.cpp \
-					main.cpp
+					main.cpp # Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
 ################################################################################
 # RULES
 ################################################################################
-vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser
+vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser # Add more paths here
 
 all: $(NAME)
 
