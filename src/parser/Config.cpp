@@ -4,6 +4,10 @@
 #include <sstream> // std::istringstream
 #include <regex> // std::regex, std::regex_match
 #include <string> // std::string
+#include <stdexcept> // std::invalid_argument, std::out_of_range
+#include <unordered_map> // std::unordered_map
+#include <algorithm> // std::find
+#include <filesystem> // std::filesystem
 
 // Define namespaces
 using std::ifstream;
@@ -23,6 +27,11 @@ bool parseBool(const string &value) {
 }
 
 int parsePort(const string &value) {
+    std::regex port_regex("^[0-9]+$");
+    if (!std::regex_match(value, port_regex)) {
+        throw std::invalid_argument("Invalid port number: " + value);
+    }
+
     int port = std::stoi(value);
     if (port <= 0 || port > 65535) {
         throw std::out_of_range("Port number out of range: " + value);
@@ -31,7 +40,7 @@ int parsePort(const string &value) {
 }
 
 void validateMethods(const vector<string> &methods) {
-    vector<string> validMethods = {"GET", "POST", "PUT", "DELETE"};
+    vector<string> validMethods = {"GET", "POST", "DELETE"};
     for (const auto &method : methods) {
         if (std::find(validMethods.begin(), validMethods.end(), method) == validMethods.end()) {
             throw std::invalid_argument("Invalid HTTP method: " + method);
@@ -46,8 +55,7 @@ bool isValidIP(const string &ip) {
 }
 
 bool isValidFilePath(const string &path) {
-    // Basic validation for file paths (can be extended)
-    return !path.empty() && path[0] != ' ';
+    return std::filesystem::exists(path);
 }
 
 bool isValidURL(const string &url) {
@@ -60,6 +68,16 @@ bool isValidSize(const string &size) {
     std::regex sizePattern(
         R"(\d+[KMG]?)");
     return std::regex_match(size, sizePattern);
+}
+
+void validateErrorPage(const string &code, const string &path) {
+    std::regex code_regex("^[1-5][0-9][0-9]$");
+    if (!std::regex_match(code, code_regex)) {
+        throw std::invalid_argument("Invalid error code: " + code);
+    }
+    if (!isValidFilePath(path)) {
+        throw std::invalid_argument("Invalid file path: " + path);
+    }
 }
 
 // Utility functions for parsing
@@ -94,13 +112,10 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
         }},
         {"error_page", [&](const string &value) {
             istringstream iss(value);
-            int errorCode;
-            string filePath;
-            iss >> errorCode >> filePath;
-            if (!isValidFilePath(filePath)) {
-                throw std::invalid_argument("Invalid file path: " + value);
-            }
-            config.errorPages[errorCode] = filePath; // Store in map
+            std::string code, path;
+            iss >> code >> path;
+            validateErrorPage(code, path);
+            config.errorPages[std::stoi(code)] = path; // Store in map
         }},
         {"client_max_body_size", [&](const string &value) {
             if (!isValidSize(value)) {
@@ -133,8 +148,9 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
             currentLocation.root = value;
         }},
         {"index", [&](const string &value) {
-            if (!isValidFilePath(value)) {
-                throw std::invalid_argument("Invalid file path: " + value);
+            string fullPath = currentLocation.root + "/" + value;
+            if (!isValidFilePath(fullPath)) {
+                throw std::invalid_argument("Invalid file path: " + fullPath);
             }
             currentLocation.index = value;
         }},
