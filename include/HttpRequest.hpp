@@ -2,6 +2,14 @@
 
 #include <string>
 #include <unordered_map>
+#include <variant>
+
+struct ParseError {
+	int errorCode;
+	std::string errorMessage;
+
+	ParseError(int code, std::string& msg) : errorCode(code), errorMessage(msg) {}
+};
 
 class HttpRequest {
 	private:
@@ -14,7 +22,7 @@ class HttpRequest {
 		bool _isDirectory;
 
 	public:
-		HttpRequest(const std::string& rawRequest);
+		HttpRequest() = default;
 		HttpRequest(const HttpRequest& request);
 		~HttpRequest() = default;
 		HttpRequest& operator=(const HttpRequest& request);
@@ -25,6 +33,10 @@ class HttpRequest {
 		const std::unordered_map<std::string, std::string>& getHeaders() const;
 		const std::string& getBody() const;
 
+		void setHeader(const std::string& name, const std::string& value);
+
 		bool isDirectory() const;
 		bool isCgi() const;
+
+		static std::variant<HttpRequest, ParseError> parse(const std::string& rawRequest);
 };
