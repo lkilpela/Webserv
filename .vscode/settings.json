@@ -59,6 +59,9 @@
         "random": "cpp",
         "type_traits": "cpp",
         "utility": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "regex": "cpp",
+        "system_error": "cpp",
+        "istream": "cpp"
     }
 }
