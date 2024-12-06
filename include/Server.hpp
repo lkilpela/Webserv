@@ -8,13 +8,17 @@
 #include <cstring>
 #include <vector>
 #include <algorithm>
+#include <poll.h>
 #define BACKLOG 128
 
 class Server {
 	public:
 		Server() = default;
-		Server(const Config& config);
-		~Server() = default;
-		void makeSocket();
-		void listen();
+		// Server(const Config& config);
+		Server(const std::vector<int> ports);
+		~Server();
+	
+	private:
+		std::vector<int> serverFds;
+		std::vector<pollfd> pollData;
 };

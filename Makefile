@@ -19,6 +19,7 @@ OBJ_DIR			=	./obj
 SRC_DIR			=	./src
 SRCS			=	Config.cpp \
 					Utils.cpp \
+					Server.cpp \
 					main.cpp # Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
