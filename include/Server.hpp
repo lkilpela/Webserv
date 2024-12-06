@@ -17,8 +17,10 @@ class Server {
 		// Server(const Config& config);
 		Server(const std::vector<int> ports);
 		~Server();
+		void pollServers(Server&);
 	
 	private:
 		std::vector<int> serverFds;
 		std::vector<pollfd> pollData;
+		std::vector<
 };

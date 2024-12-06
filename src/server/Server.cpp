@@ -3,8 +3,8 @@
 void closeFds(std::vector<int> fds){ std::for_each(fds.begin(), fds.end(), [](int fd){close(fd);}); }
 
 Server::~Server(){
-	std::cout << "close fds" << std::endl;
-	closeFds(serverFds);}
+	std::for_each(serverFds.begin(), serverFds.end(), [](int fd){close(fd);});
+	}
 
 Server::Server(const std::vector<int> ports) {
     for (int port : ports) {
@@ -21,12 +21,13 @@ Server::Server(const std::vector<int> ports) {
             throw std::runtime_error("Failed to listen on port " + std::to_string(port));
         serverFds.push_back(serverFd);
 		pollData.push_back({serverFd, POLLIN, 0});
-		for (auto i : serverFds)
-			std::cout << "server fd: " << i << std::endl;
-		for (auto i : pollData)
-			std::cout << "polldata: " << i.fd << std::endl;
     }
 }
+
+void pollServers(Server& Servers){
+	while (true)
+}
+
 
 int main() {
 	std::vector<int> ports = {8080, 8081};

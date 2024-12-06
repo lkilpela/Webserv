@@ -72,33 +72,56 @@ int main() {
     return 0;
 }
 
-/*
-1. Networking and Connection Handling
-Responsibilities:
-Implement the socket creation, binding, listening, and accepting client connections.
-Handle non-blocking I/O using poll() or an equivalent mechanism.
-Manage multiple clients simultaneously.
-Key Functions: socket(), bind(), listen(), accept(), poll().
-Who Should Take This?
-A student with an interest in low-level programming or networking concepts.
+#define PORT 8080
+#define BACKLOG 128
 
-2. HTTP Request and Response Handling
-Responsibilities:
-Parse HTTP requests: Extract method, URL, headers, and body.
-Build HTTP responses: Status line, headers, and body.
-Handle error responses (e.g., 404 Not Found, 500 Internal Server Error).
-Support HTTP methods (GET, POST, DELETE).
-Key Functions: recv(), send().
-Who Should Take This?
-A student interested in parsing protocols and working with strings.
+int main() {
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        perror("Socket creation failed");
+        return -1;
+    }
 
-3. File Handling and Static Content
-Responsibilities:
-CGI
-Serve static files (e.g., HTML, CSS, images).
-Handle directory traversal and listing (if required).
-Manage file uploads (write files to disk).
-Implement configuration file parsing to set server parameters.
-Key Functions: open(), read(), write(), opendir(), readdir(), close().
-Who Should Take This?
-A student comfortable working with file systems and configuration files.*/
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(PORT);
+
+    if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+        perror("Bind failed");
+        close(server_fd);
+        return -1;
+    }
+
+    // Set backlog size
+    if (listen(server_fd, BACKLOG) < 0) {
+        perror("Listen failed");
+        close(server_fd);
+        return -1;
+    }
+
+    std::cout << "Server is listening on port " << PORT << " with a backlog of " << BACKLOG << std::endl;
+
+    while (true) {
+        sockaddr_in client_addr;
+        socklen_t client_len = sizeof(client_addr);
+        int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+
+        if (client_fd < 0) {
+            if (errno == ECONNABORTED || errno == EAGAIN || errno == EWOULDBLOCK) {
+                std::cerr << "Connection dropped (backlog full or client disconnected)" << std::endl;
+                continue;
+            }
+            perror("Accept failed");
+            break;
+        }
+
+        std::cout << "New client connected!" << std::endl;
+
+        // Simulate handling client and close connection
+        close(client_fd);
+    }
+
+    close(server_fd);
+    return 0;
+}
