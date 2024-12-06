@@ -38,9 +38,6 @@ struct Config {
 };
 
 class ConfigParser {
-private:
-
-
 public:
     // Function to parse the configuration text
     void parseConfig(const string &filename, Config &config);
