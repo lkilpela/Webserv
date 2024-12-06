@@ -13,8 +13,8 @@ CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 ################################################################################
 NAME			=	webserv
 INCLUDES		=	./include
-M_HEADERS		=	$(INCLUDES)/Config.hpp 
-					$(INCLUDES)/Utils.hpp  # Add more headers here
+M_HEADERS		=	$(INCLUDES)/Config.hpp \
+					$(INCLUDES)/Utils.hpp
 OBJ_DIR			=	./obj
 SRC_DIR			=	./src
 SRCS			=	Config.cpp \
