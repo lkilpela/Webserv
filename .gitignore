@@ -32,4 +32,6 @@
 *.app
 
 webserv
-sandbox.cpp
+
+.DS_Store
+.vscode/

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cstring>
-#include "Configuration.hpp"
+#include "Config.hpp"
 
 class Server {
 	public:
-		Server(const Configuration& config);
+		Server(const Config& config);
 		void listen();
 };
