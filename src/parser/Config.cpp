@@ -1,13 +1,12 @@
 #include "Config.hpp"
+#include "Utils.hpp"
 #include <fstream> // std::ifstream, std::getline
 #include <iostream> // std::cout, std::endl
 #include <sstream> // std::istringstream
-#include <regex> // std::regex, std::regex_match
 #include <string> // std::string
 #include <stdexcept> // std::invalid_argument, std::out_of_range
 #include <unordered_map> // std::unordered_map
 #include <algorithm> // std::find
-#include <filesystem> // std::filesystem
 
 // Define namespaces
 using std::ifstream;
@@ -19,93 +18,17 @@ using std::endl;
 using ParserFunction = std::function<void(const string&)>;
 using ParserMap = std::unordered_map<string, ParserFunction>;
 
-// Utility functions for validation
-bool parseBool(const string &value) {
-    if (value == "on") return true;
-    if (value == "off") return false;
-    throw std::invalid_argument("Invalid boolean value: " + value);
-}
-
-int parsePort(const string &value) {
-    std::regex port_regex("^[0-9]+$");
-    if (!std::regex_match(value, port_regex)) {
-        throw std::invalid_argument("Invalid port number: " + value);
-    }
-
-    int port = std::stoi(value);
-    if (port <= 0 || port > 65535) {
-        throw std::out_of_range("Port number out of range: " + value);
-    }
-    return port;
-}
-
-void validateMethods(const vector<string> &methods) {
-    vector<string> validMethods = {"GET", "POST", "DELETE"};
-    for (const auto &method : methods) {
-        if (std::find(validMethods.begin(), validMethods.end(), method) == validMethods.end()) {
-            throw std::invalid_argument("Invalid HTTP method: " + method);
-        }
-    }
-}
-
-bool isValidIP(const string &ip) {
-    std::regex ipPattern(
-        R"((\d{1,3}\.){3}\d{1,3})");
-    return std::regex_match(ip, ipPattern);
-}
-
-bool isValidFilePath(const string &path) {
-    return std::filesystem::exists(path);
-}
-
-bool isValidURL(const string &url) {
-    std::regex urlPattern(
-        R"((http|https)://([^\s/$.?#].[^\s]*)$)");
-    return std::regex_match(url, urlPattern);
-}
-
-bool isValidSize(const string &size) {
-    std::regex sizePattern(
-        R"(\d+[KMG]?)");
-    return std::regex_match(size, sizePattern);
-}
-
-void validateErrorPage(const string &code, const string &path) {
-    std::regex code_regex("^[1-5][0-9][0-9]$");
-    if (!std::regex_match(code, code_regex)) {
-        throw std::invalid_argument("Invalid error code: " + code);
-    }
-    if (!isValidFilePath(path)) {
-        throw std::invalid_argument("Invalid file path: " + path);
-    }
-}
-
-// Utility functions for parsing
-string trim(const string& str) {
-    size_t first = str.find_first_not_of(" \t;");
-    size_t last = str.find_last_not_of(" \t;");
-    return (first == string::npos) ? "" : str.substr(first, (last - first + 1));
-}
-
-string removeComments(const std::string& str) {
-size_t commentPos = str.find('#');
-if (commentPos != string::npos) {
-        return str.substr(0, commentPos);
-    }
-    return str;
-}
-
 // Function to parse global configuration lines
 void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
     static const ParserMap globalParsers = {
         {"host", [&](const string &value) {
-            if (!isValidIP(value)) {
+            if (!utils::isValidIP(value)) {
                 throw std::invalid_argument("Invalid IP address: " + value);
             }
             config.host = value;
         }},
         {"port", [&](const string &value) {
-            config.port = parsePort(value);
+            config.port = utils::parsePort(value);
         }},
         {"server_name", [&](const string &value) {
             config.serverName = value;
@@ -114,11 +37,11 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
             istringstream iss(value);
             std::string code, path;
             iss >> code >> path;
-            validateErrorPage(code, path);
+            utils::validateErrorPage(code, path);
             config.errorPages[std::stoi(code)] = path; // Store in map
         }},
         {"client_max_body_size", [&](const string &value) {
-            if (!isValidSize(value)) {
+            if (!utils::isValidSize(value)) {
                 throw std::invalid_argument("Invalid size format: " + value);
             }
             config.clientMaxBodySize = value;
@@ -129,7 +52,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
     string key, value;
     if (iss >> key) {
         getline(iss, value);
-        value = trim(removeComments(value));
+        value = utils::trim(utils::removeComments(value));
         auto it = globalParsers.find(key);
         if (it != globalParsers.end()) {
             it->second(value);
@@ -142,20 +65,20 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
 void ConfigParser::parseLocation(const string &line, Location &currentLocation) {
     static const ParserMap locationParsers = {
         {"root", [&](const string &value) {
-            if (!isValidFilePath(value)) {
+            if (!utils::isValidFilePath(value)) {
                 throw std::invalid_argument("Invalid file path: " + value);
             }
             currentLocation.root = value;
         }},
         {"index", [&](const string &value) {
             string fullPath = currentLocation.root + "/" + value;
-            if (!isValidFilePath(fullPath)) {
+            if (!utils::isValidFilePath(fullPath)) {
                 throw std::invalid_argument("Invalid file path: " + fullPath);
             }
             currentLocation.index = value;
         }},
         {"autoindex", [&](const string &value) {
-            currentLocation.isAutoIndex = parseBool(value);
+            currentLocation.isAutoIndex = utils::parseBool(value);
         }},
         {"methods", [&](const string &value) {
             istringstream iss(value);
@@ -164,14 +87,14 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
             while (iss >> method) {
                 methods.push_back(method);
             }
-            validateMethods(methods);
+            utils::validateMethods(methods);
             currentLocation.methods = methods;
         }},
         {"cgi_extension", [&](const string &value) {
             currentLocation.cgiExtension = value;
         }},
         {"upload_dir", [&](const string &value) {
-            if (!isValidFilePath(value)) {
+            if (!utils::isValidFilePath(value)) {
                 throw std::invalid_argument("Invalid file path: " + value);
             }
             currentLocation.uploadDir = value;
@@ -183,7 +106,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
             while (iss >> part) {
                 returnParts.push_back(part);
             }
-            if (returnParts.size() != 2 || !isValidURL(returnParts[1])) {
+            if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
                 throw std::invalid_argument("Invalid return directive: " + value);
             }
             currentLocation.returnUrl = returnParts;
@@ -194,7 +117,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
     string key, value;
     if (iss >> key) {
         getline(iss, value);
-        value = trim(removeComments(value));
+        value = utils::trim(utils::removeComments(value));
         auto it = locationParsers.find(key);
         if (it != locationParsers.end()) {
             it->second(value);
@@ -215,7 +138,7 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
     bool inLocationBlock = false;
 
     while (std::getline(file, line)) {
-        line = trim(removeComments(line));
+        line = utils::trim(utils::removeComments(line));
         if (line.empty()) continue;
 
         // Start of the http block
