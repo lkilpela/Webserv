@@ -24,8 +24,20 @@ Server::Server(const std::vector<int> ports) {
     }
 }
 
-void pollServers(Server& Servers){
-	while (true)
+void Server::pollServers(Server& Servers){
+    // for (int i = 0; i < Servers.pollData.size(); i++)
+    //     std::cout << Servers.pollData[i].fd << " " << Servers.serverFds[i] << std::endl;
+	while (true){
+        int activity = poll(Servers.pollData.data(), Servers.pollData.size(), 0);
+        if (activity == -1)
+            throw std::runtime_error("Poll failed");
+        for (int i = 0; i < Servers.pollData.size(); i++){
+            if (Servers.pollData[i].revents & POLLIN){
+                
+            }
+        }
+            
+    }
 }
 
 
@@ -33,6 +45,7 @@ int main() {
 	std::vector<int> ports = {8080, 8081};
     try {
 		Server servers(ports);
+        servers.pollServers(servers);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;

@@ -72,56 +72,126 @@ int main() {
     return 0;
 }
 
-#define PORT 8080
-#define BACKLOG 128
+#include <iostream>
+#include <vector>
+#include <cstring>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <poll.h>
 
-int main() {
+#define PORT 8080
+#define BACKLOG 10
+
+int createListeningSocket(int port) {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         perror("Socket creation failed");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(port);
 
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
         perror("Bind failed");
         close(server_fd);
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-    // Set backlog size
     if (listen(server_fd, BACKLOG) < 0) {
         perror("Listen failed");
         close(server_fd);
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-    std::cout << "Server is listening on port " << PORT << " with a backlog of " << BACKLOG << std::endl;
+    std::cout << "Listening on port " << port << std::endl;
+    return server_fd;
+}
+
+int main() {
+    // Create the listening socket
+    int server_fd = createListeningSocket(PORT);
+
+    // Vector to store pollfd structs
+    std::vector<pollfd> poll_fds;
+
+    // Add the listening socket to poll_fds
+    pollfd server_pollfd = {server_fd, POLLIN, 0};
+    poll_fds.push_back(server_pollfd);
+
+    // Vector to store client sockets
+    std::vector<int> client_sockets;
 
     while (true) {
-        sockaddr_in client_addr;
-        socklen_t client_len = sizeof(client_addr);
-        int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
-
-        if (client_fd < 0) {
-            if (errno == ECONNABORTED || errno == EAGAIN || errno == EWOULDBLOCK) {
-                std::cerr << "Connection dropped (backlog full or client disconnected)" << std::endl;
-                continue;
-            }
-            perror("Accept failed");
+        // Call poll() to monitor file descriptors
+        int activity = poll(poll_fds.data(), poll_fds.size(), -1);
+        if (activity < 0) {
+            perror("Poll error");
             break;
         }
 
-        std::cout << "New client connected!" << std::endl;
+        // Iterate through poll_fds
+        for (size_t i = 0; i < poll_fds.size(); ++i) {
+            if (poll_fds[i].revents & POLLIN) {
+                // If the listening socket is readable, accept a new connection
+                if (poll_fds[i].fd == server_fd) {
+                    sockaddr_in client_addr{};
+                    socklen_t addr_len = sizeof(client_addr);
+                    int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &addr_len);
+                    if (client_fd < 0) {
+                        perror("Accept failed");
+                        continue;
+                    }
+                    std::cout << "New client connected: " << client_fd << std::endl;
 
-        // Simulate handling client and close connection
-        close(client_fd);
+                    // Add the new client socket to poll_fds
+                    pollfd client_pollfd = {client_fd, POLLIN, 0};
+                    poll_fds.push_back(client_pollfd);
+
+                    // Add the new client socket to client_sockets
+                    client_sockets.push_back(client_fd);
+                }
+                // If a client socket is readable, handle the client
+                else {
+                    char buffer[1024];
+                    int client_fd = poll_fds[i].fd;
+
+                    ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);
+                    if (bytes_read <= 0) {
+                        // Connection closed or error
+                        if (bytes_read == 0) {
+                            std::cout << "Client disconnected: " << client_fd << std::endl;
+                        } else {
+                            perror("Recv failed");
+                        }
+
+                        close(client_fd);
+
+                        // Remove the client socket from poll_fds and client_sockets
+                        poll_fds.erase(poll_fds.begin() + i);
+                        client_sockets.erase(std::remove(client_sockets.begin(), client_sockets.end(), client_fd), client_sockets.end());
+
+                        --i; // Adjust index due to removal
+                    } else {
+                        // Echo data back to client
+                        std::string message(buffer, bytes_read);
+                        std::cout << "Received from client " << client_fd << ": " << message << std::endl;
+
+                        send(client_fd, message.c_str(), message.size(), 0);
+                    }
+                }
+            }
+        }
     }
 
+    // Clean up
+    for (int fd : client_sockets) {
+        close(fd);
+    }
     close(server_fd);
+
     return 0;
 }

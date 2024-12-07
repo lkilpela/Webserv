@@ -22,5 +22,5 @@ class Server {
 	private:
 		std::vector<int> serverFds;
 		std::vector<pollfd> pollData;
-		std::vector<
+		std::vector<int> clientFds;
 };
