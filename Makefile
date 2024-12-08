@@ -3,7 +3,7 @@
 # COMPILATION
 ################################################################################
 CXX				=	c++
-CXX_STRICT		=	-Wall -Wextra -Werror -std=c++17
+CXX_STRICT		=	-Wall -Wextra -Werror -std=c++20
 DB_FLAGS		=	-g
 HEADERS			=	-I $(INCLUDES)
 CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)

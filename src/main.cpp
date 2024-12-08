@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Config.hpp"
 #include <exception>
+#include "http.hpp"
 
 //#include "Server.hpp"
 
@@ -13,7 +14,7 @@ int main(int argc, char **argv) {
 	try {
 		ConfigParser parser;
 		parser.load(argv[1]);
-		
+
 		//Server server(config);
 		///server.listen();
 	} catch (std::exception& e) {
