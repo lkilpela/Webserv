@@ -27,25 +27,24 @@ void Server::listen(){
         if (::poll(_pollData.data(), _pollData.size(), 0) == -1)
             throw std::runtime_error("Poll failed");
         for (unsigned long i = 0; i < _pollData.size(); i++){
-			//###Accepts and creates new client
+			//##Accepts and creates new client
             if (_pollData[i].revents & POLLIN){
 				if (utils::isInVector(_pollData[i].fd, _serverFds)){
 					sockaddr_in clientAddr {};
 					socklen_t addrLen = sizeof(clientAddr);
 					int clientFd = ::accept(_pollData[i].fd, (struct sockaddr*)&clientAddr, &addrLen);
 					if (clientFd < 0) {
-						//###not sure if I need to print out error message
+						std::cerr << "accept failed" << std::endl;
 						continue;
 					}
-					//http::Request request(clientFd);
-					//http::Response response(clientFd);
-					// process(request, response); CGI in here 
 				}
 				// pollfd clientFd = {clientFd, POLLIN | POLLOUT, 0}
 				
 			}
 			// else(Servers.pollData[i].revents & POLLOUT){
-			// 	//read
+				//http::Request request(clientFd);
+				//http::Response response(clientFd);
+				// process(request, response); CGI in here 
 			// }
         }
             
