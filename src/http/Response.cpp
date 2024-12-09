@@ -1,5 +1,11 @@
+#include <iostream>
 #include <sstream>
 #include <fstream>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
 #include "http/Response.hpp"
 
 using http::Response;
@@ -54,7 +60,38 @@ Response& Response::setBody(const std::string& bodyContent) {
 // 		onError()
 // 	}
 // }
+void Response::sendStatus(Status status) {
+	std::ostringstream stream;
 
+	stream
+		<< "HTTP/1.1 "
+		<< static_cast<std::uint16_t>(_status.code) << " "
+		<< _status.reason << "\r\n"
+		<< "Content-Type: text/plain\r\n"
+		<< "Content-Length: " << _status.reason.length() << "\r\n\r\n"
+		<< _status.reason;
+
+
+	// for (const auto& [name, value] : _headers) {
+	// 	stream << name << ": " << value << "\r\n";
+	// }
+
+	std::string data = stream.str();
+	size_t totalBytes = data.size();
+	size_t totalBytesSent = 0;
+
+	while (totalBytesSent < totalBytes) {
+		ssize_t bytesSent = ::send(_clientSocket, data.c_str(), totalBytes - bytesSent, 0);
+		if (bytesSent < 0) {
+			std::cerr << "Failed to send data at Response::sendStatus(): " << ::strerror(errno) << std::endl;
+			break;
+		}
+		totalBytesSent += static_cast<size_t>(bytesSent);
+	}
+	if (::close(_clientSocket) < 0) {
+		std::cerr << "Failed to close socket at Response::sendStatus(): " << ::strerror(errno) << std::endl;
+	}
+}
 // std::string Response::toString() const {
 // 	std::ostringstream responseStream;
 

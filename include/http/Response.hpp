@@ -31,6 +31,7 @@ namespace http {
 			Response& setBody(const std::string& bodyContent);
 
 			void sendFile(const std::string& filePath, std::function<void(std::exception&)> onError);
+			void sendStatus(http::Status status);
 			std::string toString() const;
 
 	};
