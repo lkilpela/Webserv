@@ -80,118 +80,107 @@ int main() {
 #include <unistd.h>
 #include <poll.h>
 
-#define PORT 8080
-#define BACKLOG 10
+struct Server {
+    std::vector<pollfd> pollData;
+};
 
-int createListeningSocket(int port) {
+int main() {
+    Server Servers;
+
+    // Create the listening socket
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         perror("Socket creation failed");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
+    // Set up the address and bind the socket
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
+    address.sin_port = htons(8080);
 
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
         perror("Bind failed");
         close(server_fd);
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
-    if (listen(server_fd, BACKLOG) < 0) {
+    if (listen(server_fd, 10) < 0) {
         perror("Listen failed");
         close(server_fd);
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
-    std::cout << "Listening on port " << port << std::endl;
-    return server_fd;
-}
-
-int main() {
-    // Create the listening socket
-    int server_fd = createListeningSocket(PORT);
-
-    // Vector to store pollfd structs
-    std::vector<pollfd> poll_fds;
-
-    // Add the listening socket to poll_fds
+    // Add the listening socket to pollData
     pollfd server_pollfd = {server_fd, POLLIN, 0};
-    poll_fds.push_back(server_pollfd);
-
-    // Vector to store client sockets
-    std::vector<int> client_sockets;
+    Servers.pollData.push_back(server_pollfd);
 
     while (true) {
-        // Call poll() to monitor file descriptors
-        int activity = poll(poll_fds.data(), poll_fds.size(), -1);
+        // Call poll() to monitor sockets
+        int activity = poll(Servers.pollData.data(), Servers.pollData.size(), -1);
         if (activity < 0) {
             perror("Poll error");
             break;
         }
 
-        // Iterate through poll_fds
-        for (size_t i = 0; i < poll_fds.size(); ++i) {
-            if (poll_fds[i].revents & POLLIN) {
-                // If the listening socket is readable, accept a new connection
-                if (poll_fds[i].fd == server_fd) {
+        // Process events
+        for (int i = 0; i < Servers.pollData.size(); i++) {
+            if (Servers.pollData[i].revents & POLLIN) {
+                // Handle readable events
+                if (Servers.pollData[i].fd == server_fd) {
+                    // Accept new connection
                     sockaddr_in client_addr{};
                     socklen_t addr_len = sizeof(client_addr);
                     int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &addr_len);
+
                     if (client_fd < 0) {
                         perror("Accept failed");
                         continue;
                     }
+
                     std::cout << "New client connected: " << client_fd << std::endl;
 
-                    // Add the new client socket to poll_fds
-                    pollfd client_pollfd = {client_fd, POLLIN, 0};
-                    poll_fds.push_back(client_pollfd);
-
-                    // Add the new client socket to client_sockets
-                    client_sockets.push_back(client_fd);
-                }
-                // If a client socket is readable, handle the client
-                else {
+                    // Add client socket to pollData
+                    pollfd client_pollfd = {client_fd, POLLIN | POLLOUT, 0};
+                    Servers.pollData.push_back(client_pollfd);
+                } else {
+                    // Read data from client socket
                     char buffer[1024];
-                    int client_fd = poll_fds[i].fd;
-
+                    int client_fd = Servers.pollData[i].fd;
                     ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);
+
                     if (bytes_read <= 0) {
-                        // Connection closed or error
                         if (bytes_read == 0) {
                             std::cout << "Client disconnected: " << client_fd << std::endl;
                         } else {
                             perror("Recv failed");
                         }
 
+                        // Remove client socket from pollData
                         close(client_fd);
-
-                        // Remove the client socket from poll_fds and client_sockets
-                        poll_fds.erase(poll_fds.begin() + i);
-                        client_sockets.erase(std::remove(client_sockets.begin(), client_sockets.end(), client_fd), client_sockets.end());
-
-                        --i; // Adjust index due to removal
+                        Servers.pollData.erase(Servers.pollData.begin() + i);
+                        --i; // Adjust index after removal
                     } else {
-                        // Echo data back to client
-                        std::string message(buffer, bytes_read);
-                        std::cout << "Received from client " << client_fd << ": " << message << std::endl;
-
-                        send(client_fd, message.c_str(), message.size(), 0);
+                        std::cout << "Received from client " << client_fd << ": " << std::string(buffer, bytes_read) << std::endl;
                     }
                 }
+            } else if (Servers.pollData[i].revents & POLLOUT) {
+                // Handle writable events (e.g., send response)
+                int client_fd = Servers.pollData[i].fd;
+                std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+                send(client_fd, response.c_str(), response.size(), 0);
+
+                // Remove POLLOUT from events if no more data to send
+                Servers.pollData[i].events &= ~POLLOUT;
             }
         }
     }
 
     // Clean up
-    for (int fd : client_sockets) {
-        close(fd);
+    for (auto& pfd : Servers.pollData) {
+        close(pfd.fd);
     }
-    close(server_fd);
-
     return 0;
 }
+

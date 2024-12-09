@@ -1,12 +1,7 @@
 #include "Server.hpp"
+#include "Utils.hpp"
 
-void closeFds(std::vector<int> fds){ std::for_each(fds.begin(), fds.end(), [](int fd){close(fd);}); }
-
-Server::~Server(){
-	std::for_each(serverFds.begin(), serverFds.end(), [](int fd){close(fd);});
-	}
-
-Server::Server(const std::vector<int> ports) {
+Servers::Servers(const std::vector<int> ports) {
     for (int port : ports) {
         int serverFd = socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)            
@@ -24,27 +19,47 @@ Server::Server(const std::vector<int> ports) {
     }
 }
 
-void Server::pollServers(Server& Servers){
+// template <typename T>
+// 	bool isInVector(T element, std::vector<T>& v){
+// 		return std::find(v.begin(), v.end(), element) != v.end();
+// 	}
+
+void Servers::pollServers(Servers& Servers){
     // for (int i = 0; i < Servers.pollData.size(); i++)
     //     std::cout << Servers.pollData[i].fd << " " << Servers.serverFds[i] << std::endl;
 	while (true){
-        int activity = poll(Servers.pollData.data(), Servers.pollData.size(), 0);
-        if (activity == -1)
+        if (poll(Servers.pollData.data(), Servers.pollData.size(), 0) == -1)
             throw std::runtime_error("Poll failed");
-        for (int i = 0; i < Servers.pollData.size(); i++){
+        for (unsigned long i = 0; i < Servers.pollData.size(); i++){
+			//Accepts and creates new client
             if (Servers.pollData[i].revents & POLLIN){
-                
-            }
+				if (utils::isInVector(Servers.pollData[i].fd, Servers.serverFds)){
+				// if (isInVector(Servers.pollData[i].fd, Servers.serverFds)){
+					sockaddr_in clientAddr {};
+					socklen_t addrLen = sizeof(clientAddr);
+					int clientFd = accept(Servers.pollData[i].fd, (struct sockaddr*)&clientAddr, &addrLen);
+					if (clientFd < 0){
+						
+						continue;
+					}
+				}
+			}
+			// else(Servers.pollData[i].revents & POLLOUT){
+			// 	//read
+			// }
         }
             
     }
 }
 
+Servers::~Servers(){
+	std::for_each(serverFds.begin(), serverFds.end(), [](int fd){close(fd);});
+	}
 
 int main() {
 	std::vector<int> ports = {8080, 8081};
     try {
-		Server servers(ports);
+		Servers servers(ports);
         servers.pollServers(servers);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

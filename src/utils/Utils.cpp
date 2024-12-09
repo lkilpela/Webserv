@@ -83,5 +83,8 @@ namespace utils {
         }
         return str;
     }
-
+	template <typename T>
+	bool isInVector(T element, std::vector<T>& v){
+		return std::find(v.begin(), v.end(), element) != v.end();
+	}
 } // namespace utils

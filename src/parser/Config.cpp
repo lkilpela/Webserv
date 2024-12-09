@@ -7,6 +7,7 @@
 #include <stdexcept> // std::invalid_argument, std::out_of_range
 #include <unordered_map> // std::unordered_map
 #include <algorithm> // std::find
+#include <functional>
 
 // Define namespaces
 using std::ifstream;
