@@ -11,16 +11,16 @@
 #include <poll.h>
 #define BACKLOG 128
 
-class Servers {
+class Server {
 	public:
-		Servers() = default;
+		Server() = default;
 		// Server(const Config& config);
-		Servers(const std::vector<int> ports);
-		~Servers();
-		void pollServers(Servers&);
+		Server(const std::vector<int> ports);
+		~Server();
+		void listen();
 	
 	private:
-		std::vector<int> serverFds;
-		std::vector<pollfd> pollData;
-		std::vector<int> clientFds;
+		std::vector<int> _serverFds;
+		std::vector<pollfd> _pollData;
+		std::vector<int> _clientFds;
 };

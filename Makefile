@@ -13,9 +13,9 @@ CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 ################################################################################
 NAME			=	webserv
 INCLUDES		=	./include
-# M_HEADERS		=	$(INCLUDES)/Config.hpp \
-# 					$(INCLUDES)/Utils.hpp	\
-# 					$(INCLUDES)/Server.hpp
+M_HEADERS		=	$(INCLUDES)/Config.hpp \
+					$(INCLUDES)/Utils.hpp	\
+					$(INCLUDES)/Server.hpp
 OBJ_DIR			=	./obj
 SRC_DIR			=	./src
 SRCS			=	Config.cpp \
@@ -38,7 +38,7 @@ $(NAME): $(OBJECTS)
 	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
 	@echo "--------------------------------------------"
 
-$(OBJ_DIR)/%.o: %.cpp
+$(OBJ_DIR)/%.o: %.cpp $(M_HEADERS)
 	@mkdir -p $(OBJ_DIR)
 	@echo "Compiling $< to $@"
 	@$(CXX_FULL) -c $< -o $@

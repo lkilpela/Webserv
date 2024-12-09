@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 namespace utils {
     std::string trim(const std::string& str);
@@ -15,5 +16,7 @@ namespace utils {
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
 	template <typename T>
-	bool isInVector(T element, std::vector<T>& v);
+	bool isInVector(T element, std::vector<T>& v){
+		return std::find(v.begin(), v.end(), element) != v.end();
+	}
 } // namespace utils
