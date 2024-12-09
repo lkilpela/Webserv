@@ -16,6 +16,8 @@ namespace http {
 			std::unordered_map<std::string, std::string> _headers;
 			bool _isRedirected;
 
+			void _send(const void *buf, size_t size, int flags);
+
 		public:
 			Response(int clientSocket);
 			Response(const Response& response);
@@ -32,6 +34,7 @@ namespace http {
 
 			void sendFile(const std::string& filePath, std::function<void(std::exception&)> onError);
 			void sendStatus(http::Status status);
+			void sendText(const std::string& text);
 			std::string toString() const;
 
 	};

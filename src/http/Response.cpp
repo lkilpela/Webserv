@@ -53,35 +53,11 @@ Response& Response::setBody(const std::string& bodyContent) {
 	return *this;
 }
 
-// void Response::sendFile(const std::string& filePath, std::function<void(std::exception&)> onError) {
-// 	std::ifstream file(filePath);
-
-// 	if (!file.is_open()) {
-// 		onError()
-// 	}
-// }
-void Response::sendStatus(Status status) {
-	std::ostringstream stream;
-
-	stream
-		<< "HTTP/1.1 "
-		<< static_cast<std::uint16_t>(_status.code) << " "
-		<< _status.reason << "\r\n"
-		<< "Content-Type: text/plain\r\n"
-		<< "Content-Length: " << _status.reason.length() << "\r\n\r\n"
-		<< _status.reason;
-
-
-	// for (const auto& [name, value] : _headers) {
-	// 	stream << name << ": " << value << "\r\n";
-	// }
-
-	std::string data = stream.str();
-	size_t totalBytes = data.size();
+void Response::_send(const void *buf, size_t size, int flags) {
 	size_t totalBytesSent = 0;
 
-	while (totalBytesSent < totalBytes) {
-		ssize_t bytesSent = ::send(_clientSocket, data.c_str(), totalBytes - bytesSent, 0);
+	while (totalBytesSent < size) {
+		ssize_t bytesSent = ::send(_clientSocket, buf, size - bytesSent, flags);
 		if (bytesSent < 0) {
 			std::cerr << "Failed to send data at Response::sendStatus(): " << ::strerror(errno) << std::endl;
 			break;
@@ -92,6 +68,45 @@ void Response::sendStatus(Status status) {
 		std::cerr << "Failed to close socket at Response::sendStatus(): " << ::strerror(errno) << std::endl;
 	}
 }
+
+void Response::sendFile(const std::string& filePath, std::function<void(std::exception&)> onError) {
+	std::ifstream file(filePath);
+
+	// if (!file.is_open()) {
+	// 	onError()
+	// }
+}
+
+void Response::sendStatus(Status status) {
+	std::ostringstream stream;
+
+	stream
+		<< "HTTP/1.1 "
+		<< static_cast<std::uint16_t>(_status.code) << " "
+		<< _status.reason << "\r\n";
+
+	if (_headers.find("Content-Type") == _headers.end()) {
+		_headers["Content-Type"] = "text/plain";
+	}
+
+	if (_headers.find("Content-Length") == _headers.end()) {
+		_headers["Content-Length"] = std::to_string(_status.reason.length());
+	}
+
+	for (const auto& [name, value] : _headers) {
+		stream << name << ": " << value << "\r\n";
+	}
+
+	stream << "\r\n" << _status.reason;
+
+	std::string data = stream.str();
+	_send(data.c_str(), data.size(), 0);
+}
+
+void Response::sendText(const std::string& text) {
+	
+}
+
 // std::string Response::toString() const {
 // 	std::ostringstream responseStream;
 
