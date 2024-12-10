@@ -57,7 +57,7 @@ void Response::_send(const void *buf, size_t size, int flags) {
 	size_t totalBytesSent = 0;
 
 	while (totalBytesSent < size) {
-		ssize_t bytesSent = ::send(_clientSocket, buf, size - bytesSent, flags);
+		ssize_t bytesSent = ::send(_clientSocket, buf + totalBytesSent, size - totalBytesSent, flags);
 		if (bytesSent < 0) {
 			std::cerr << "Failed to send data at Response::sendStatus(): " << ::strerror(errno) << std::endl;
 			break;
@@ -104,7 +104,7 @@ void Response::sendStatus(Status status) {
 }
 
 void Response::sendText(const std::string& text) {
-	
+
 }
 
 // std::string Response::toString() const {
