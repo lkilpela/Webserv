@@ -53,7 +53,43 @@ Response& Response::setBody(const std::string& bodyContent) {
 	return *this;
 }
 
+void Response::_sendHeaders(int flags) {
+	std::ostringstream stream;
+
+	stream
+		<< "HTTP/1.1"
+		<< " " << static_cast<std::uint16_t>(_status.code) << " "
+		<< _status.reason << "\r\n";
+
+	for (const auto& [name, value] : _headers) {
+		stream << name << ": " << value << "\r\n";
+	}
+
+	stream << "\r\n";
+
+	std::string result = stream.str();
+	size_t size = result.size();
+	size_t totalBytesSent = 0;
+
+	while (totalBytesSent < size) {
+		ssize_t bytesSent = ::send(_clientSocket, result.c_str() + totalBytesSent, size - totalBytesSent, flags);
+		if (bytesSent < 0) {
+			std::cerr << "Failed to send headers: " << ::strerror(errno) << std::endl;
+			break;
+		}
+		totalBytesSent += static_cast<size_t>(bytesSent);
+	}
+
+	if (::close(_clientSocket) < 0) {
+		std::cerr << "Failed to close socket at Response::sendStatus(): " << ::strerror(errno) << std::endl;
+	}
+}
+
 void Response::_send(const void *buf, size_t size, int flags) {
+	if (!buf || size == 0) {
+		return;
+	}
+
 	size_t totalBytesSent = 0;
 
 	while (totalBytesSent < size) {
@@ -64,6 +100,7 @@ void Response::_send(const void *buf, size_t size, int flags) {
 		}
 		totalBytesSent += static_cast<size_t>(bytesSent);
 	}
+
 	if (::close(_clientSocket) < 0) {
 		std::cerr << "Failed to close socket at Response::sendStatus(): " << ::strerror(errno) << std::endl;
 	}

@@ -19,6 +19,24 @@ namespace http {
 			void _send(const void *buf, size_t size, int flags);
 
 		public:
+			enum class Header {
+				Age
+   				Cache-Control
+   				Expires
+   				Date
+   				Location
+   				Retry-After
+   				Vary
+   				Warning
+				ETag
+   				Last-Modified
+				WWW-Authenticate
+				Proxy-Authenticate
+				Accept-Ranges
+				Allow
+				Server
+			};
+
 			Response(int clientSocket);
 			Response(const Response& response);
 			~Response() = default;

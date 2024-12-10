@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <optional>
 #include "Uri.hpp"
+#include "Header.hpp"
 
 namespace http {
 	class Request {
@@ -18,6 +19,36 @@ namespace http {
 			bool _isDirectory;
 
 		public:
+			struct Header : public BaseHeader {
+				enum Enum {
+					CACHE_CONTROL,
+					EXPECT,
+					HOST,
+					MAX_FORWARDS,
+					PRAGMA,
+					RANGE,
+					TE,
+
+					IF_MATCH,
+					IF_NONE_MATCH,
+					IF_MODIFIED_SINCE,
+					IF_UNMODIFIED_SINCE,
+					IF_RANGE,
+
+					ACCEPT,
+					ACCEPT_CHARSET,
+					ACCEPT_ENCODING,
+					ACCEPT_LANGUAGE,
+
+					AUTHORIZATION,
+					PROXY_AUTHORIZATION,
+					FROM,
+					REFERER,
+					USER_AGENT
+
+				};
+			};
+
 			Request(int clientSocket);
 			Request(const Request& request) = default;
 			~Request() = default;
@@ -41,4 +72,8 @@ namespace http {
 
 			// static std::variant<Request, HttpError> create(int clientSocket);
 	};
+}
+
+int main() {
+	http:Request::Header::
 }
