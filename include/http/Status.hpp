@@ -4,6 +4,7 @@
 #include <string>
 
 namespace http {
+
 	struct Status final {
 		enum class Code : std::uint16_t {
 			CONTINUE = 100,
@@ -52,10 +53,13 @@ namespace http {
    			GATEWAY_TIMEOUT = 504,
    			HTTP_VERSION_NOT_SUPPORTED = 505
 		};
+		
 		Code code;
 		std::string reason;
 
 		Status(Code statusCode);
-		static std::string getReason(Code code);
+
+		static constexpr const char* getReason(Code code);
 	};
+
 }
