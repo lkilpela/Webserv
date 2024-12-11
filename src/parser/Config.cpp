@@ -1,3 +1,4 @@
+#include "Server.hpp"
 #include "Config.hpp"
 #include "Utils.hpp"
 #include <fstream> // std::ifstream, std::getline
@@ -271,10 +272,25 @@ void ConfigParser::printConfig(const Config& config) {
     }
 }
 
+
+void initServers(const Config& config) {
+	std::vector<Server> servers;
+    for (const auto& serverConfig : config.servers) {
+        Server server(serverConfig.host, serverConfig.port);
+        servers.push_back(server);
+    }
+
+    // Start all servers
+    for (auto& server : servers) {
+        server.start();
+    }
+}
+
 // Function to load the configuration
 void ConfigParser::load(const string& filePath) {
     Config config;
     ConfigParser parser;
     parser.parseConfig(filePath, config);
-    parser.printConfig(config);
+    //parser.printConfig(config);
+    initServers(config);
 }
