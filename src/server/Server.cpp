@@ -6,6 +6,9 @@ Server::Server(const std::vector<int> ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)            
 			throw std::runtime_error("Failed to create socket");
+		int flag = fcntl(serverFd, F_GETFL, 0);
+		if (flag == -1 || fcntl(serverFd, F_SETFL, flag | O_NONBLOCK) == -1)
+			throw std::runtime_error("Failed to create nonblocking");
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
@@ -22,7 +25,7 @@ Server::Server(const std::vector<int> ports) {
 void Server::listen(){
     // for (int i = 0; i < Servers.pollData.size(); i++)
     //     std::cout << Servers.pollData[i].fd << " " << Servers.serverFds[i] << std::endl;
-	std::for_each(_serverFds.begin(), _serverFds.end(), [](int fd){close(fd);});
+	// std::for_each(_serverFds.begin(), _serverFds.end(), [](int fd){close(fd);});
 	while (true){
         if (::poll(_pollData.data(), _pollData.size(), 0) == -1)
             throw std::runtime_error("Poll failed");
@@ -37,17 +40,16 @@ void Server::listen(){
 						std::cerr << "accept failed" << std::endl;
 						continue;
 					}
-				}
-				// pollfd clientFd = {clientFd, POLLIN | POLLOUT, 0}
-				
+					pollfd clientPollData {clientFd, POLLIN | POLLOUT, 0};
+					_pollData.push_back(clientPollData);
+				}				
 			}
-			// else(Servers.pollData[i].revents & POLLOUT){
+			else if(_pollData[i].revents & POLLOUT){
 				//http::Request request(clientFd);
 				//http::Response response(clientFd);
 				// process(request, response); CGI in here 
-			// }
-        }
-            
+			}
+        }       
     }
 }
 
