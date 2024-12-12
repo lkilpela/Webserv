@@ -45,6 +45,7 @@ void Server::listen(){
 				}				
 			}
 			else if(_pollData[i].revents & POLLOUT){
+				//timeout
 				//http::Request request(clientFd);
 				//http::Response response(clientFd);
 				// process(request, response); CGI in here 
