@@ -52,7 +52,7 @@ std::string executeCGIScript(const std::string &scriptPath, const std::map<std::
         perror("execve");
         exit(1);
     } else {
-        // Parent process: Read from the pipe
+/*         // Parent process: Read from the pipe
         close(pipefd[1]); // Close write end in parent process
 
         char buffer[4096];
@@ -69,5 +69,5 @@ std::string executeCGIScript(const std::string &scriptPath, const std::map<std::
         waitpid(pid, &status, 0);
 
         return output;
-    }
+    } */
 }
