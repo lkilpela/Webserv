@@ -11,7 +11,7 @@ namespace http {
 	class Request {
 		private:
 			std::string _method;
-			http::Uri _uri;
+			Uri _uri;
 			std::string _version;
 			std::unordered_map<std::string, std::string> _headers;
 			std::vector<std::uint8_t> _buffer;
@@ -25,7 +25,7 @@ namespace http {
 			Request& operator=(const Request& request) = default;
 
 			const std::string& getMethod() const;
-			const http::Uri& getUri() const;
+			const Uri& getUri() const;
 			const std::string& getVersion() const;
 			// const std::string& getBody() const;
 
@@ -33,7 +33,7 @@ namespace http {
 			bool Request::parse();
 
 			Request& setMethod(const std::string& method);
-			Request& setUri(const http::Uri& uri);
+			Request& setUri(const Uri& uri);
 			Request& setVersion(const std::string& version);
 			Request& setHeader(Header header, const std::string& value);
 

@@ -8,7 +8,7 @@
 namespace http {
 
 	const std::string& Request::getMethod() const { return _method; }
-	const http::Uri& Request::getUri() const { return _uri; }
+	const Uri& Request::getUri() const { return _uri; }
 	const std::string& Request::getVersion() const { return _version; }
 	// const std::string& Request::getBody() const { return _body; }
 
@@ -27,7 +27,7 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setUri(const http::Uri& uri) {
+	Request& Request::setUri(const Uri& uri) {
 		_uri = uri;
 		return *this;
 	}
