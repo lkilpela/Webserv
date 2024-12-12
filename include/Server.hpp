@@ -31,7 +31,7 @@ class Server {
 		{
 			std::cout << "Initialzing server at " << host << ":" << port << std::endl;
 		}
-		Server(const std::vector<int> ports);
+		Server(std::vector<int> ports);
 		~Server();
 		void listen();
 		void start();

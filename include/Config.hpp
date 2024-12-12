@@ -25,7 +25,7 @@ struct Location {
 
 struct ServerConfig {
     string host;
-    unsigned int port;
+    int port;
     string serverName;
     map<int, string> errorPages;
     string clientMaxBodySize;
@@ -34,6 +34,7 @@ struct ServerConfig {
 
 // Multi servers struct
 struct Config {
+    vector<int> ports;
     vector<ServerConfig> servers;
 };
 

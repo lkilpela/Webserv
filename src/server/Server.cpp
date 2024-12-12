@@ -17,6 +17,7 @@ int setNonBlocking(int fd) {
 
 Server::Server(const std::vector<int> ports) {
     for (int port : ports) {
+        std::cout << "port: " << port << std::endl;
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)            
 			throw std::runtime_error("Failed to create socket");
@@ -25,7 +26,7 @@ Server::Server(const std::vector<int> ports) {
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
-        address.sin_port = ::htons(port);
+        address.sin_port = htons(port);
         if (::bind(serverFd, (struct sockaddr*)&address, sizeof(address)) == -1)
 	        throw std::runtime_error("Failed to bind socket on port " + std::to_string(port));
         if (::listen(serverFd, BACKLOG) == -1)
@@ -59,7 +60,7 @@ void Server::listen(){
 					pollfd clientPollData {clientFd, POLLIN, 0};
 					_pollData.push_back(clientPollData);
 				} else {
-					//handle client request
+/* 					//handle client request
 					char buffer[4096];
                     ssize_t bytes_read = recv(_pollData[i].fd, buffer, sizeof(buffer) - 1, 0);
                     if (bytes_read <= 0) {
@@ -70,16 +71,16 @@ void Server::listen(){
                         buffer[bytes_read] = '\0';
                         clientRequests[_pollData[i].fd] = buffer;
                         _pollData[i].events = POLLOUT; // Prepare for response
-                    }
+                    } */
                 }			
 			} else if(_pollData[i].revents & POLLOUT){
-				// Send response
+/* 				// Send response
                 const std::string& request = clientRequests[_pollData[i].fd];
                 std::string response = handleRequest(request, config);
                 send(_pollData[i].fd, response.c_str(), response.size(), 0);
                 close(_pollData[i].fd);
                 _pollData.erase(_pollData.begin() + i);
-                --i;
+                --i; */
 
 			}
         }       
@@ -103,7 +104,7 @@ Server::~Server(){
 //     return 0;
 // }
 
-void Server::handleRequest(const Request& request, const Config& config) {
+/* void Server::handleRequest(const Request& request, const Config& config) {
     // Find the server that matches the request host and port
     for (const auto& server : config.servers) {
         if (server.host == request.host && server.port == request.port) {
@@ -128,4 +129,4 @@ void Server::handleRequest(const Request& request, const Config& config) {
         }
     }
     cout << "Server not found" << endl;
-}
+} */

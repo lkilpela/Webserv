@@ -12,8 +12,9 @@ int main(int argc, char **argv) {
 
 	try {
 		ConfigParser parser;
+		Config config;
 		parser.load(argv[1]);
-		//Server server(config);
+		Server server(config.ports);
 		///server.listen();
 	} catch (std::exception& e) {
 		std::cerr << e.what() << std::endl;
