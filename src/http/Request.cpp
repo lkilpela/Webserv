@@ -12,7 +12,12 @@ namespace http {
 	}
 
 	void Request::parse() {
-
+		const std::vector<uint8_t> headerEnd = {'\r', '\n', '\r', '\n'};
+		auto it = std::search(_buffer.begin(), _buffer.end(), headerEnd.begin(), headerEnd.end());
+		if (it == _buffer.end()) {
+			// throw BadRequest("Headers not terminated with \\r\\n\\r\\n");
+		}
+		std::distance(_buffer.begin(), it) + headerEnd.size();
 	}
 
 	const std::string& Request::getMethod() const {

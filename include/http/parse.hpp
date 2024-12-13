@@ -30,7 +30,7 @@ namespace http {
 	};
 
 	template <typename Iterator>
-	static Uri parseUri(const Iterator begin, const Iterator end) {
+	Uri parseUri(const Iterator begin, const Iterator end) {
 		Uri result;
 
 		// RFC 3986, 3.1. Scheme
