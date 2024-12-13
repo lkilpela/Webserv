@@ -9,6 +9,8 @@
 #include <algorithm> // std::find
 
 // Define namespaces
+using std::string;
+using std::vector;
 using std::ifstream;
 using std::istringstream;
 using std::cout;
