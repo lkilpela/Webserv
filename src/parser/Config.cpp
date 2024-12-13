@@ -1,5 +1,7 @@
 #include "Config.hpp"
 #include "Utils.hpp"
+#include "Error.hpp"
+#include <functional> // std::function
 #include <fstream> // std::ifstream, std::getline
 #include <iostream> // std::cout, std::endl
 #include <sstream> // std::istringstream
@@ -25,7 +27,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
     static const ParserMap globalParsers = {
         {"host", [&](const string &value) {
             if (!utils::isValidIP(value)) {
-                throw std::invalid_argument("Invalid IP address: " + value);
+                throw ConfigException("Invalid IP address: " + value, std::errc::invalid_argument);
             }
             config.host = value;
         }},
