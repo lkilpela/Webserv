@@ -8,5 +8,5 @@ namespace http {
 
 	};
 
-	static constexpr const char* getMimeType(const std::string& extension);
+	constexpr const char* getMimeType(const std::string& extension);
 }

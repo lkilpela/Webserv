@@ -7,19 +7,32 @@
 
 namespace http {
 
-	const std::string& Request::getMethod() const { return _method; }
-	const Uri& Request::getUri() const { return _uri; }
-	const std::string& Request::getVersion() const { return _version; }
-	// const std::string& Request::getBody() const { return _body; }
-
-	void Request::append(const char* data) {
-		if (data != NULL) {
-			_buffer.insert(_buffer.end(), data, data + ::strlen(data));
-		}
+	void Request::append(const char* data, size_t size) {
+		_buffer.insert(_buffer.end(), data, data + size);
 	}
 
-	bool Request::parse() {
+	void Request::parse() {
 
+	}
+
+	const std::string& Request::getMethod() const {
+		return _method;
+	}
+
+	const Uri& Request::getUri() const {
+		return _uri;
+	}
+
+	const std::string& Request::getVersion() const {
+		return _version;
+	}
+
+	const std::span<const std::uint8_t> Request::getBody() const {
+		return std::span<const std::uint8_t>(_buffer);
+	}
+
+	const std::string& Request::getBodyAsFile() const {
+		return _filePath;
 	}
 
 	Request& Request::setMethod(const std::string& method) {
@@ -41,11 +54,6 @@ namespace http {
 		_headers[stringOf(header)] = value;
 		return *this;
 	}
-
-	// Request& Request::setBody(const std::string& bodyContent) {
-	// 	_body = bodyContent;
-	// 	return *this;
-	// }
 
 	bool Request::isDirectory() const { return _isDirectory; }
 	bool Request::isCgi() const { return _isCgi; }

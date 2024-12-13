@@ -27,7 +27,7 @@ namespace http {
 		if (extension == "js") return "text/javascript";
 		if (extension == "json") return "application/json";
 		if (extension == "jsonld") return "application/ld+json";
-		if (extension == "mid" || extension == "midi") return "audio/midi, audio/x-midi";
+		if (extension == "mid" || extension == "midi") return "audio/midi";
 		if (extension == "mjs") return "text/javascript";
 		if (extension == "mp3") return "audio/mpeg";
 		if (extension == "mp4") return "video/mp4";
