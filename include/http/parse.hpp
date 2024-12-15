@@ -18,7 +18,7 @@ namespace http {
 	 * - fragment = `section2`
 	 *
 	*/
-	struct Uri final {
+	struct Url final {
 		std::string scheme;
         std::string user;
         std::string password;
@@ -30,7 +30,7 @@ namespace http {
 	};
 
 	template <typename Iterator>
-	Uri parseUri(const Iterator begin, const Iterator end) {
+	Url parseUri(const Iterator begin, const Iterator end) {
 		Uri result;
 
 		// RFC 3986, 3.1. Scheme

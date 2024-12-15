@@ -3,7 +3,18 @@
 #include <array>
 #include <algorithm>
 #include <sys/socket.h>
+#include "Utils.hpp"
 #include "http/Request.hpp"
+
+// Behavior of recv()
+// When recv() returns:
+// > 0: Data was successfully received.
+// 0: The peer has performed an orderly shutdown (connection closed).
+// < 0: An error occurred. If the error is EAGAIN or EWOULDBLOCK, recv() does not block and returns -1 immediately.
+// Approach
+// To detect non-blocking cases (EAGAIN/EWOULDBLOCK):
+
+// If recv() returns -1 and the socket is non-blocking, assume it’s a temporary error and retry when POLLIN is triggered again.
 
 namespace http {
 
@@ -12,20 +23,37 @@ namespace http {
 	}
 
 	void Request::parse() {
-		const std::vector<uint8_t> headerEnd = {'\r', '\n', '\r', '\n'};
-		auto it = std::search(_buffer.begin(), _buffer.end(), headerEnd.begin(), headerEnd.end());
-		if (it == _buffer.end()) {
-			// throw BadRequest("Headers not terminated with \\r\\n\\r\\n");
-		}
-		std::distance(_buffer.begin(), it) + headerEnd.size();
+		using Iterator = std::vector<uint8_t>::iterator;
+		const Iterator begin = _buffer.begin();
+		const Iterator end = _buffer.end();
+		std::size_t pos = utils::findBlankLine<Iterator>(begin, end);
+		std::string headerSection(begin, begin + pos);
+		std::istringstream stream(headerSection);
+		std::string line;
+		std::getline(stream, line);
+		// update _buffer to hold request body
+		_buffer.erase(begin, begin + pos);
+	}
+
+	void Request::reset() {
+		_method.clear();
+		_url = Url();
+		_version.clear();
+		_headers.clear();
+		_buffer.clear();
+		_filePath.clear();
+		_isComplete = false;
+		_isCgi = false;
+		_isDirectory = false;
+		_numberOfRetries = 0;
 	}
 
 	const std::string& Request::getMethod() const {
 		return _method;
 	}
 
-	const Uri& Request::getUri() const {
-		return _uri;
+	const Url& Request::getUrl() const {
+		return _url;
 	}
 
 	const std::string& Request::getVersion() const {
@@ -45,8 +73,8 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setUri(const Uri& uri) {
-		_uri = uri;
+	Request& Request::setUrl(const Url& url) {
+		_url = url;
 		return *this;
 	}
 
@@ -60,8 +88,17 @@ namespace http {
 		return *this;
 	}
 
-	bool Request::isDirectory() const { return _isDirectory; }
-	bool Request::isCgi() const { return _isCgi; }
+	bool Request::isComplete() const {
+		return _isComplete;
+	}
+
+	bool Request::isCgi() const {
+		return _isCgi;
+	}
+
+	bool Request::isDirectory() const {
+		return _isDirectory;
+	}
 
 	// std::optional<Request> Request::parse(
 	// 	const std::string& rawRequest,

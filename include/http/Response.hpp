@@ -16,7 +16,9 @@ namespace http {
 			std::string _url;
 			std::string _body;
 			std::unordered_map<std::string, std::string> _headers;
-			bool _isRedirected;
+			std::size_t _totalBytesSent { 0 };
+			bool _isRedirected { false };
+			bool _isComplete { false };
 
 			std::string _composeHeaders() const;
 			void _send(const void *buf, const size_t size, int flags);
@@ -34,9 +36,11 @@ namespace http {
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(const std::string& bodyContent);
 
-			void sendFile(const std::string& filePath, std::function<void(std::exception&)> onError);
+			void sendFile(const std::string& filePath);
 			void sendStatus(http::Status status);
 			void sendText(const std::string& text);
+
+			bool isComplete() const;
 	};
 
 }

@@ -8,7 +8,17 @@
 #include <errno.h>
 #include "http/Response.hpp"
 
+//  Behavior of send()
+// When send() returns:
+// >= 0: The number of bytes successfully sent.
+// < 0: An error occurred. If the error is EAGAIN or EWOULDBLOCK, send() does not block and returns -1.
+// Approach
+// To detect non-blocking cases (EAGAIN/EWOULDBLOCK):
+
+// If send() returns -1, assume the socket is not ready for writing, and rely on POLLOUT to resume sending.
+
 namespace http {
+
 	Response::Response(int clientSocket) : _clientSocket(clientSocket) {}
 
 	// Response::Response(const Response& response)
@@ -66,32 +76,20 @@ namespace http {
 	}
 
 	void Response::_send(const void *buf, const size_t size, int flags) {
-		if (!buf || size == 0) {
-			return;
+		const ssize_t bytesSent = ::send(_clientSocket, buf + _totalBytesSent, size - _totalBytesSent, flags);
+		if (bytesSent < 0) {
+			// throw SocketException("Failed to send data");
 		}
-
-		size_t totalBytesSent = 0;
-
-		while (totalBytesSent < size) {
-			const ssize_t bytesSent = ::send(_clientSocket, buf + totalBytesSent, size - totalBytesSent, flags);
-			if (bytesSent < 0) {
-				std::cerr << "Failed to send data at Response::sendStatus(): " << ::strerror(errno) << std::endl;
-				break;
-			}
-			totalBytesSent += static_cast<size_t>(bytesSent);
-		}
-
-		if (::close(_clientSocket) < 0) {
-			std::cerr << "Failed to close socket at Response::sendStatus(): " << ::strerror(errno) << std::endl;
+		_totalBytesSent += static_cast<std::size_t>(bytesSent);
+		if (_totalBytesSent >= size) {
+			_isComplete = true;
 		}
 	}
 
-	void Response::sendFile(const std::string& filePath, std::function<void(std::exception&)> onError) {
+	void Response::sendFile(const std::string& filePath) {
 		std::ifstream file(filePath);
 
-		// if (!file.is_open()) {
-		// 	onError()
-		// }
+		
 	}
 
 	void Response::sendStatus(Status status) {
@@ -106,5 +104,10 @@ namespace http {
 	void Response::sendText(const std::string& text) {
 
 	}
+
+	bool Response::isComplete() const {
+		return _isComplete;
+	}
+
 }
 

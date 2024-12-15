@@ -13,13 +13,15 @@ namespace http {
 	class Request {
 		private:
 			std::string _method;
-			Uri _uri;
+			Url _url;
 			std::string _version;
 			std::unordered_map<std::string, std::string> _headers;
 			std::vector<std::uint8_t> _buffer;
 			std::string _filePath;
-			bool _isCgi;
-			bool _isDirectory;
+			bool _isComplete { false };
+			bool _isCgi { false };
+			bool _isDirectory { false };
+			uint8_t _numberOfRetries { 0 };
 
 		public:
 			Request() = default;
@@ -28,21 +30,23 @@ namespace http {
 			Request& operator=(const Request& request) = default;
 
 			void append(const char* data, size_t size);
-			void Request::parse();
+			void parse();
+			void reset();
 
 			const std::string& getMethod() const;
-			const Uri& getUri() const;
+			const Url& getUrl() const;
 			const std::string& getVersion() const;
 			const std::span<const std::uint8_t> getBody() const;
 			const std::string& getBodyAsFile() const;
 
 			Request& setMethod(const std::string& method);
-			Request& setUri(const Uri& uri);
+			Request& setUrl(const Url& url);
 			Request& setVersion(const std::string& version);
 			Request& setHeader(Header header, const std::string& value);
 
-			bool isDirectory() const;
+			bool isComplete() const;
 			bool isCgi() const;
+			bool isDirectory() const;
 	};
 
 }
