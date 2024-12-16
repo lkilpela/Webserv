@@ -13,18 +13,18 @@ namespace utils {
     bool parseBool(const string &value) {
         if (value == "on") return true;
         if (value == "off") return false;
-        throw ConfigError(EINVAL);
+        throw ConfigError(EINVAL, "Invalid boolean value");
     }
 
     int parsePort(const string &value) {
         std::regex port_regex("^[0-9]+$");
         if (!std::regex_match(value, port_regex)) {
-            throw ConfigError(EINVAL);
+            throw ConfigError(EINVAL, "Invalid port number");
         }
 
         int port = std::stoi(value);
         if (port <= 0 || port > 65535) {
-            throw ConfigError(ERANGE);
+            throw ConfigError(ERANGE, "Port number out of range");
         }
         return port;
     }
@@ -33,7 +33,7 @@ namespace utils {
         vector<string> validMethods = {"GET", "POST", "DELETE"};
         for (const auto &method : methods) {
             if (std::find(validMethods.begin(), validMethods.end(), method) == validMethods.end()) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid method");
             }
         }
     }
@@ -63,10 +63,10 @@ namespace utils {
     void validateErrorPage(const string &code, const string &path) {
         std::regex code_regex("^[1-5][0-9][0-9]$");
         if (!std::regex_match(code, code_regex)) {
-            throw ConfigError(EINVAL);
+            throw ConfigError(EINVAL, "Invalid error code");
         }
         if (!isValidFilePath(path)) {
-            throw ConfigError(EINVAL);
+            throw ConfigError(EINVAL, "Invalid error page path");
         }
     }
 
