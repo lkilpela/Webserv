@@ -1,9 +1,8 @@
 #pragma once
 
 #include <string>
-#include <system_error>
-#include <exception>
 #include <iostream>
+#include <cerrno> 
 
 class WSException {
 public:
@@ -19,8 +18,12 @@ private:
 // Default ConfigError exception
 class ConfigError : public WSException {
 public:
-    ConfigError(int err)
-    : WSException(err) {}
+    ConfigError(int err, const std::string& msg)
+    : WSException(err), message(msg) {}
+
+    const char* what() const noexcept { return message.c_str(); }
+private:
+    std::string message;
 };
 
 class NetworkError : public WSException {
@@ -81,4 +84,42 @@ public:
     - Unexpected errors
     - Memory allocation failures
     - Unhandled exceptions
+*/
+
+/* COMMON ERROR CODES:
+
+- `recv`: 
+  - `EAGAIN` or `EWOULDBLOCK`: The socket is marked non-blocking and the receive operation would block.
+  - `EBADF`: The socket argument is not a valid file descriptor.
+  - `ECONNRESET`: Connection reset by peer.
+  - `EFAULT`: The receive buffer pointer is outside the process's address space.
+  - `EINTR`: The receive was interrupted by delivery of a signal before any data was available.
+  - `EINVAL`: Invalid argument passed.
+  - `ENOTCONN`: The socket is not connected.
+  - `ENOTSOCK`: The file descriptor does not refer to a socket.
+
+- `socket`:
+  - `EACCES`: Permission to create a socket of the specified type and/or protocol is denied.
+  - `EAFNOSUPPORT`: The implementation does not support the specified address family.
+  - `EINVAL`: Unknown protocol, or protocol family not available.
+  - `EMFILE`: The per-process limit on the number of open file descriptors has been reached.
+  - `ENFILE`: The system-wide limit on the total number of open files has been reached.
+  - `ENOBUFS` or `ENOMEM`: Insufficient memory is available. The socket cannot be created until sufficient resources are freed.
+  - `EPROTONOSUPPORT`: The protocol type or the specified protocol is not supported within this domain.
+
+- `bind`:
+  - `EACCES`: The address is protected, and the user is not the superuser.
+  - `EADDRINUSE`: The given address is already in use.
+  - `EBADF`: The socket argument is not a valid file descriptor.
+  - `EINVAL`: The socket is already bound to an address.
+  - `ENOTSOCK`: The file descriptor does not refer to a socket.
+  - `EADDRNOTAVAIL`: The specified address is not available from the local machine.
+  - `EFAULT`: The address is outside the user's accessible address space.
+
+- `listen`:
+  - `EADDRINUSE`: Another socket is already listening on the same port.
+  - `EBADF`: The socket argument is not a valid file descriptor.
+  - `ENOTSOCK`: The file descriptor does not refer to a socket.
+  - `EOPNOTSUPP`: The socket is not of a type that supports the listen operation.
+
 */

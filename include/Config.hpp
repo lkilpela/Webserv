@@ -12,6 +12,7 @@ struct Location {
     std::string path;
     std::string root;
     std::string index;
+    std::string autoIndex;
     bool isAutoIndex;
     std::vector<std::string> methods;
     std::string cgiExtension;

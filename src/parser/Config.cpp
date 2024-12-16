@@ -27,13 +27,13 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
     static const ParserMap globalParsers = {
         {"host", [&](const string &value) {
             if (!config.host.empty() || !utils::isValidIP(value)) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid host");
             }
             config.host = value;
         }},
         {"port", [&](const string &value) {
             if (config.port != 0) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid port");
             }
             config.port = utils::parsePort(value);
         }},
@@ -49,7 +49,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
         }},
         {"client_max_body_size", [&](const string &value) {
             if (!config.clientMaxBodySize.empty() || !utils::isValidSize(value)) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid client_max_body_size");
             }
             config.clientMaxBodySize = value;
         }}
@@ -64,7 +64,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
         if (it != globalParsers.end()) {
             it->second(value);
         } else {
-            throw ConfigError(EINVAL);;
+            throw ConfigError(EINVAL, "Invalid directive in server block");
         }
     }
 }
@@ -73,26 +73,27 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
     static const ParserMap locationParsers = {
         {"root", [&](const string &value) {
             if (!currentLocation.root.empty() || !utils::isValidFilePath(value)) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid root");
             }
             currentLocation.root = value;
         }},
         {"index", [&](const string &value) {
             string fullPath = currentLocation.root + "/" + value;
             if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid index");
             }
             currentLocation.index = value;
         }},
         {"autoindex", [&](const string &value) {
-            if (currentLocation.isAutoIndex) {
-                throw ConfigError(EINVAL);
+            if (!currentLocation.autoIndex.empty()) {
+                throw ConfigError(EINVAL, "Invalid autoindex");
             }
+            currentLocation.autoIndex = value;
             currentLocation.isAutoIndex = utils::parseBool(value);
         }},
         {"methods", [&](const string &value) {
             if (!currentLocation.methods.empty()) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid methods");
             }
             istringstream iss(value);
             vector<string> methods;
@@ -105,19 +106,19 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
         }},
         {"cgi_extension", [&](const string &value) {
             if (!currentLocation.cgiExtension.empty()) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid cgi_extension");
             }
             currentLocation.cgiExtension = value;
         }},
         {"upload_dir", [&](const string &value) {
             if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(value)) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid upload_dir");
             }
             currentLocation.uploadDir = value;
         }},
         {"return", [&](const string &value) {
             if (!currentLocation.returnUrl.empty()) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid return");
             }
             istringstream iss(value);
             vector<string> returnParts;
@@ -126,7 +127,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
                 returnParts.push_back(part);
             }
             if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
-                throw ConfigError(EINVAL);
+                throw ConfigError(EINVAL, "Invalid return");
             }
             currentLocation.returnUrl = returnParts;
         }}
@@ -140,6 +141,8 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
         auto it = locationParsers.find(key);
         if (it != locationParsers.end()) {
             it->second(value);
+        } else {
+            throw ConfigError(EINVAL, "Invalid directive in location block");
         }
     }
 }
@@ -147,7 +150,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 void ConfigParser::parseConfig(const string &filename, Config& config) {
     ifstream file(filename);
     if (!file.is_open()) {
-        throw ConfigError(ENOENT);
+        throw ConfigError(ENOENT, "Invalid file path");
     }
     string line;
     ServerConfig currentServer;
@@ -163,7 +166,7 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
         // Start of the http block
         if (line == "http {") {
             if (inHttpBlock) {
-                throw ConfigError(EINVAL); // Nested http block
+                throw ConfigError(EINVAL, "Nested http block");
             }
             inHttpBlock = true;
             continue;
@@ -182,7 +185,7 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
             } else if (inHttpBlock) {
                 inHttpBlock = false;
             } else {
-                throw ConfigError(EINVAL); // Invalid block closure
+                throw ConfigError(EINVAL, "Invalid block closure");
             }
             continue;
         }
@@ -190,10 +193,10 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
         // Start of a server block
         if (line == "server {") {
             if (!inHttpBlock) {
-                throw ConfigError(EINVAL); // Server block outside of http block
+                throw ConfigError(EINVAL, "Server block outside of http block");
             }
             if (inServerBlock) {
-                throw ConfigError(EINVAL); // Nested server block
+                throw ConfigError(EINVAL, "Nested server block");
             }
             inServerBlock = true;
             currentServer = ServerConfig(); // Initialize a new server block
@@ -203,10 +206,10 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
         // Start of a location block
         if (line.find("location ") == 0) {
             if (!inServerBlock) {
-                throw ConfigError(EINVAL); // Location block outside of server block
+                throw ConfigError(EINVAL, "Location block outside of server block");
             }
             if (inLocationBlock) {
-                throw ConfigError(EINVAL); // Nested location block
+                throw ConfigError(EINVAL, "Nested location block");
             }
             inLocationBlock = true;
             istringstream iss(line);
@@ -223,21 +226,21 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
             parseGlobal(line, currentServer);
         // Invalid directive outside of recognized blocks
         } else if (inHttpBlock) {
-            throw ConfigError(EINVAL); // Invalid directive outside of recognized blocks
+            throw ConfigError(EINVAL, "Invalid directive outside of recognized blocks");
         } else {
-            throw ConfigError(EINVAL); // Invalid directive outside of recognized blocks
+            throw ConfigError(EINVAL, "Invalid directive outside of recognized blocks");
         }
     }
 
     // Final validations for unclosed blocks
     if (inHttpBlock) {
-        throw ConfigError(EINVAL); // Unclosed http block
+        throw ConfigError(EINVAL, "Unclosed http block");
     }
     if (inServerBlock) {
-        throw ConfigError(EINVAL); // Unclosed server block
+        throw ConfigError(EINVAL, "Unclosed server block");
     }
     if (inLocationBlock) {
-        throw ConfigError(EINVAL); // Unclosed location block
+        throw ConfigError(EINVAL, "Unclosed location block");
     }
 }
 
@@ -296,7 +299,7 @@ void ConfigParser::load(const string& filePath) {
         parseConfig(filePath, config);
         printConfig(config);
     } catch (const ConfigError& e) {
-        cout << "Error: " << e.code() << " " << e.code().message() << endl;
+        cout << "Error: " << e.code() << " " << e.what() << endl;
         
     }
 }
