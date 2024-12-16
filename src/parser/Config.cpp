@@ -85,9 +85,15 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
             currentLocation.index = value;
         }},
         {"autoindex", [&](const string &value) {
+            if (currentLocation.isAutoIndex) {
+                throw ConfigError(EINVAL);
+            }
             currentLocation.isAutoIndex = utils::parseBool(value);
         }},
         {"methods", [&](const string &value) {
+            if (!currentLocation.methods.empty()) {
+                throw ConfigError(EINVAL);
+            }
             istringstream iss(value);
             vector<string> methods;
             string method;
@@ -98,15 +104,21 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
             currentLocation.methods = methods;
         }},
         {"cgi_extension", [&](const string &value) {
+            if (!currentLocation.cgiExtension.empty()) {
+                throw ConfigError(EINVAL);
+            }
             currentLocation.cgiExtension = value;
         }},
         {"upload_dir", [&](const string &value) {
-            if (!utils::isValidFilePath(value)) {
+            if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(value)) {
                 throw ConfigError(EINVAL);
             }
             currentLocation.uploadDir = value;
         }},
         {"return", [&](const string &value) {
+            if (!currentLocation.returnUrl.empty()) {
+                throw ConfigError(EINVAL);
+            }
             istringstream iss(value);
             vector<string> returnParts;
             string part;
