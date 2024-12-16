@@ -2,30 +2,58 @@
 
 #include <string>
 #include <system_error>
+#include <exception>
 #include <iostream>
 
-template <typename T>
-class CustomException {
+class WSException {
 public:
-    CustomException(const std::string& message, std::errc errorCode)
-        : message(message), errorCode(errorCode) {}
+    WSException(std::errc err)
+    : errorCode(std::make_error_code(err)) {}
+    WSException(std::error_code errorCode)
+    : errorCode(errorCode) {}
+    virtual ~WSException() = default;
 
-    const std::string& what() const noexcept { return message; }
-    std::errc code() const noexcept { return errorCode; }
-
+    std::error_code code() const noexcept { return errorCode; }
 private:
-    std::string message;
-    std::errc errorCode;
+    std::error_code errorCode;
 };
 
+// Default ConfigError exception
+class CongigError : public WSException {
+public:
+    CongigError(std::errc err = std::errc::invalid_argument)
+    : WSException(err) {}
+};
 
-// Define specific error types
-struct ConfigError {};  // Tag for configuration errors
-struct NetworkError {}; // Tag for network errors
+class NetworkError : public WSException {
+public:
+    NetworkError(std::errc err = std::errc::address_in_use)
+    : WSException(err) {}
+};
 
-// Type aliases for specific exceptions
-using ConfigException = CustomException<ConfigError>;
-using NetworkException = CustomException<NetworkError>;
+class RequestError : public WSException {
+public:
+    RequestError(std::errc err = std::errc::invalid_argument)
+    : WSException(err) {}
+};
+
+class ResponseError : public WSException {
+public:
+    ResponseError(std::errc err = std::errc::invalid_argument)
+    : WSException(err) {}
+};
+
+class RuntimeError : public WSException {
+public:
+    RuntimeError(std::errc err = std::errc::operation_not_permitted)
+    : WSException(err) {}
+};
+
+class FileSystemError : public WSException {
+public:
+    FileSystemError(std::errc err = std::errc::no_such_file_or_directory)
+    : WSException(err) {}
+};
 
 
 /* PRIMARY EXCEPTION CLASSES

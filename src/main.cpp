@@ -17,9 +17,9 @@ int main(int argc, char **argv) {
 		
 		//Server server(config);
 		///server.listen();
-	} catch (const ConfigException& e) {
-		std::cerr << "Error: " << e.what() << " (code: " << static_cast<int>(e.code()) << ")" << std::endl;
-	} catch (std::exception& e) {
+	} catch (const WSException& e) {
+		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
+	} catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;
 		return 1;
 	}
