@@ -4,45 +4,42 @@
 #include <vector>
 #include <map>
 
-using std::string;
-using std::vector;
-using std::map;
-
 # define YELLOW "\033[0;33m"
 # define RESET "\033[0m"
 
 // Server struct
 struct Location {
-    string path;
-    string root;
-    string index;
+    std::string path;
+    std::string root;
+    std::string index;
+    std::string autoIndex;
     bool isAutoIndex;
-    vector<string> methods;
-    string cgiExtension;
-    string uploadDir;
-    vector<string> returnUrl;
+    std::vector<std::string> methods;
+    std::string cgiExtension;
+    std::string uploadDir;
+    std::vector<std::string> returnUrl;
 };
 
 struct ServerConfig {
-    string host;
+    std::string host;
     unsigned int port;
-    string serverName;
-    map<int, string> errorPages;
-    string clientMaxBodySize;
-    vector<Location> locations;
+    std::string serverName;
+    std::map<int, std::string> errorPages;
+    std::string clientMaxBodySize;
+    std::vector<Location> locations;
 };
 
 // Multi servers struct
 struct Config {
-    vector<ServerConfig> servers;
+    std::vector<ServerConfig> servers;
 };
 
 class ConfigParser {
 public:
     // Function to parse the configuration text
-    void parseConfig(const string &filename, Config &config);
-    void parseGlobal(const string &line, ServerConfig &config);
-    void parseLocation(const string &line, Location &currentLocation);
-	void load(const string& filePath);
+    void parseConfig(const std::string &filename, Config &config);
+    void parseGlobal(const std::string &line, ServerConfig &config);
+    void parseLocation(const std::string &line, Location &currentLocation);
+	void load(const std::string& filePath);
 	void printConfig(const Config& config);
 };
