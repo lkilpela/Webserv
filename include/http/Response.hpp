@@ -10,8 +10,7 @@ namespace http {
 
 	class Response {
 		private:
-			int _clientSocket;
-			http::Status _status { http::Status::Code::ACCEPTED };
+			http::Status _status { Status::Code::ACCEPTED };
 			std::string _type;
 			std::string _url;
 			std::string _body;
@@ -21,10 +20,10 @@ namespace http {
 			bool _isComplete { false };
 
 			std::string _composeHeaders() const;
-			void _send(const void *buf, const size_t size, int flags);
+			void _send(int clientSocket, const void *buf, const size_t size, int flags);
 
 		public:
-			Response(int clientSocket);
+			Response() = default;
 			Response(const Response& response);
 			~Response() = default;
 
@@ -37,7 +36,7 @@ namespace http {
 			Response& setBody(const std::string& bodyContent);
 
 			void sendFile(const std::string& filePath);
-			void sendStatus(http::Status status);
+			void sendStatus(int clientSocket, Status status);
 			void sendText(const std::string& text);
 
 			bool isComplete() const;
