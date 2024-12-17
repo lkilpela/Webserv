@@ -14,14 +14,14 @@
 // 	try {
 // 		ConfigParser parser;
 // 		parser.load(argv[1]);
-		
+
 		//Server server(config);
 		///server.listen();
-	} catch (const WSException& e) {
-		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
-	} catch (const std::exception& e) {
-		std::cerr << e.what() << std::endl;
-		return 1;
-	}
-	return 0;
-}
+// 	} catch (const WSException& e) {
+// 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
+// 	} catch (const std::exception& e) {
+// 		std::cerr << e.what() << std::endl;
+// 		return 1;
+// 	}
+// 	return 0;
+// }
