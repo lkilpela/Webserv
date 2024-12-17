@@ -38,7 +38,7 @@ namespace utils {
 		static constexpr std::vector<std::uint8_t> delimiter = {'\r', '\n', '\r', '\n'};
 		auto pos = std::search(begin, end, delimiter.begin(), delimiter.end());
 		if (pos == end) {
-			throw RequestException("Bad Request: Missing header-body delimiter");
+			return std::string::npos;
 		}
 		return std::distance(begin, pos) + delimiter.size();
 	}
