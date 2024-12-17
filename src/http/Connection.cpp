@@ -1,8 +1,9 @@
+#include <unistd.h>
 #include "http/Connection.hpp"
 
 namespace http {
 
-	Connection::Connection(struct pollfd& pollFd, int timeout_ms)
+	Connection::Connection(struct ::pollfd& pollFd, int timeout_ms)
 		: _pollFd(pollFd)
 		, _timeout_ms(timeout_ms)
 		, _lastReceived(std::chrono::steady_clock::now()) {
@@ -14,7 +15,7 @@ namespace http {
 	}
 
 	void Connection::close() {
-
+		::close(_pollFd.fd);
 	}
 
 }
