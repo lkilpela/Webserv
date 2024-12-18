@@ -19,8 +19,6 @@
 
 namespace http {
 
-	Response::Response(int clientSocket) : _clientSocket(clientSocket) {}
-
 	// Response::Response(const Response& response)
 	// 	: _statusCode(response._statusCode)
 	// 	, _statusText(response._statusText)
@@ -42,7 +40,9 @@ namespace http {
 	// 	return *this;
 	// }
 
-	const Status& Response::getStatus() const { return _status; }
+	const Status& Response::getStatus() const {
+		return _status;
+	}
 
 	Response& Response::setStatus(const Status& status) {
 		_status = status;
@@ -75,33 +75,35 @@ namespace http {
 		return stream.str();
 	}
 
-	void Response::_send(const void *buf, const size_t size, int flags) {
-		const ssize_t bytesSent = ::send(_clientSocket, buf + _totalBytesSent, size - _totalBytesSent, flags);
+	void Response::_send(int clientSocket, const void *buf, const size_t size, int flags) {
+		const ssize_t bytesSent = ::send(clientSocket, buf + this->_bytesSent, size - this->_bytesSent, flags);
 		if (bytesSent < 0) {
 			// throw SocketException("Failed to send data");
+			_lastSent = std::chrono::stead_clock::now();
 		}
-		_totalBytesSent += static_cast<std::size_t>(bytesSent);
-		if (_totalBytesSent >= size) {
+		this->_bytesSent += static_cast<std::size_t>(bytesSent);
+		if (this->_bytesSent >= size) {
 			_isComplete = true;
+			this->_bytesSent = 0;
 		}
 	}
 
-	void Response::sendFile(const std::string& filePath) {
+	void Response::sendFile(int clientSocket, const std::string& filePath) {
 		std::ifstream file(filePath);
 
-		
+
 	}
 
-	void Response::sendStatus(Status status) {
+	void Response::sendStatus(int clientSocket, Status status) {
 		setStatus(status);
 		setHeader(Header::CONTENT_TYPE, "text/plain");
 		setHeader(Header::CONTENT_LENGTH, std::to_string(_status.reason.length()));
 
 		std::string response = _composeHeaders() + _status.reason;
-		_send(response.c_str(), response.size(), 0);
+		_send(clientSocket, response.c_str(), response.size(), 0);
 	}
 
-	void Response::sendText(const std::string& text) {
+	void Response::sendText(int clientSocket, const std::string& text) {
 
 	}
 
