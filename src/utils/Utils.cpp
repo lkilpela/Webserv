@@ -3,6 +3,8 @@
 #include <regex> // std::regex, std::regex_match
 #include <filesystem> // std::filesystem
 #include <stdexcept> // std::invalid_argument, std::out_of_range
+#include <fcntl.h>
+
 
 using std::string;
 using std::vector;
@@ -84,5 +86,12 @@ namespace utils {
         }
         return str;
     }
+
+	int setNonBlocking(int fd) {
+	int flag = fcntl(fd, F_GETFL, 0);
+	if (flag == -1)
+		return -1;
+	return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+}
 	
 } // namespace utils

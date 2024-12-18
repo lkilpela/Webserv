@@ -1,14 +1,20 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
+int setNonBlocking(int fd) {
+	int flag = fcntl(fd, F_GETFL, 0);
+	if (flag == -1)
+		return -1;
+	return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+}
+
 Server::Server(const std::vector<int> ports) {
     for (int port : ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)
 			throw std::runtime_error("Failed to create socket");
-		int flag = fcntl(serverFd, F_GETFL, 0);
-		if (flag == -1 || fcntl(serverFd, F_SETFL, flag | O_NONBLOCK) == -1)
-			throw std::runtime_error("Failed to create nonblocking");
+		if (setNonBlocking(serverFd) == -1)
+			throw std::runtime_error("Nonblocking failed");
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
@@ -37,7 +43,24 @@ void Server::_addClient(std::size_t i) {
 }
 
 void Server::process(Request& req, Response& res) {
-
+	if (req.CGI){
+		int pipefd[2];
+		if(pipe(pipefd) == -1)
+			perror("Pipe failed");
+		close(pipefd[1]);
+		if (setNonBlocking(pipefd[0]) == -1)
+			perror("Pipe nonblocking failed");
+		pollfd cgiData { pipefd[0], POLLIN, 0 };
+		_pollfds.push_back(cgiData);
+		pid_t pid = fork();
+		if (pid == 0){
+			close(pipefd[0]);
+			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+				perror("Dup2 failed");
+				//exceve
+		} else
+	}
+		
 }
 
 void Server::listen(){

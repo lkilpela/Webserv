@@ -15,6 +15,7 @@ namespace utils {
     bool isValidURL(const std::string &url);
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
+	int setNonBlocking(int fd);
 	
 	template <typename T>
 	bool isInVector(T element, std::vector<T>& v){
