@@ -3,7 +3,7 @@
 #include "Error.hpp"
 #include <exception>
 
-//#include "Server.hpp"
+#include "Server.hpp"
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -14,10 +14,9 @@ int main(int argc, char **argv) {
 	try {
 		ConfigParser parser;
 		parser.load(argv[1]);
-
-		parser.ser
+		
 		Server server(config);
-		/server.listen();
+		server.listen();
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {

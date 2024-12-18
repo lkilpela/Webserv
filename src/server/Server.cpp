@@ -1,19 +1,13 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
-int setNonBlocking(int fd) {
-	int flag = fcntl(fd, F_GETFL, 0);
-	if (flag == -1)
-		return -1;
-	return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
-}
-
 Server::Server(const std::vector<int> ports) {
+	//need to figure out route mapping
     for (int port : ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)
 			throw std::runtime_error("Failed to create socket");
-		if (setNonBlocking(serverFd) == -1)
+		if (utils::setNonBlocking(serverFd) == -1)
 			throw std::runtime_error("Nonblocking failed");
         sockaddr_in address{};
         address.sin_family = AF_INET;
@@ -25,6 +19,47 @@ Server::Server(const std::vector<int> ports) {
             throw std::runtime_error("Failed to listen on port " + std::to_string(port));
         _serverFds.push_back(serverFd);
 		_pollfds.push_back({serverFd, POLLIN, 0});
+    }
+}
+
+void Server::processCGI(Request& req) {
+	int pipefd[2];
+	if(pipe(pipefd) == -1)
+		perror("Pipe failed");
+	if (utils::setNonBlocking(pipefd[0]) == -1)
+		perror("Pipe nonblocking failed");
+	pollfd cgiData { pipefd[0], POLLIN, 0 };
+	_pollfds.push_back(cgiData);
+	pid_t pid = fork();
+	if (pid == 0){
+		close(pipefd[0]);
+		if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+			perror("Dup2 failed");
+			//exceve
+	} else
+	close(pipefd[1]);
+}
+
+void Server::processHttpClient(Request& req, Response& res) {
+
+}
+
+void Server::listen() {
+	while (true) {
+        if (::poll(_pollfds.data(), _pollfds.size(), 0) == -1)
+			perror("Poll failed");
+        for (std::size_t i = 0; i < _pollfds.size(); i++) {
+			const int fd = _pollfds[i].fd;			
+			if (_isNewClient(fd)) {
+				_addClient(fd);
+			} else {
+				auto& [req, res] = _requestResponseByFd.at(fd);
+				if (_isConnectedClient(fd))
+					processHttpClient(req, res);					
+				else
+					processCGI(req);
+			}
+		}
     }
 }
 
@@ -42,59 +77,12 @@ void Server::_addClient(std::size_t i) {
 	_pollfds.push_back(clientPollData);
 }
 
-void Server::process(Request& req, Response& res) {
-	if (req.CGI){
-		int pipefd[2];
-		if(pipe(pipefd) == -1)
-			perror("Pipe failed");
-		close(pipefd[1]);
-		if (setNonBlocking(pipefd[0]) == -1)
-			perror("Pipe nonblocking failed");
-		pollfd cgiData { pipefd[0], POLLIN, 0 };
-		_pollfds.push_back(cgiData);
-		pid_t pid = fork();
-		if (pid == 0){
-			close(pipefd[0]);
-			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
-				perror("Dup2 failed");
-				//exceve
-		} else
-	}
-		
+bool Server::_isNewClient(int fd) const {
+	return utils::isInVector<int>(fd, _serverFds);
 }
 
-void Server::listen(){
-	while (true){
-        if (::poll(_pollfds.data(), _pollfds.size(), 0) == -1)
-            throw std::runtime_error("Poll failed");
-        for (std::size_t i = 0; i < _pollfds.size(); i++) {
-			//##Accepts and creates new client
-            if (_pollfds[i].revents & POLLIN) {
-				if (utils::isInVector(_pollfds[i].fd, _serverFds)){
-					_addClient(i);
-				} else {
-					const int fd = _pollfds[i].fd;
-					unsigned char buffer[1024];
-					ssize_t bytesRead = recv(fd, buffer, 1024, 0);
-
-					auto& [req, res] = _requestResponseByFd.at(fd);
-					req.append(buffer);
-					if (req.isComplete()) {
-						req.parse();
-						process(req, res);
-						if (res.isReady())
-						_pollfds[i].events |= POLLOUT;
-					}
-				}
-			}
-			else if(_pollfds[i].revents & POLLOUT) {
-				//timeout
-				//http::Request request(clientFd);
-				//http::Response response(clientFd);
-				// process(request, response); CGI in here
-			}
-        }
-    }
+bool Server::_isConnectedClient(int fd) const {
+	return utils::isInVector<int>(fd, _clientFds);
 }
 
 Server::~Server() {

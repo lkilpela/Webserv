@@ -40,6 +40,6 @@ public:
     void parseConfig(const std::string &filename, Config &config);
     void parseGlobal(const std::string &line, ServerConfig &config);
     void parseLocation(const std::string &line, Location &currentLocation);
-	void load(const std::string& filePath);
+	void load(const std::string& filePath); 
 	void printConfig(const Config& config);
 };

@@ -10,6 +10,7 @@
 #include <cstring>
 #include <vector>
 #include <algorithm>
+#include <functional>
 #include <poll.h>
 #define BACKLOG 128
 
@@ -23,13 +24,18 @@ class Server {
 		Server(const std::vector<int> ports);
 		~Server();
 		void listen();
-		void process(Request& req, Response& res);
+		void processCGI(Request& req);
+		void processHttpClient(Request& req, Response& res);
 
 	private:
 		std::vector<int> _serverFds;
 		std::vector<pollfd> _pollfds;
 		std::unordered_map<int, std::pair<Request, Response>> _requestResponseByFd;
 		std::vector<int> _clientFds;
+		std::unordered_map<std::string, std::function<void(Request& req, Response& res)>> _routes;
 
 		void _addClient(std::size_t i);
+		bool _isNewClient(int fd) const;
+		bool _isConnectedClient(int fd) const;
+		void _addRoute(std::string, std::function<void(Request& req, Response& res)>);
 };
