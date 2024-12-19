@@ -10,8 +10,9 @@ sequenceDiagram
     participant NetworkManager
     participant HTTPHandler
     participant FileSystem
-    participant Libc
     participant CGIHandler
+    participant Libc
+    
 
     Client->>WebServer: Send Request (HTTP)
     WebServer->>ConfigParser: Load Config (on startup)
@@ -40,13 +41,34 @@ sequenceDiagram
             HTTPHandler-->>WebServer: Parsed Request
 
             alt Valid Request
-                WebServer->>FileSystem: Resolve URI
-                alt Static File
+                HTTPHandler->>WebServer: Check HTTP Method
+                alt Method: GET
+                    WebServer->>FileSystem: Resolve URI, static files
                     FileSystem->>Libc: open() or stat()
                     Libc-->>FileSystem: File Descriptor/Metadata
                     FileSystem-->>WebServer: Resource
+                else Method: POST
+                    WebServer->>HTTPHandler: Handle File Upload
+                    HTTPHandler-->>FileSystem: Save Uploaded File
+                    FileSystem-->>WebServer: Upload Status
+                    WebServer->>HTTPHandler: Build Upload Response
+                    HTTPHandler-->>WebServer: Upload Response Ready
+                    WebServer->>Libc: send()
+                    Libc-->>Client: Deliver Upload Response
+                else Method: DELETE
+                    WebServer->>HTTPHandler: Handle File Deletion
+                    HTTPHandler-->>FileSystem: Delete File
+                    FileSystem-->>WebServer: Deletion Status
+                    WebServer->>HTTPHandler: Build Deletion Response
+                    HTTPHandler-->>WebServer: Deletion Response Ready
                 else CGI
                     WebServer->>CGIHandler: Execute CGI Script
+                    CGIHandler->>Libc: fork()
+                    Libc-->>CGIHandler: Child Process
+                    CGIHandler->>Libc: exec()
+                    Libc-->>CGIHandler: Execute Script
+                    CGIHandler->>Libc: read()
+                    Libc-->>CGIHandler: Script Output
                     CGIHandler-->>WebServer: CGI Response
                 end
                 WebServer->>HTTPHandler: Build HTTP Response
@@ -60,14 +82,6 @@ sequenceDiagram
                 Libc-->>Client: Deliver Error Response
             end
 
-        else File Upload
-            WebServer->>HTTPHandler: Handle File Upload
-            HTTPHandler-->>FileSystem: Save Uploaded File
-            FileSystem-->>WebServer: Upload Status
-            WebServer->>HTTPHandler: Build Upload Response
-            HTTPHandler-->>WebServer: Upload Response Ready
-            WebServer->>Libc: send()
-            Libc-->>Client: Deliver Upload Response
         end
 
         WebServer->>Libc: close()
@@ -108,16 +122,13 @@ sequenceDiagram
 
 ### 7. Handling Valid Requests
 - **If the request is valid**:
-  - The **WebServer** resolves the requested URI. This may involve checking for either a static file or executing a CGI script.
-  - **If it’s a static file**:
-    - The **FileSystem** component interacts with **Libc** by calling `open()` or `stat()` to check for the requested resource. **Libc** returns either a file descriptor for the resource or metadata indicating the file's status (e.g., not found).
-    - The resource is then sent back to the **WebServer**.
-  - **If it’s a CGI request**:
-    - The **WebServer** calls the **CGIHandler** to execute the corresponding CGI script, which generates a dynamic response.
-    - The response from the CGI script is returned to the **WebServer**.
-  - The **WebServer** then instructs the **HTTPHandler** to construct a valid HTTP response based on the requested resource (static or dynamic).
-  - The completed response is sent back to the **WebServer**.
-  - The **WebServer** sends the response back to the client using the `send()` function, which writes the HTTP response data to the client socket.
+  - The **WebServer** checks the HTTP method used in the request:
+    - **GET**: The server resolves the requested URI and checks if it's a static file. The **FileSystem** component interacts with **Libc** by calling `open()` or `stat()` to check for the requested resource. **Libc** returns either a file descriptor for the resource or metadata indicating the file's status (e.g., not found). The resource is then sent back to the **WebServer**.
+    - **POST**: If the request is for a file upload, the **WebServer** directs the request to the **HTTPHandler**, which processes the file upload. The uploaded file is saved using the **FileSystem** component. The upload status is returned to the **WebServer**, which then builds the upload response and sends it back to the client using the `send()` function.
+    - **DELETE**: For file deletion requests, the server directs the request to the **HTTPHandler**, which deletes the specified file via the **FileSystem**. The deletion status is returned, and an appropriate response is generated.
+    - **CGI**: If the request requires executing a CGI script, the server interacts with the **CGIHandler** to generate a dynamic response, which is returned to the **WebServer**.
+  - After determining the resource or action to perform, the **WebServer** instructs the **HTTPHandler** to construct an HTTP response based on the outcome.
+  - The completed response is sent back to the client using the `send()` function, which writes the HTTP response data to the client socket.
 
 ### 8. Handling Invalid Requests
 - **If the request is invalid**:
@@ -125,18 +136,10 @@ sequenceDiagram
   - The error response is constructed and sent back to the **WebServer**.
   - Just like with valid requests, the response is delivered to the client using the `send()` function.
 
-### 9. Handling File Uploads
-- **If the request is for a file upload**:
-  - The **WebServer** directs the request to the **HTTPHandler**, which processes the file upload.
-  - The **HTTPHandler** saves the uploaded file using the **FileSystem** component.
-  - Once the file is saved, the upload status is returned to the **WebServer**.
-  - The **WebServer** then instructs the **HTTPHandler** to build an upload response (indicating success or failure).
-  - The upload response is sent back to the client using the `send()` function.
-
-### 10. Connection Management
+### 9. Connection Management
 - After processing the request (whether valid, invalid, or a file upload), the **WebServer** chooses to keep the connection open for persistent connections or closes the client connection using the `close()` function from **Libc** as needed. This ensures that system resources are freed and that the server can efficiently manage open connections.
 
-### 11. Loop Continuation
+### 10. Loop Continuation
 - The server continues to listen for new connections in a loop, repeating the process for each incoming client request.
 
 ## Key Concepts Illustrated in the Sequence Diagram
