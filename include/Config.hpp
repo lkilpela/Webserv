@@ -31,6 +31,7 @@ struct ServerConfig {
 
 // Multi servers struct
 struct Config {
+    std::vector<int> ports;
     std::vector<ServerConfig> servers;
 };
 
