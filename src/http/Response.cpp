@@ -62,7 +62,9 @@ namespace http {
 		return bytesSent;
 	}
 
-	const http::Status& Response::getHttpStatus() const { return _httpStatus; }
+	const http::Status& Response::getHttpStatus() const {
+		return _httpStatus;
+	}
 
 	Response& Response::setHttpStatus(const http::Status& httpStatus) {
 		_httpStatus = httpStatus;
@@ -96,23 +98,24 @@ namespace http {
 	}
 
 	void Response::sendFile(const std::string& filePath) {
+		
 		std::ifstream file(filePath);
 
 
 	}
 
-	void Response::sendStatus(int clientSocket, Status status) {
-		setStatus(status);
-		setHeader(Header::CONTENT_TYPE, "text/plain");
-		setHeader(Header::CONTENT_LENGTH, std::to_string(_status.reason.length()));
+	// void Response::sendStatus(int clientSocket, Status status) {
+	// 	setStatus(status);
+	// 	setHeader(Header::CONTENT_TYPE, "text/plain");
+	// 	setHeader(Header::CONTENT_LENGTH, std::to_string(_status.reason.length()));
 
-		std::string response = _composeHeaders() + _status.reason;
-		_send(clientSocket, response.c_str(), response.size(), 0);
-	}
+	// 	std::string response = _composeHeaders() + _status.reason;
+	// 	_send(clientSocket, response.c_str(), response.size(), 0);
+	// }
 
-	void Response::sendText(const std::string& text) {
+	// void Response::sendText(const std::string& text) {
 
-	}
+	// }
 
 }
 

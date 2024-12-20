@@ -29,7 +29,7 @@ namespace http {
 		, _status(request._status) {
 			request._isCgi = false;
 			request._isDirectory = false;
-			request._status = RequestStatus::INCOMPLETE;
+			request._status = Request::Status::INCOMPLETE;
 	}
 
 	const std::string& Request::getMethod() const { return _method; }
@@ -37,7 +37,7 @@ namespace http {
 	const std::string& Request::getVersion() const { return _version; }
 	const std::span<const std::uint8_t> Request::getBody() const { return std::span<const std::uint8_t>(_body); }
 	const std::string& Request::getBodyAsFile() const { return _filePath; }
-	const RequestStatus& Request::getStatus() const { return _status; }
+	const Request::Status& Request::getStatus() const { return _status; }
 
 	Request& Request::setMethod(const std::string& method) {
 		_method = method;
@@ -59,7 +59,7 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setStatus(const RequestStatus& status) {
+	Request& Request::setStatus(const Request::Status& status) {
 		_status = status;
 		return *this;
 	}

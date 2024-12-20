@@ -25,13 +25,13 @@ namespace http {
 			const std::string& getVersion() const;
 			const std::span<const std::uint8_t> getBody() const;
 			const std::string& getBodyAsFile() const;
-			const Status& getStatus() const;
+			const Request::Status& getStatus() const;
 
 			Request& setMethod(const std::string& method);
 			Request& setUrl(const Url& url);
 			Request& setVersion(const std::string& version);
 			Request& setHeader(Header header, const std::string& value);
-			Request& setStatus(const Status& status);
+			Request& setStatus(const Request::Status& status);
 
 			bool isCgi() const;
 			bool isDirectory() const;
@@ -48,9 +48,9 @@ namespace http {
 			std::unordered_map<std::string, std::string> _headers;
 			std::vector<std::uint8_t> _body;
 			std::string _filePath;
+			Request::Status _status { Request::Status::INCOMPLETE };
 			bool _isCgi { false };
 			bool _isDirectory { false };
-			Status _status { Status::INCOMPLETE };
 	};
 
 }

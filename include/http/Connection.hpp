@@ -9,21 +9,26 @@
 
 namespace http {
 	class Connection {
-		private:
-			int _msTimeout;
-			std::vector<std::uint8_t> _buffer;
-			std::queue<std::pair<Request, Response>> _queue;
-			std::chrono::steady_clock::time_point _lastReceived;
-
 		public:
-			explicit Connection(int msTimeout);
+			Connection(int clientSocket, int msTimeout);
 			Connection(const Connection&) = delete;
 
 			Connection& operator=(const Connection&) = delete;
 
 			ssize_t readData(int clientSocket);
 			const std::pair<Request, Response>& getRequestResponse();
+			void close();
 
 			bool isTimedOut() const;
+
+		private:
+			int _clientSocket;
+			int _msTimeout;
+			std::vector<std::uint8_t> _buffer;
+			std::queue<std::pair<Request, Response>> _queue;
+			std::chrono::steady_clock::time_point _lastReceived;
+			bool _isClosed { false };
+
+			void _processBuffer();
 	};
 }
