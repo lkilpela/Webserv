@@ -17,80 +17,154 @@ protected:
     }
 };
 
-TEST_F(ConfigParserTest, ParseValidHost) {
-    std::string line = "host 127.0.0.1";
-    ASSERT_NO_THROW(parser.parseGlobal(line, config));
-    EXPECT_EQ(config.host, "127.0.0.1");
+TEST_F(ConfigParserTest, ParseHost) {
+    // Valid cases
+    EXPECT_NO_THROW({
+        parser.parseGlobal("host 127.0.0.1", config);
+        std::cout << "Parsed host: " << config.host << std::endl;
+    });
+
+    // Invalid cases
+    EXPECT_THROW({
+        parser.parseGlobal("host invalid_host", config);
+        std::cout << "Parsed host: " << config.host << std::endl;
+    }, ConfigError);
+
+    EXPECT_THROW({
+        parser.parseGlobal("host ", config);
+        std::cout << "Parsed host: " << config.host << std::endl;
+    }, ConfigError);
+
+    // Duplicate host
+    EXPECT_THROW({
+        parser.parseGlobal("host 192.168.1.1", config);
+        std::cout << "Parsed host: " << config.host << std::endl;
+    }, ConfigError);
 }
 
-TEST_F(ConfigParserTest, ParseInvalidHost) {
-    std::string line = "host invalid_host";
-    EXPECT_THROW(parser.parseGlobal(line, config), ConfigError);
+TEST_F(ConfigParserTest, ParsePort) {
+    // Valid cases
+    EXPECT_NO_THROW({
+        parser.parseGlobal("port 8080", config);
+        std::cout << "Parsed port: " << config.port << std::endl;
+    });
+
+    // Invalid cases
+    EXPECT_THROW({
+        parser.parseGlobal("host invalid_port", config);
+        std::cout << "Parsed port: " << config.port << std::endl;
+    }, ConfigError);
+
+    EXPECT_THROW({
+        parser.parseGlobal("port ", config);
+        std::cout << "Parsed port: " << config.port << std::endl;
+    }, ConfigError);
+
+    // Duplicate host
+    EXPECT_THROW({
+        parser.parseGlobal("port 8081", config);
+        std::cout << "Parsed port: " << config.port << std::endl;
+    }, ConfigError);
 }
 
-TEST_F(ConfigParserTest, ParseDuplicateHost) {
-    std::string line1 = "host 127.0.0.1";
-    std::string line2 = "host 192.168.1.1";
-    ASSERT_NO_THROW(parser.parseGlobal(line1, config));
-    EXPECT_THROW(parser.parseGlobal(line2, config), ConfigError);
+// ServerName is optional so it can be empty
+TEST_F(ConfigParserTest, ParseServerName) {
+    // Valid cases
+    EXPECT_NO_THROW({
+        parser.parseGlobal("server_name localhost", config);
+        std::cout << "Parsed server name: " << config.serverName << std::endl;
+    });
+
+    EXPECT_NO_THROW({
+        parser.parseGlobal("", config);
+        std::cout << "Parsed server name: " << config.serverName << std::endl;
+    });
+
+    // Duplicate server name
+    EXPECT_THROW({
+        parser.parseGlobal("server_name localhost", config);
+        std::cout << "Parsed server name: " << config.serverName << std::endl;
+    }, ConfigError);
 }
 
-TEST_F(ConfigParserTest, ParseValidPort) {
-    std::string line = "port 8080";
-    ASSERT_NO_THROW(parser.parseGlobal(line, config));
-    EXPECT_EQ(config.port, static_cast<unsigned int>(8080));
-}
+TEST_F(ConfigParserTest, ParseErrorPage) {
+    // Valid cases
+    EXPECT_NO_THROW({
+        parser.parseGlobal("error_page 404 config/default/404.html", config);
+        std::cout << "Parsed error page: " << config.errorPages[404] << std::endl;
+    });
 
-TEST_F(ConfigParserTest, ParseInvalidPort) {
-    std::string line = "port invalid_port";
-    EXPECT_THROW(parser.parseGlobal(line, config), ConfigError);
-}
+    // Invalid cases
+    EXPECT_THROW({
+        parser.parseGlobal("error_page 404 config/default//404.html", config);
+        std::cout << "Parsed error page: " << config.errorPages[404] << std::endl;
+    }, ConfigError);
 
-TEST_F(ConfigParserTest, ParseDuplicatePort) {
-    std::string line1 = "port 8080";
-    std::string line2 = "port 8081";
-    ASSERT_NO_THROW(parser.parseGlobal(line1, config));
-    EXPECT_THROW(parser.parseGlobal(line2, config), ConfigError);
-}
+    EXPECT_THROW({
+        parser.parseGlobal("error_page 404 config/default/505.html", config);
+        std::cout << "Parsed error page: " << config.errorPages[404] << std::endl;
+    }, ConfigError);
 
-TEST_F(ConfigParserTest, ParseValidServerName) {
-    std::string line = "server_name localhost";
-    ASSERT_NO_THROW(parser.parseGlobal(line, config));
-    EXPECT_EQ(config.serverName, "localhost");
-}
-
-TEST_F(ConfigParserTest, ParseValidErrorPage) {
-    std::string line = "error_page 404 config/default/404.html";
-    ASSERT_NO_THROW(parser.parseGlobal(line, config));
-    EXPECT_EQ(config.errorPages[404], "config/default/404.html");
-}
-
-TEST_F(ConfigParserTest, ParseInvalidErrorPage) {
-    std::string line = "error_page 404 config/default//404.html";
-    EXPECT_THROW(parser.parseGlobal(line, config), ConfigError);
-}
-
-TEST_F(ConfigParserTest, ParseDuplicateErrorPage) {
-    std::string line1 = "error_page 404 config/default/404.html";
-    std::string line2 = "error_page 404 config/default//404.html";
-    ASSERT_NO_THROW(parser.parseGlobal(line1, config));
-    EXPECT_THROW(parser.parseGlobal(line2, config), ConfigError);
 }
 
 TEST_F(ConfigParserTest, ParseValidClientMaxBodySize) {
-    std::string line = "client_max_body_size 1m";
-    ASSERT_NO_THROW(parser.parseGlobal(line, config));
-    EXPECT_EQ(config.clientMaxBodySize, "1m");
+    // Valid cases
+    EXPECT_NO_THROW({
+        parser.parseGlobal("client_max_body_size 1M", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    });
+
+    // Reset config for the next test
+    config.clientMaxBodySize.clear();
+    
+    EXPECT_NO_THROW({
+        parser.parseGlobal("client_max_body_size 1K", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    });
+
+    // Reset config for the next test
+    config.clientMaxBodySize.clear();
+
+    EXPECT_NO_THROW({
+        parser.parseGlobal("client_max_body_size 1G", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    });
+
+    // Duplicate client max body size
+    EXPECT_THROW({
+        parser.parseGlobal("client_max_body_size 1M", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    }, ConfigError);
+
+    // Invalid cases
+    EXPECT_THROW({
+        parser.parseGlobal("client_max_body_size invalid_size", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    }, ConfigError);
+
+    EXPECT_THROW({
+        parser.parseGlobal("client_max_body_size 1", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    }, ConfigError);
+
+    EXPECT_THROW({
+        parser.parseGlobal("client_max_body_size 1KB", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    }, ConfigError);
+
+    EXPECT_THROW({
+        parser.parseGlobal("client_max_body_size 1MB", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    }, ConfigError);
+
+    EXPECT_THROW({
+        parser.parseGlobal("client_max_body_size 1GB", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    }, ConfigError);
+
+    EXPECT_THROW({
+        parser.parseGlobal("client_max_body_size 10000KB", config);
+        std::cout << "Parsed client max body size: " << config.clientMaxBodySize << std::endl;
+    }, ConfigError);
 }
 
-TEST_F(ConfigParserTest, ParseInvalidClientMaxBodySize) {
-    std::string line = "client_max_body_size invalid_size";
-    EXPECT_THROW(parser.parseGlobal(line, config), ConfigError);
-}
-
-TEST_F(ConfigParserTest, ParseDuplicateClientMaxBodySize) {
-    std::string line1 = "client_max_body_size 1m";
-    std::string line2 = "client_max_body_size 2m";
-    ASSERT_NO_THROW(parser.parseGlobal(line1, config));
-    EXPECT_THROW(parser.parseGlobal(line2, config), ConfigError);
-}

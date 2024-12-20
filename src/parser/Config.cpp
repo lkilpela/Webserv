@@ -38,6 +38,9 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
             config.port = utils::parsePort(value);
         }},
         {"server_name", [&](const string &value) {
+            if (!config.serverName.empty()) {
+                throw ConfigError(EINVAL, "Invalid server_name");
+            }
             config.serverName = value;
         }},
         {"error_page", [&](const string &value) {
