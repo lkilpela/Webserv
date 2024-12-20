@@ -70,8 +70,16 @@ TEST_DIR        =   ./tests
 TEST_SRCS       =   $(wildcard $(TEST_DIR)/*.cpp)
 TEST_OBJECTS    =   $(TEST_SRCS:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-# Check if Google Test is installed
-GTEST_DIR       := $(shell brew --prefix googletest 2>/dev/null || echo "/usr/local/opt/googletest")
+# Detect the operating system
+UNAME_S := $(shell uname -s)
+
+# Set Google Test paths based on the operating system
+ifeq ($(UNAME_S), Darwin)
+    GTEST_DIR := $(shell brew --prefix googletest 2>/dev/null || echo "/usr/local/opt/googletest")
+else
+    GTEST_DIR := /usr/local
+endif
+
 GTEST_HEADERS   =   -I$(GTEST_DIR)/include
 GTEST_LIBS      =   -L$(GTEST_DIR)/lib -lgtest -lgtest_main -pthread
 
