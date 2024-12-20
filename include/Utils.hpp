@@ -13,4 +13,9 @@ namespace utils {
     bool isValidURL(const std::string &url);
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
+
+    template <typename T>
+	bool isInVector(const T& element, const std::vector<T>& v) {
+		return std::find(v.begin(), v.end(), element) != v.end();
+	}
 } // namespace utils
