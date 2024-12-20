@@ -18,55 +18,26 @@
 
 namespace http {
 
-	void Request::append(const char* data, size_t size) {
-		_buffer.insert(_buffer.end(), data, data + size);
+	Request::Request(Request&& request)
+		: _method(std::move(request._method))
+		, _url(std::move(request._url))
+		, _version(std::move(request._version))
+		, _headers(std::move(request._headers))
+		, _body(std::move(request._body))
+		, _isCgi(request._isCgi)
+		, _isDirectory(request._isDirectory)
+		, _status(request._status) {
+			request._isCgi = false;
+			request._isDirectory = false;
+			request._status = RequestStatus::INCOMPLETE;
 	}
 
-	void Request::parse() {
-		using Iterator = std::vector<uint8_t>::iterator;
-		const Iterator begin = _buffer.begin();
-		const Iterator end = _buffer.end();
-		std::size_t pos = utils::findBlankLine<Iterator>(begin, end);
-		std::string headerSection(begin, begin + pos);
-		std::istringstream stream(headerSection);
-		std::string line;
-		std::getline(stream, line);
-		// update _buffer to hold request body
-		_buffer.erase(begin, begin + pos);
-	}
-
-	void Request::reset() {
-		_method.clear();
-		_url = Url();
-		_version.clear();
-		_headers.clear();
-		_buffer.clear();
-		_filePath.clear();
-		_isComplete = false;
-		_isCgi = false;
-		_isDirectory = false;
-		_numberOfRetries = 0;
-	}
-
-	const std::string& Request::getMethod() const {
-		return _method;
-	}
-
-	const Url& Request::getUrl() const {
-		return _url;
-	}
-
-	const std::string& Request::getVersion() const {
-		return _version;
-	}
-
-	const std::span<const std::uint8_t> Request::getBody() const {
-		return std::span<const std::uint8_t>(_buffer);
-	}
-
-	const std::string& Request::getBodyAsFile() const {
-		return _filePath;
-	}
+	const std::string& Request::getMethod() const { return _method; }
+	const Url& Request::getUrl() const { return _url; }
+	const std::string& Request::getVersion() const { return _version; }
+	const std::span<const std::uint8_t> Request::getBody() const { return std::span<const std::uint8_t>(_body); }
+	const std::string& Request::getBodyAsFile() const { return _filePath; }
+	const RequestStatus& Request::getStatus() const { return _status; }
 
 	Request& Request::setMethod(const std::string& method) {
 		_method = method;
@@ -88,17 +59,13 @@ namespace http {
 		return *this;
 	}
 
-	bool Request::isComplete() const {
-		return _isComplete;
+	Request& Request::setStatus(const RequestStatus& status) {
+		_status = status;
+		return *this;
 	}
 
-	bool Request::isCgi() const {
-		return _isCgi;
-	}
-
-	bool Request::isDirectory() const {
-		return _isDirectory;
-	}
+	bool Request::isCgi() const { return _isCgi; }
+	bool Request::isDirectory() const { return _isDirectory; }
 
 	// std::optional<Request> Request::parse(
 	// 	const std::string& rawRequest,

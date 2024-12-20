@@ -1,24 +1,29 @@
 #pragma once
 
-#include <poll.h>
+#include <vector>
+#include <queue>
+#include <utility>
 #include <chrono>
 #include "Request.hpp"
 #include "Response.hpp"
 
 namespace http {
-
 	class Connection {
-
 		private:
-			struct ::pollfd _pollFd;
-			int _timeout_ms;
-			Request _request;
-			Response _response;
+			int _msTimeout;
+			std::vector<std::uint8_t> _buffer;
+			std::queue<std::pair<Request, Response>> _queue;
 			std::chrono::steady_clock::time_point _lastReceived;
 
 		public:
-			Connection(struct ::pollfd& pollFd, int timeout_ms);
-			const bool isTimeout() const;
-			void close();
+			explicit Connection(int msTimeout);
+			Connection(const Connection&) = delete;
+
+			Connection& operator=(const Connection&) = delete;
+
+			ssize_t readData(int clientSocket);
+			const std::pair<Request, Response>& getRequestResponse();
+
+			bool isTimedOut() const;
 	};
 }

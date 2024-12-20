@@ -9,29 +9,18 @@
 namespace http {
 
 	class Response {
-		private:
-			http::Status _status { Status::Code::ACCEPTED };
-			std::string _type;
-			std::string _url;
-			std::string _body;
-			std::unordered_map<std::string, std::string> _headers;
-			std::size_t _totalBytesSent { 0 };
-			bool _isRedirected { false };
-			bool _isComplete { false };
-
-			std::string _composeHeaders() const;
-			void _send(int clientSocket, const void *buf, const size_t size, int flags);
-
 		public:
-			Response() = default;
-			Response(const Response& response);
+			enum class Status { INCOMPLETE, READY, SENDING, SENT, ERROR };
+
+			Response(int clientSocket);
+			Response(const Response&) = delete;
 			~Response() = default;
 
-			Response& operator=(const Response& response);
+			Response& operator=(const Response&) = delete;
 
-			const http::Status& getStatus() const;
+			const http::Status& getHttpStatus() const;
 
-			Response& setStatus(const http::Status& status);
+			Response& setHttpStatus(const http::Status& httpStatus);
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(const std::string& bodyContent);
 
@@ -39,7 +28,22 @@ namespace http {
 			void sendStatus(int clientSocket, Status status);
 			void sendText(const std::string& text);
 
-			bool isComplete() const;
+		private:
+			int _clientSocket;
+			Response::Status _status { Response::Status::INCOMPLETE };
+			http::Status _httpStatus { http::Status::Code::NONE };
+			std::string _type;
+			std::string _url;
+			std::string _body;
+			std::unordered_map<std::string, std::string> _headers;
+			std::size_t _bytesSent { 0 };
+			std::size_t _totalBytes { 0 };
+			bool _isRedirected { false };
+			bool _isComplete { false };
+
+			std::string _composeHeaders() const;
+			ssize_t _send();
+
 	};
 
 }

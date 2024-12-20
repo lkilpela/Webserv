@@ -19,6 +19,8 @@
 
 namespace http {
 
+	Response::Response(int clientSocket) : _clientSocket(clientSocket) {}
+
 	// Response::Response(const Response& response)
 	// 	: _statusCode(response._statusCode)
 	// 	, _statusText(response._statusText)
@@ -39,11 +41,31 @@ namespace http {
 	// 	}
 	// 	return *this;
 	// }
+	ssize_t Response::_send() {
+		if (_status != Response::Status::READY) {
+			return 0;
+		}
+		_status = Response::Status::SENDING;
+		const ssize_t bytesSent = ::send(
+			_clientSocket,
+			buf + this->_bytesSent,
+			_totalBytes - this->_bytesSent,
+			MSG_NOSIGNAL
+		);
+		if (bytesSent < 0) {
+			// throw SocketException("Failed to send data");
+		}
+		this->_bytesSent += static_cast<std::size_t>(bytesSent);
+		if (_totalBytesSent >= size) {
+			_isComplete = true;
+		}
+		return bytesSent;
+	}
 
-	const Status& Response::getStatus() const { return _status; }
+	const http::Status& Response::getHttpStatus() const { return _httpStatus; }
 
-	Response& Response::setStatus(const Status& status) {
-		_status = status;
+	Response& Response::setHttpStatus(const http::Status& httpStatus) {
+		_httpStatus = httpStatus;
 		return *this;
 	}
 
@@ -73,17 +95,6 @@ namespace http {
 		return stream.str();
 	}
 
-	void Response::_send(int clientSocket, const void *buf, const size_t size, int flags) {
-		const ssize_t bytesSent = ::send(clientSocket, buf + _totalBytesSent, size - _totalBytesSent, flags);
-		if (bytesSent < 0) {
-			// throw SocketException("Failed to send data");
-		}
-		_totalBytesSent += static_cast<std::size_t>(bytesSent);
-		if (_totalBytesSent >= size) {
-			_isComplete = true;
-		}
-	}
-
 	void Response::sendFile(const std::string& filePath) {
 		std::ifstream file(filePath);
 
@@ -101,10 +112,6 @@ namespace http {
 
 	void Response::sendText(const std::string& text) {
 
-	}
-
-	bool Response::isComplete() const {
-		return _isComplete;
 	}
 
 }

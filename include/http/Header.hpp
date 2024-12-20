@@ -3,6 +3,7 @@
 #include <string>
 
 namespace http {
+	
 	enum class Header {
 		// Representation
 		CONTENT_TYPE,

@@ -7,6 +7,8 @@ namespace http {
 
 	struct Status final {
 		enum class Code : std::uint16_t {
+			NONE = 0,
+
 			CONTINUE = 100,
 			SWITCHING_PROTOCOLS = 101,
 
@@ -53,7 +55,7 @@ namespace http {
    			GATEWAY_TIMEOUT = 504,
    			HTTP_VERSION_NOT_SUPPORTED = 505
 		};
-		
+
 		Code code;
 		std::string reason;
 

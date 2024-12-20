@@ -33,12 +33,12 @@ namespace utils {
 	 * @throws RequestException If the delimiter (`\r\n\r\n`) is not found in the given range.
 	 *                          This indicates that the HTTP request is malformed.
 	 */
-	template<typename Iterator>
+	template <typename Iterator>
 	std::size_t findBlankLine(const Iterator begin, const Iterator end) {
 		static constexpr std::vector<std::uint8_t> delimiter = {'\r', '\n', '\r', '\n'};
 		auto pos = std::search(begin, end, delimiter.begin(), delimiter.end());
 		if (pos == end) {
-			throw RequestException("Bad Request: Missing header-body delimiter");
+			return std::string::npos;
 		}
 		return std::distance(begin, pos) + delimiter.size();
 	}
