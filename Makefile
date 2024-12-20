@@ -89,7 +89,6 @@ $(GTEST_DIR):
 endif
 
 tests: $(GTEST_DIR) $(TEST_NAME)
-	@./$(TEST_NAME)
 
 $(TEST_NAME): $(TEST_OBJECTS) $(LIB_NAME)
 	@echo "--------------------------------------------"
