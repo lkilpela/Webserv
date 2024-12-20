@@ -12,6 +12,7 @@ CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 # MANDATORY
 ################################################################################
 NAME			=	webserv
+LIB_NAME        =   libwebserv.a
 INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/Utils.hpp \
@@ -38,6 +39,12 @@ $(NAME): $(OBJECTS)
 	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
 	@echo "--------------------------------------------"
 
+$(LIB_NAME): $(OBJECTS)
+	@echo "--------------------------------------------"
+	@ar rcs $(LIB_NAME) $(OBJECTS)
+	@echo "[$(LIB_NAME)] $(B)Built static library $(LIB_NAME)$(RC)"
+	@echo "--------------------------------------------"
+
 $(OBJ_DIR)/%.o: %.cpp $(M_HEADERS)
 	@mkdir -p $(OBJ_DIR)
 	@echo "Compiling $< to $@"
@@ -49,7 +56,7 @@ clean:
 	@echo "[$(NAME)] Object files cleaned."
 
 fclean: clean
-	@rm -f $(NAME) $(TEST_NAME)
+	@rm -f $(NAME) $(LIB_NAME) $(TEST_NAME)
 	@echo "[$(NAME)] Everything deleted."
 
 re: fclean all
@@ -84,9 +91,9 @@ endif
 tests: $(GTEST_DIR) $(TEST_NAME)
 	@./$(TEST_NAME)
 
-$(TEST_NAME): $(TEST_OBJECTS)
+$(TEST_NAME): $(TEST_OBJECTS) $(LIB_NAME)
 	@echo "--------------------------------------------"
-	@$(CXX) $(TEST_OBJECTS) -o $(TEST_NAME) $(GTEST_LIBS)
+	@$(CXX) $(TEST_OBJECTS) -L. -lwebserv -o $(TEST_NAME) $(GTEST_LIBS)
 	@echo "[$(TEST_NAME)] $(B)Built test target $(TEST_NAME)$(RC)"
 	@echo "--------------------------------------------"
 
