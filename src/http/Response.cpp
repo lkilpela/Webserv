@@ -1,12 +1,14 @@
-#include <iostream>
-#include <sstream>
-#include <fstream>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <array>
 #include "http/Response.hpp"
+#include "utils.hpp"
 
 //  Behavior of send()
 // When send() returns:
@@ -21,53 +23,32 @@ namespace http {
 
 	Response::Response(int clientSocket) : _clientSocket(clientSocket) {}
 
-	// Response::Response(const Response& response)
-	// 	: _statusCode(response._statusCode)
-	// 	, _statusText(response._statusText)
-	// 	, _type(response._type)
-	// 	, _url(response._url)
-	// 	, _body(response._body)
-	// 	, _headers(response._headers) {
-	// }
+	void Response::send() {
+		using enum Response::Status;
 
-	// Response& Response::operator=(const Response& response) {
-	// 	if (this != &response) {
-	// 		_statusCode = response._statusCode;
-	// 		_statusText = response._statusText;
-	// 		_type = response._type;
-	// 		_url = response._url;
-	// 		_body = response._body;
-	// 		_headers = response._headers;
-	// 	}
-	// 	return *this;
-	// }
-	ssize_t Response::_send() {
-		if (_status != Response::Status::READY) {
-			return 0;
+		if (_status != READY || _status != SENDING) return 0;
+		_status = SENDING;
+
+		if (!_header.empty()) {
+			const ssize_t bytesSent = ::send(_clientSocket, _header.c_str(), _header.size(), MSG_NOSIGNAL);
+			if (bytesSent < 0) {
+				// throw SocketException("Failed to send data");
+			}
+		} else {
+			_sendBody();
 		}
-		_status = Response::Status::SENDING;
-		const ssize_t bytesSent = ::send(
-			_clientSocket,
-			buf + this->_bytesSent,
-			_totalBytes - this->_bytesSent,
-			MSG_NOSIGNAL
-		);
-		if (bytesSent < 0) {
-			// throw SocketException("Failed to send data");
-		}
-		this->_bytesSent += static_cast<std::size_t>(bytesSent);
-		if (_totalBytesSent >= size) {
-			_isComplete = true;
-		}
-		return bytesSent;
 	}
 
-	const http::Status& Response::getHttpStatus() const {
-		return _httpStatus;
+	const Response::Status& Response::getStatus() const {
+		return _status;
 	}
 
-	Response& Response::setHttpStatus(const http::Status& httpStatus) {
-		_httpStatus = httpStatus;
+	const http::StatusCode Response::getHttpStatusCode() const {
+		return _statusCode;
+	}
+
+	Response& Response::setHttpStatusCode(const http::StatusCode statusCode) {
+		_statusCode = statusCode;
 		return *this;
 	}
 
@@ -81,41 +62,42 @@ namespace http {
 		return *this;
 	}
 
-	std::string Response::_composeHeaders() const {
-		std::ostringstream stream;
+	Response& Response::setFile(const std::string& filePath) {
+		_filePath = filePath;
+		return *this;
+	}
 
-		stream
-			<< "HTTP/1.1 "
-			<< static_cast<std::uint16_t>(_status.code) << " "
-			<< _status.reason << "\r\n";
+	void Response::build() {
+		_header = buildResponseHeader(_statusCode, _headers);
 
-		for (const auto& [name, value] : _headers) {
-			stream << name << ": " << value << "\r\n";
+		if (!_filePath.empty()) {
+			_fileStream.open(_filePath);
+			if (!_fileStream.is_open()) {
+				std::cerr << "Failed to open file " << _filePath << std::endl;
+				_status = Response::Status::ERROR;
+				throw ;
+			}
+		}
+		_status = Response::Status::READY;
+	}
+
+	void Response::_sendBody() {
+		const ssize_t bytesSent = ::send(_clientSocket, _body.data(), _body.size(), MSG_NOSIGNAL);
+		if (bytesSent >= 0) {
+			_body.erase(0, static_cast<std::size_t>(bytesSent));
+			if (_body.empty()) {
+				_status = Response::Status::SENT_ALL;
+			}
 		}
 
-		stream << "\r\n";
-		return stream.str();
+		std::array<char, 1024> buffer;
+		const size_t bytesRead = _fileStream
+									.read(buffer.data(), buffer.size())
+									.gcount();
+		const ssize_t bytesSent = ::send(_clientSocket, buffer.data(), bytesRead, MSG_NOSIGNAL);
+		if (bytesSent >= 0) {
+
+		}
 	}
-
-	void Response::sendFile(const std::string& filePath) {
-		
-		std::ifstream file(filePath);
-
-
-	}
-
-	// void Response::sendStatus(int clientSocket, Status status) {
-	// 	setStatus(status);
-	// 	setHeader(Header::CONTENT_TYPE, "text/plain");
-	// 	setHeader(Header::CONTENT_LENGTH, std::to_string(_status.reason.length()));
-
-	// 	std::string response = _composeHeaders() + _status.reason;
-	// 	_send(clientSocket, response.c_str(), response.size(), 0);
-	// }
-
-	// void Response::sendText(const std::string& text) {
-
-	// }
-
 }
 

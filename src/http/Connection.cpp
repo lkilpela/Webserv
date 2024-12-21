@@ -1,34 +1,46 @@
-#include <sys/socket.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <string.h>
+#include <errno.h>
+#include <iostream>
 #include <array>
 #include "http/Connection.hpp"
+#include "http/utils.hpp"
 
 namespace http {
 
 	Connection::Connection(int clientSocket, int msTimeout)
 		: _clientSocket(clientSocket)
-		, _msTimeout(msTimeout) {
+		, _msTimeout(msTimeout)
+		, _lastReceived(std::chrono::steady_clock::now()) {
 	}
 
-	ssize_t Connection::readData(int clientSocket) {
-		std::array<std::uint8_t, 1024> buf;
-		ssize_t bytesRead = recv(clientSocket, buf.data(), buf.size(), 0);
-		if (bytesRead > 0) {
-			_buffer.insert(_buffer.end(), buf.begin(), buf.begin() + bytesRead);
-			_lastReceived = std::chrono::steady_clock::now();
-			_processBuffer();
+	void Connection::readRequest(std::uint8_t *buffer, size_t size) {
+		_requestBuffer.reserve(_requestBuffer.size() + size);
+		_requestBuffer.insert(_requestBuffer.end(), buffer, buffer + size);
+		_lastReceived = std::chrono::steady_clock::now();
+
+		std::size_t pos = findBlankLine(_requestBuffer.begin(), _requestBuffer.end());
+
+		if (pos == std::string::npos && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
+			_responseQueue.emplace(Request { Request::Status::BAD_REQUEST }, Response { _clientSocket });
+			return;
 		}
-		if (bytesRead == 0)
-		return bytesRead;
+			_processBuffer(pos);
+
 	}
 
-	const std::pair<Request, Response>& Connection::getRequestResponse() {
-		return _queue.front();
-	}
+	void Connection::sendResponse() {
+		if (_responseQueue.empty()) {
+			return;
+		}
 
-	void Connection::close() {
-		::close(_clientSocket);
-		_clientSocket = -1;
+		auto& response = _responseQueue.front();
+		response.send();
+
+		if (response.getStatus() == Response::Status::SENT_ALL) {
+			_responseQueue.pop();
+		}
 	}
 
 	bool Connection::isTimedOut() const {
@@ -36,12 +48,24 @@ namespace http {
 		return (elapsedTime > std::chrono::milliseconds(_msTimeout));
 	}
 
-	void Connection::_processBuffer() {
-		Request req = Request::parse(_buffer.begin(), _buffer.end());
-			const auto& status = req.getStatus();
-			if (status == Request::Status::COMPLETE || status == Request::Status::BAD_REQUEST) {
-				_queue.emplace(std::move(req), Response { _clientSocket });
-				// update _buffer
-			}
+	void Connection::close() {
+		if (_clientSocket == -1) return;
+
+		if (::close(_clientSocket) < 0) {
+			std::cerr << "Failed to close socket " << _clientSocket << ": " << strerror(errno) << std::endl;
+		}
+
+		_clientSocket = -1;
+	}
+
+	void Connection::_processBuffer(std::size_t pos) {
+		using enum Request::Status;
+
+		Request req = Request::parse(_requestBuffer.begin(), _requestBuffer.end());
+
+		if (req.getStatus() == COMPLETE || req.getStatus() == BAD_REQUEST) {
+			_responseQueue.emplace(std::move(req), Response { _clientSocket });
+			// update _requestBuffer
+		}
 	}
 }

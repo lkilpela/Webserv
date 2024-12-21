@@ -2,15 +2,13 @@
 
 #include <string>
 #include <unordered_map>
-#include <functional>
-#include "Status.hpp"
-#include "Header.hpp"
+#include <vector>
+#include "constants.hpp"
 
 namespace http {
-
 	class Response {
 		public:
-			enum class Status { INCOMPLETE, READY, SENDING, SENT, ERROR };
+			enum class Status { INCOMPLETE, READY, SENDING, SENT_ALL, ERROR };
 
 			Response(int clientSocket);
 			Response(const Response&) = delete;
@@ -18,28 +16,29 @@ namespace http {
 
 			Response& operator=(const Response&) = delete;
 
-			const http::Status& getHttpStatus() const;
+			const Response::Status& getStatus() const;
+			const http::StatusCode getHttpStatusCode() const;
 
-			Response& setHttpStatus(const http::Status& httpStatus);
+			Response& setHttpStatusCode(const http::StatusCode statusCode);
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(const std::string& bodyContent);
+			Response& setFile(const std::string& filePath);
 
-			void sendFile(const std::string& filePath);
+			void send();
+			void build();
 			// void sendStatus(int clientSocket, Status status);
 			// void sendText(const std::string& text);
 
 		private:
 			int _clientSocket;
 			Response::Status _status { Response::Status::INCOMPLETE };
-			http::Status _httpStatus { http::Status::Code::NONE };
-			std::string _body;
+			http::StatusCode _statusCode { http::StatusCode::NONE };
 			std::unordered_map<std::string, std::string> _headers;
-			std::size_t _bytesSent { 0 };
-			std::size_t _totalBytes { 0 };
+			std::string _header;
+			std::string _body;
+			std::string _filePath;
+			std::ifstream _fileStream;
 
-			std::string _composeHeaders() const;
-			ssize_t _send();
-
+			void _sendBody();
 	};
-
 }

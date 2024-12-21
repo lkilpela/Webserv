@@ -6,10 +6,9 @@
 #include <span>
 #include <unordered_map>
 #include "Url.hpp"
-#include "Header.hpp"
+#include "constants.hpp"
 
 namespace http {
-
 	class Request {
 		public:
 			enum class Status { COMPLETE, INCOMPLETE, BAD_REQUEST };
@@ -52,5 +51,4 @@ namespace http {
 			bool _isCgi { false };
 			bool _isDirectory { false };
 	};
-
 }

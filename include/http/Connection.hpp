@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <queue>
-#include <utility>
 #include <chrono>
 #include "Request.hpp"
 #include "Response.hpp"
@@ -12,11 +11,10 @@ namespace http {
 		public:
 			Connection(int clientSocket, int msTimeout);
 			Connection(const Connection&) = delete;
-
 			Connection& operator=(const Connection&) = delete;
 
-			ssize_t readData(int clientSocket);
-			const std::pair<Request, Response>& getRequestResponse();
+			void readRequest(std::uint8_t *buffer, size_t size);
+			void sendResponse();
 			void close();
 
 			bool isTimedOut() const;
@@ -24,11 +22,10 @@ namespace http {
 		private:
 			int _clientSocket;
 			int _msTimeout;
-			std::vector<std::uint8_t> _buffer;
-			std::queue<std::pair<Request, Response>> _queue;
+			std::vector<std::uint8_t> _requestBuffer;
+			std::queue<Response> _responseQueue;
 			std::chrono::steady_clock::time_point _lastReceived;
-			bool _isClosed { false };
 
-			void _processBuffer();
+			void _processBuffer(std::size_t pos);
 	};
 }

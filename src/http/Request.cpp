@@ -3,7 +3,7 @@
 #include <array>
 #include <algorithm>
 #include <sys/socket.h>
-#include "Utils.hpp"
+#include "utils.hpp"
 #include "http/Request.hpp"
 
 // Behavior of recv()
