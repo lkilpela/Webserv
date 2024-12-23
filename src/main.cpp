@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Config.hpp"
 #include "Error.hpp"
+#include "Server.hpp"
 #include <exception>
 
 //#include "Server.hpp"
@@ -14,9 +15,6 @@ int main(int argc, char **argv) {
 	try {
 		ConfigParser parser;
 		parser.load(argv[1]);
-		
-		//Server server(config);
-		///server.listen();
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {

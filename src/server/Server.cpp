@@ -1,4 +1,6 @@
-#include "Config.hpp" // ServerConfig
+#include "Server.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
 #include <iostream> // std::cout, std::endl
 #include <sys/socket.h> // socket, bind, listen, accept
 #include <netinet/in.h> // sockaddr_in
@@ -10,6 +12,8 @@
 #include <arpa/inet.h> // inet_pton
 #include "Error.hpp" // Error
 #include <fcntl.h> // fcntl
+
+
 void setNonBlocking(int sockfd) {
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1) {
@@ -19,7 +23,8 @@ void setNonBlocking(int sockfd) {
 		throw NetworkError(errno);
 	}
 }
-int createAndBindSocket(const ServerConfig& config) {
+int Server::createAndBindSocket(const ServerConfig& config) {
+    std::cout << "Creating and binding socket for " << config.host << ":" << config.port << std::endl;
 	// Create a socket
 	// AF_INET is the address family for IPv4
 	// SOCK_STREAM is the type of socket, it provides sequenced, reliable, two-way, connection-based byte streams
@@ -45,7 +50,9 @@ int createAndBindSocket(const ServerConfig& config) {
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(config.port);
-    serverAddr.sin_addr.s_addr = inet_pton(AF_INET, config.host.c_str(), &serverAddr.sin_addr);
+    if (inet_pton(AF_INET, config.host.c_str(), &serverAddr.sin_addr) <= 0) {
+        throw NetworkError(errno);
+    }
 	// casting: sockaddr_in structure to sockaddr structure because socket API expect a pointer to a sockaddr structure, 
 	// which is a generic structur for handling addresses
     if (bind(sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
@@ -58,9 +65,11 @@ int createAndBindSocket(const ServerConfig& config) {
     if (listen(sockfd, SOMAXCONN) == -1) {
 		throw NetworkError(errno);
     }
+
+    std::cout << "Socket created and bound for " << config.host << ":" << config.port << std::endl;
     return sockfd;
 }
-void acceptConnection(int sockfd) {
+/* void acceptConnection(int sockfd) {
 	sockaddr_in clientAddr{};
 	socklen_t clientAddrSize = sizeof(clientAddr);
 	// Accept a connection
@@ -74,4 +83,81 @@ void acceptConnection(int sockfd) {
 	std::cout << "Accepted connection" << std::endl;
 	// Close the socket
 	close(clientSockfd);
+} */
+
+void Server::handleConnections(int serverSockfd) {
+    std::cout << "Listening for connections" << std::endl;
+    std::vector<pollfd> pollfds;
+    pollfds.push_back({serverSockfd, POLLIN, 0});
+
+    while (true) {
+        int pollCount = poll(pollfds.data(), pollfds.size(), -1);
+        if (pollCount == -1) {
+            throw NetworkError(errno);
+        }
+
+        for (size_t i = 0; i < pollfds.size(); ++i) {
+            if (pollfds[i].revents & POLLIN) {
+                if (pollfds[i].fd == serverSockfd) {
+                    // Accept new connection
+                    sockaddr_in clientAddr{};
+                    socklen_t clientAddrSize = sizeof(clientAddr);
+                    int clientSockfd = accept(serverSockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
+                    if (clientSockfd == -1) {
+                        throw NetworkError(errno);
+                        continue;
+                    }
+                    setNonBlocking(clientSockfd);
+                    pollfds.push_back({clientSockfd, POLLIN, 0});
+                    std::cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << std::endl;
+                } else {
+                    // Handle data from client
+                    char buffer[1024];
+                    ssize_t bytesRead = read(pollfds[i].fd, buffer, sizeof(buffer));
+                    if (bytesRead <= 0) {
+                        if (bytesRead == 0) {
+                            std::cout << "Client disconnected" << std::endl;
+                        } else {
+                            std::cerr << "read() failed" << strerror(errno) << std::endl;
+                        }
+                        close(pollfds[i].fd);
+                        pollfds.erase(pollfds.begin() + i);
+                        --i;
+                    } else {
+                        // Process data
+                        std::string rawRequest(buffer, bytesRead);
+                        HttpRequest request = HttpRequest::parse(rawRequest);
+                        if (!request.validate()) {
+                            std::cerr << "Invalid request" << std::endl;
+                            close(pollfds[i].fd);
+                            pollfds.erase(pollfds.begin() + i);
+                            --i;
+                            continue;
+                        }
+                        std::cout << "Received request: " << request.method << " " << request.path << std::endl;
+                        
+                        // Generate response
+                        HttpResponse response;
+                        response.version = "HTTP/1.1";
+                        response.statusCode = 200;
+                        response.statusMessage = "OK";
+                        response.headers["Content-Type"] = "text/plain";
+                        response.body = "Hello, world!";
+                        response.headers["Content-Length"] = std::to_string(response.body.size());
+
+                        if (!response.validate()) {
+                            std::cerr << "Invalid response" << std::endl;
+                            close(pollfds[i].fd);
+                            pollfds.erase(pollfds.begin() + i);
+                            --i;
+                            continue;
+                        }
+
+                        std::string rawResponse = response.toString();
+                        write(pollfds[i].fd, rawResponse.c_str(), rawResponse.size());
+                    }
+                }
+            }
+        }
+    }
 }

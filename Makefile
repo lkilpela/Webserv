@@ -16,12 +16,14 @@ LIB_NAME        =   libwebserv.a
 INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/Utils.hpp \
-					$(INCLUDES)/Error.hpp # Add more headers here
+					$(INCLUDES)/Error.hpp \
+					$(INCLUDES)/Server.hpp # Add more headers here
 
 OBJ_DIR			=	./obj
 SRC_DIR			=	./src
 SRCS			=	Config.cpp \
 					Utils.cpp \
+					Server.cpp \
 					main.cpp # Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
@@ -29,7 +31,7 @@ OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 ################################################################################
 # RULES
 ################################################################################
-vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser  \ $(SRC_DIR)/utils # Add more paths here
+vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser  \ $(SRC_DIR)/utils \ $(SRC_DIR)/server # Add more paths here
 
 all: $(NAME)
 
