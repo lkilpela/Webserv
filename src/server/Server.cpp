@@ -126,6 +126,7 @@ void Server::handleConnections(int serverSockfd) {
                     } else {
                         // Process data
                         std::string rawRequest(buffer, bytesRead);
+                        std::cout << "Raw request:\n" << rawRequest << std::endl; // Debug
                         HttpRequest request = HttpRequest::parse(rawRequest);
                         if (!request.validate()) {
                             std::cerr << "Invalid request" << std::endl;
@@ -154,6 +155,7 @@ void Server::handleConnections(int serverSockfd) {
                         }
 
                         std::string rawResponse = response.toString();
+                        std::cout << "Raw response:\n" << rawResponse << std::endl;
                         write(pollfds[i].fd, rawResponse.c_str(), rawResponse.size());
                     }
                 }
