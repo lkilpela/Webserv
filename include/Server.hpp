@@ -20,6 +20,7 @@ private:
 	std::vector<int> serverSockets;
 
 	int createAndBindSocket(const ServerConfig& config);
+	void handleClient(int clientSockfd);
 	void handleConnections(int serverSockfd);
 };
 

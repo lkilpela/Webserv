@@ -85,6 +85,46 @@ int Server::createAndBindSocket(const ServerConfig& config) {
 	close(clientSockfd);
 } */
 
+void Server::handleClient(int clientSockfd) {
+    // Handle data from client
+    char buffer[1024];
+    ssize_t bytesRead = read(clientSockfd, buffer, sizeof(buffer));
+    if (bytesRead <= 0) {
+        if (bytesRead == 0) {
+            std::cout << "Client disconnected" << std::endl;
+        } else {
+            std::cerr << "read() failed" << strerror(errno) << std::endl;
+        }
+    }
+    // Process data
+    std::string rawRequest(buffer, bytesRead);
+    std::cout << "Raw request:\n" << rawRequest << std::endl; // Debug
+    HttpRequest request = HttpRequest::parse(rawRequest);
+    if (!request.validate()) {
+        std::cerr << "Invalid request" << std::endl;
+        return ;
+    }
+    std::cout << "Received request: " << request.method << " " << request.path << std::endl;
+    
+    // Generate response
+    HttpResponse response;
+    response.version = "HTTP/1.1";
+    response.statusCode = 200;
+    response.statusMessage = "OK";
+    response.headers["Content-Type"] = "text/plain";
+    response.body = "Hello, world!";
+    response.headers["Content-Length"] = std::to_string(response.body.size());
+
+    if (!response.validate()) {
+        std::cerr << "Invalid response" << std::endl;
+        return ;
+    }
+
+    std::string rawResponse = response.toString();
+    std::cout << "Raw response:\n" << rawResponse << std::endl;
+    write(clientSockfd, rawResponse.c_str(), rawResponse.size());
+}
+
 void Server::handleConnections(int serverSockfd) {
     std::cout << "Listening for connections" << std::endl;
     std::vector<pollfd> pollfds;
@@ -111,53 +151,11 @@ void Server::handleConnections(int serverSockfd) {
                     pollfds.push_back({clientSockfd, POLLIN, 0});
                     std::cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << std::endl;
                 } else {
-                    // Handle data from client
-                    char buffer[1024];
-                    ssize_t bytesRead = read(pollfds[i].fd, buffer, sizeof(buffer));
-                    if (bytesRead <= 0) {
-                        if (bytesRead == 0) {
-                            std::cout << "Client disconnected" << std::endl;
-                        } else {
-                            std::cerr << "read() failed" << strerror(errno) << std::endl;
-                        }
-                        close(pollfds[i].fd);
-                        pollfds.erase(pollfds.begin() + i);
-                        --i;
-                    } else {
-                        // Process data
-                        std::string rawRequest(buffer, bytesRead);
-                        std::cout << "Raw request:\n" << rawRequest << std::endl; // Debug
-                        HttpRequest request = HttpRequest::parse(rawRequest);
-                        if (!request.validate()) {
-                            std::cerr << "Invalid request" << std::endl;
-                            close(pollfds[i].fd);
-                            pollfds.erase(pollfds.begin() + i);
-                            --i;
-                            continue;
-                        }
-                        std::cout << "Received request: " << request.method << " " << request.path << std::endl;
-                        
-                        // Generate response
-                        HttpResponse response;
-                        response.version = "HTTP/1.1";
-                        response.statusCode = 200;
-                        response.statusMessage = "OK";
-                        response.headers["Content-Type"] = "text/plain";
-                        response.body = "Hello, world!";
-                        response.headers["Content-Length"] = std::to_string(response.body.size());
-
-                        if (!response.validate()) {
-                            std::cerr << "Invalid response" << std::endl;
-                            close(pollfds[i].fd);
-                            pollfds.erase(pollfds.begin() + i);
-                            --i;
-                            continue;
-                        }
-
-                        std::string rawResponse = response.toString();
-                        std::cout << "Raw response:\n" << rawResponse << std::endl;
-                        write(pollfds[i].fd, rawResponse.c_str(), rawResponse.size());
-                    }
+                    // Handle client data
+                    handleClient(pollfds[i].fd);
+                    close(pollfds[i].fd);
+                    pollfds.erase(pollfds.begin() + i);
+                    --i;
                 }
             }
         }
