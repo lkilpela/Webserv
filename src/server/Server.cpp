@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
+#include "Constant.hpp"
+#include "CgiHandler.hpp"
 #include <iostream> // std::cout, std::endl
 #include <sys/socket.h> // socket, bind, listen, accept
 #include <netinet/in.h> // sockaddr_in
@@ -12,7 +14,31 @@
 #include <arpa/inet.h> // inet_pton
 #include "Error.hpp" // Error
 #include <fcntl.h> // fcntl
+#include <fstream> // std::ifstream
+#include <sstream> // std::stringstream
 
+// Function to determine the content type based on the file extension
+std::string getContentType(const std::string& path) {
+    std::map<std::string, std::string> contentTypes = {
+        {".html", "text/html"},
+        {".htm", "text/html"},
+        {".jpg", "image/jpeg"},
+        {".jpeg", "image/jpeg"},
+        {".png", "image/png"},
+        {".gif", "image/gif"},
+        {".css", "text/css"},
+        {".js", "application/javascript"}
+    };
+
+    size_t dotPos = path.find_last_of(".");
+    if (dotPos != std::string::npos) {
+        std::string extension = path.substr(dotPos);
+        if (contentTypes.find(extension) != contentTypes.end()) {
+            return contentTypes[extension];
+        }
+    }
+    return "application/octet-stream";
+}
 
 void setNonBlocking(int sockfd) {
 	int flags = fcntl(sockfd, F_GETFL, 0);
@@ -72,13 +98,13 @@ int Server::createAndBindSocket(const ServerConfig& config) {
 
 void Server::handleClient(int clientSockfd) {
     // Handle data from client
-    char buffer[1024];
+    char buffer[BUFFER_SIZE];
     ssize_t bytesRead = read(clientSockfd, buffer, sizeof(buffer));
     if (bytesRead <= 0) {
         if (bytesRead == 0) {
             std::cout << "Client disconnected" << std::endl;
         } else {
-            std::cerr << "read() failed" << strerror(errno) << std::endl;
+            throw FileSystemError(errno);
         }
     }
     // Process data
@@ -87,26 +113,95 @@ void Server::handleClient(int clientSockfd) {
     HttpRequest request = HttpRequest::parse(rawRequest);
     if (!request.validate()) {
         std::cerr << "Invalid request" << std::endl;
+        sendErrorResponse(clientSockfd, HTTP_BAD_REQUEST, HTTP_BAD_REQUEST_MSG);
         return ;
     }
     std::cout << "Received request: " << request.method << " " << request.path << std::endl;
     
     // Generate response
     HttpResponse response;
-    response.version = "HTTP/1.1";
-    response.statusCode = 200;
-    response.statusMessage = "OK";
-    response.headers["Content-Type"] = "text/plain";
-    response.body = "Hello, world!";
-    response.headers["Content-Length"] = std::to_string(response.body.size());
+    response.version = HTTP_1_1;
+
+    if (request.method == "GET") {
+        std::string filePath = DEFAULT_ERROR_PATH + request.path;
+        if (request.path == "/") {
+            filePath = DEFAULT_INDEX_PATH;
+        } else {
+            filePath = DEFAULT_PATH + request.path;
+        }
+
+        std::ifstream file(filePath);
+        if (file) {
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            response.statusCode = HTTP_OK;
+            response.statusMessage = HTTP_OK_MSG;
+            response.headers["Content-Type"] = getContentType(filePath);
+            response.body = buffer.str();
+            response.headers["Content-Length"] = std::to_string(response.body.size());
+        } else {
+            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
+            return;
+        }
+    } else if (request.method == "POST") {
+        // Handle file uploads or CGI
+        if (request.path == "/upload") {
+            // Handle file upload
+            // Save the uploaded file to a directory
+            std::ofstream outFile("/Users/lumik/Webserv/uploads/uploaded_file", std::ios::binary);
+            outFile << request.body;
+            outFile.close();
+
+            response.statusCode = HTTP_OK;
+            response.statusMessage = HTTP_OK_MSG;
+            response.headers["Content-Type"] = "text/plain";
+            response.body = "File uploaded successfully";
+            response.headers["Content-Length"] = std::to_string(response.body.size());
+        } else if (request.path == "/cgi-bin/script.cgi") {
+            // Handle CGI script execution
+            CgiHandler cgiHandler;
+            response = cgiHandler.executeCgi(request);
+        } else {
+            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
+            return;
+        }
+    } else {
+        sendErrorResponse(clientSockfd, HTTP_METHOD_NOT_ALLOWED, HTTP_METHOD_NOT_ALLOWED_MSG);
+        return;
+    }
 
     if (!response.validate()) {
         std::cerr << "Invalid response" << std::endl;
-        return ;
+        sendErrorResponse(clientSockfd, HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG);
+        return;
     }
 
     std::string rawResponse = response.toString();
     std::cout << "Raw response:\n" << rawResponse << std::endl;
+    write(clientSockfd, rawResponse.c_str(), rawResponse.size());
+}
+
+void Server::sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage) {
+    HttpResponse response;
+    response.version = "HTTP/1.1";
+    response.statusCode = statusCode;
+    response.statusMessage = statusMessage;
+
+    std::string errorPagePath = DEFAULT_ERROR_PATH + std::to_string(statusCode) + ".html";
+    std::ifstream file(errorPagePath);
+    if (file) {
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        response.body = buffer.str();
+        response.headers["Content-Type"] = DEFAULT_CONTENT_TYPE;
+    } else {
+        response.body = "<html><body><h1>" + std::to_string(statusCode) + " " + statusMessage + "</h1></body></html>";
+        response.headers["Content-Type"] = DEFAULT_CONTENT_TYPE;
+    }
+    response.headers["Content-Length"] = std::to_string(response.body.size());
+
+    std::string rawResponse = response.toString();
+    std::cout << "Raw error response:\n" << rawResponse << std::endl;
     write(clientSockfd, rawResponse.c_str(), rawResponse.size());
 }
 

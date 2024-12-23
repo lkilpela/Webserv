@@ -22,6 +22,7 @@ private:
 	int createAndBindSocket(const ServerConfig& config);
 	void handleClient(int clientSockfd);
 	void handleConnections(int serverSockfd);
+	void sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage);
 };
 
 

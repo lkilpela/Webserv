@@ -19,7 +19,9 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/Error.hpp \
 					$(INCLUDES)/Server.hpp \
 					$(INCLUDES)/Request.hpp \
-					$(INCLUDES)/Response.hpp # Add more headers here
+					$(INCLUDES)/Response.hpp \
+					$(INCLUDES)/Constant.hpp \
+					$(INCLUDES)/CgiHandler.hpp # Add more headers here
 
 OBJ_DIR			=	./obj
 SRC_DIR			=	./src
@@ -28,7 +30,8 @@ SRCS			=	Config.cpp \
 					Server.cpp \
 					main.cpp \
 					Request.cpp \
-					Response.cpp # Add more sources here
+					Response.cpp \
+					CgiHandler.cpp # Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
