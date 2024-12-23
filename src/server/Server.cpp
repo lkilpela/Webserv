@@ -69,21 +69,6 @@ int Server::createAndBindSocket(const ServerConfig& config) {
     std::cout << "Socket created and bound for " << config.host << ":" << config.port << std::endl;
     return sockfd;
 }
-/* void acceptConnection(int sockfd) {
-	sockaddr_in clientAddr{};
-	socklen_t clientAddrSize = sizeof(clientAddr);
-	// Accept a connection
-	// accept returns a new socket file descriptor for the accepted connection
-	int clientSockfd = accept(sockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
-	if (clientSockfd == -1) {
-		throw NetworkError(errno);
-	}
-	// Set the socket to non-blocking
-	setNonBlocking(clientSockfd);
-	std::cout << "Accepted connection" << std::endl;
-	// Close the socket
-	close(clientSockfd);
-} */
 
 void Server::handleClient(int clientSockfd) {
     // Handle data from client
