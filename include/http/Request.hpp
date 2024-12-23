@@ -14,6 +14,7 @@ namespace http {
 			enum class Status { COMPLETE, INCOMPLETE, BAD_REQUEST };
 
 			Request() = default;
+			explicit Request(Status status);
 			Request(const Request&) = delete;
 			Request(Request&& request);
 			~Request() = default;
@@ -42,12 +43,13 @@ namespace http {
 
 		private:
 			std::string _method;
-			Url _url;
 			std::string _version;
+			std::string _filePath;
+			Url _url;
 			std::unordered_map<std::string, std::string> _headers;
 			std::vector<std::uint8_t> _body;
-			std::string _filePath;
 			Request::Status _status { Request::Status::INCOMPLETE };
+
 			bool _isCgi { false };
 			bool _isDirectory { false };
 	};

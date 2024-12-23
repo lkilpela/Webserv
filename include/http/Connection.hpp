@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <queue>
+#include <utility>
 #include <chrono>
 #include "Request.hpp"
 #include "Response.hpp"
@@ -23,7 +24,7 @@ namespace http {
 			int _clientSocket;
 			int _msTimeout;
 			std::vector<std::uint8_t> _requestBuffer;
-			std::queue<Response> _responseQueue;
+			std::queue<std::pair<Request, Response>> _queue;
 			std::chrono::steady_clock::time_point _lastReceived;
 
 			void _processBuffer(std::size_t pos);

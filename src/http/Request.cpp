@@ -18,6 +18,10 @@
 
 namespace http {
 
+	Request::Request(Status status) : _status(status) {
+
+	}
+
 	Request::Request(Request&& request)
 		: _method(std::move(request._method))
 		, _url(std::move(request._url))

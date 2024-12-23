@@ -23,21 +23,24 @@ namespace http {
 		std::size_t pos = findBlankLine(_requestBuffer.begin(), _requestBuffer.end());
 
 		if (pos == std::string::npos && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
-			_responseQueue.emplace(Request { Request::Status::BAD_REQUEST }, Response { _clientSocket });
+			_queue.emplace(
+				Request(Request::Status::BAD_REQUEST),
+				Response(_clientSocket)
+			);
 			return;
 		}
-			_processBuffer(pos);
 
+		_processBuffer(pos);
 	}
 
 	void Connection::sendResponse() {
-		if (_responseQueue.empty())
+		if (_queue.empty())
 			return;
 
-		auto& response = _responseQueue.front();
+		auto& response = _queue.front();
 
 		if (response.send())
-			_responseQueue.pop();
+			_queue.pop();
 	}
 
 	bool Connection::isTimedOut() const {
@@ -46,12 +49,16 @@ namespace http {
 	}
 
 	void Connection::close() {
-		if (_clientSocket == -1)
+		if (_clientSocket == -1) {
 			return;
+		}
 
-		if (::close(_clientSocket) < 0)
-			std::cerr << "Failed to close socket " << _clientSocket << ": " << strerror(errno) << std::endl;
-			
+		if (::close(_clientSocket) < 0) {
+			std::cerr
+				<< "Failed to close socket " << _clientSocket << ": "
+				<< strerror(errno) << std::endl;
+		}
+
 		_clientSocket = -1;
 	}
 
@@ -61,7 +68,7 @@ namespace http {
 		Request req = Request::parse(_requestBuffer.begin(), _requestBuffer.end());
 
 		if (req.getStatus() == COMPLETE || req.getStatus() == BAD_REQUEST) {
-			_responseQueue.emplace(std::move(req), Response { _clientSocket });
+			_queue.emplace(std::move(req), Response { _clientSocket });
 			// update _requestBuffer
 		}
 	}

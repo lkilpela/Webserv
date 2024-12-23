@@ -28,8 +28,8 @@ namespace http {
         std::string query;
         std::string fragment;
 
-		Url& operator=(const Url& url) = default;
-
+		Url() = default;
+		
 		Url(Url&& url)
 			: scheme(std::move(url.scheme))
 			, user(std::move(url.user))
@@ -40,6 +40,8 @@ namespace http {
 			, query(std::move(url.query))
 			, fragment(std::move(url.fragment)) {
 		}
+
+		Url& operator=(const Url& url) = default;
 
 	};
 

@@ -5,14 +5,16 @@
 namespace http {
 	TextResponseBody::TextResponseBody(int clientSocket, const std::string& text)
 		: ResponseBody(clientSocket)
-		, _content(text) {
-			_totalBytes = _content.size();
+		, _content(text)
+	{
+		_totalBytes = _content.size();
 	}
 
 	TextResponseBody::TextResponseBody(int clientSocket, std::string&& text)
 		: ResponseBody(clientSocket)
-		, _content(std::move(text)) {
-			_totalBytes = _content.size();
+		, _content(std::move(text))
+	{
+		_totalBytes = _content.size();
 	}
 
 	bool TextResponseBody::send() {

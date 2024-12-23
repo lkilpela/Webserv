@@ -1,6 +1,5 @@
-#include <string.h>
-#include <iostream>
 #include <sstream>
+#include <cstdint>
 #include <sys/socket.h>
 #include "http/Response.hpp"
 #include "utils.hpp"
