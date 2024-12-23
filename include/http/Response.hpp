@@ -2,43 +2,41 @@
 
 #include <string>
 #include <unordered_map>
-#include <functional>
-#include "Status.hpp"
-#include "Header.hpp"
+#include <vector>
+#include <memory>
+#include "constants.hpp"
+#include "ResponseBody.hpp"
 
 namespace http {
-
 	class Response {
-		private:
-			http::Status _status { Status::Code::ACCEPTED };
-			std::string _type;
-			std::string _url;
-			std::string _body;
-			std::unordered_map<std::string, std::string> _headers;
-			std::size_t _bytesSent { 0 };
-			bool _isComplete { false };
-
-			std::string _composeHeaders() const;
-			void _send(int clientSocket, const void *buf, const size_t size, int flags);
-
 		public:
-			Response() = default;
-			Response(const Response& response);
-			~Response() = default;
+			enum class Status { INCOMPLETE, READY, SENDING, SENT_ALL, ERROR };
 
-			Response& operator=(const Response& response);
+			Response(int clientSocket);
+			Response(const Response&) = delete;
+			virtual ~Response() = default;
 
-			const http::Status& getStatus() const;
+			Response& operator=(const Response&) = delete;
 
-			Response& setStatus(const http::Status& status);
+			bool send();
+			void build();
+
+			const Response::Status& getStatus() const;
+			const http::StatusCode getHttpStatusCode() const;
+
+			Response& setHttpStatusCode(const http::StatusCode statusCode);
 			Response& setHeader(Header header, const std::string& value);
-			Response& setBody(const std::string& bodyContent);
+			Response& setBody(std::unique_ptr<ResponseBody> body);
 
-			void sendFile(int clientSocket, const std::string& filePath);
-			void sendStatus(int clientSocket, Status status);
-			void sendText(int clientSocket, const std::string& text);
+		private:
+			int _clientSocket;
+			Response::Status _status { Response::Status::INCOMPLETE };
+			http::StatusCode _statusCode { http::StatusCode::NONE };
+			std::unordered_map<std::string, std::string> _headers;
+			std::string _header;
+			std::unique_ptr<ResponseBody> _body { nullptr };
+			std::size_t _bytesSent { 0 };
 
-			bool isComplete() const;
+			bool _sendHeader();
 	};
-
 }

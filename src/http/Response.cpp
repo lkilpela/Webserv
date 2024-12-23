@@ -1,12 +1,9 @@
+#include <string.h>
 #include <iostream>
 #include <sstream>
-#include <fstream>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <string.h>
-#include <errno.h>
 #include "http/Response.hpp"
+#include "utils.hpp"
 
 //  Behavior of send()
 // When send() returns:
@@ -18,34 +15,47 @@
 // If send() returns -1, assume the socket is not ready for writing, and rely on POLLOUT to resume sending.
 
 namespace http {
+	Response::Response(int clientSocket) : _clientSocket(clientSocket) {}
 
-	// Response::Response(const Response& response)
-	// 	: _statusCode(response._statusCode)
-	// 	, _statusText(response._statusText)
-	// 	, _type(response._type)
-	// 	, _url(response._url)
-	// 	, _body(response._body)
-	// 	, _headers(response._headers) {
-	// }
+	bool Response::send() {
+		if (!_sendHeader())
+			return false;
 
-	// Response& Response::operator=(const Response& response) {
-	// 	if (this != &response) {
-	// 		_statusCode = response._statusCode;
-	// 		_statusText = response._statusText;
-	// 		_type = response._type;
-	// 		_url = response._url;
-	// 		_body = response._body;
-	// 		_headers = response._headers;
-	// 	}
-	// 	return *this;
-	// }
+		if (_body == nullptr)
+			return true;
 
-	const Status& Response::getStatus() const {
+		if (_body->send())
+			return true;
+
+		return false;
+	}
+
+	void Response::build() {
+		std::ostringstream ostream;
+
+		ostream
+			<< "HTTP/1.1 "
+			<< static_cast<std::uint16_t>(_statusCode) << " "
+			<< stringOf(_statusCode) << "\r\n";
+
+		for (const auto& [name, value] : _headers) {
+			ostream << name << ": " << value << "\r\n";
+		}
+
+		ostream << "\r\n";
+		_header = ostream.str();
+	}
+
+	const Response::Status& Response::getStatus() const {
 		return _status;
 	}
 
-	Response& Response::setStatus(const Status& status) {
-		_status = status;
+	const http::StatusCode Response::getHttpStatusCode() const {
+		return _statusCode;
+	}
+
+	Response& Response::setHttpStatusCode(const http::StatusCode statusCode) {
+		_statusCode = statusCode;
 		return *this;
 	}
 
@@ -54,62 +64,26 @@ namespace http {
 		return *this;
 	}
 
-	Response& Response::setBody(const std::string& bodyContent) {
-		_body = bodyContent;
+	Response& Response::setBody(std::unique_ptr<ResponseBody> body) {
+		_body = std::move(body);
 		return *this;
 	}
 
-	std::string Response::_composeHeaders() const {
-		std::ostringstream stream;
+	bool Response::_sendHeader() {
+		const ssize_t bytesSent = ::send(
+			_clientSocket,
+			_header.data() + this->_bytesSent,
+			_header.size() - this->_bytesSent,
+			MSG_NOSIGNAL
+		);
 
-		stream
-			<< "HTTP/1.1 "
-			<< static_cast<std::uint16_t>(_status.code) << " "
-			<< _status.reason << "\r\n";
+		if (bytesSent >= 0) {
+			this->_bytesSent += static_cast<std::size_t>(bytesSent);
 
-		for (const auto& [name, value] : _headers) {
-			stream << name << ": " << value << "\r\n";
+			if (this->_bytesSent >= _header.size())
+				return true;
 		}
 
-		stream << "\r\n";
-		return stream.str();
+		return false;
 	}
-
-	void Response::_send(int clientSocket, const void *buf, const size_t size, int flags) {
-		const ssize_t bytesSent = ::send(clientSocket, buf + this->_bytesSent, size - this->_bytesSent, flags);
-		if (bytesSent < 0) {
-			// throw SocketException("Failed to send data");
-			_lastSent = std::chrono::stead_clock::now();
-		}
-		this->_bytesSent += static_cast<std::size_t>(bytesSent);
-		if (this->_bytesSent >= size) {
-			_isComplete = true;
-			this->_bytesSent = 0;
-		}
-	}
-
-	void Response::sendFile(int clientSocket, const std::string& filePath) {
-		std::ifstream file(filePath);
-
-
-	}
-
-	void Response::sendStatus(int clientSocket, Status status) {
-		setStatus(status);
-		setHeader(Header::CONTENT_TYPE, "text/plain");
-		setHeader(Header::CONTENT_LENGTH, std::to_string(_status.reason.length()));
-
-		std::string response = _composeHeaders() + _status.reason;
-		_send(clientSocket, response.c_str(), response.size(), 0);
-	}
-
-	void Response::sendText(int clientSocket, const std::string& text) {
-
-	}
-
-	bool Response::isComplete() const {
-		return _isComplete;
-	}
-
 }
-

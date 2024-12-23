@@ -5,48 +5,50 @@
 #include <vector>
 #include <span>
 #include <unordered_map>
-#include "parse.hpp"
-#include "Header.hpp"
+#include "Url.hpp"
+#include "constants.hpp"
 
 namespace http {
-
 	class Request {
-		private:
-			std::string _method;
-			Url _url;
-			std::string _version;
-			std::unordered_map<std::string, std::string> _headers;
-			std::vector<std::uint8_t> _buffer;
-			std::string _filePath;
-			bool _isComplete { false };
-			bool _isCgi { false };
-			bool _isDirectory { false };
-			uint8_t _numberOfRetries { 0 };
-
 		public:
-			Request() = default;
-			Request(const Request& request) = default;
-			~Request() = default;
-			Request& operator=(const Request& request) = default;
+			enum class Status { COMPLETE, INCOMPLETE, BAD_REQUEST };
 
-			void append(const char* data, size_t size);
-			void parse();
-			void reset();
+			Request() = default;
+			Request(const Request&) = delete;
+			Request(Request&& request);
+			~Request() = default;
+			Request& operator=(const Request&) = delete;
 
 			const std::string& getMethod() const;
 			const Url& getUrl() const;
 			const std::string& getVersion() const;
 			const std::span<const std::uint8_t> getBody() const;
 			const std::string& getBodyAsFile() const;
+			const Request::Status& getStatus() const;
 
 			Request& setMethod(const std::string& method);
 			Request& setUrl(const Url& url);
 			Request& setVersion(const std::string& version);
 			Request& setHeader(Header header, const std::string& value);
+			Request& setStatus(const Request::Status& status);
 
-			bool isComplete() const;
 			bool isCgi() const;
 			bool isDirectory() const;
-	};
 
+			template <typename Iterator>
+			static Request parse(Iterator begin, Iterator end) {
+
+			}
+
+		private:
+			std::string _method;
+			Url _url;
+			std::string _version;
+			std::unordered_map<std::string, std::string> _headers;
+			std::vector<std::uint8_t> _body;
+			std::string _filePath;
+			Request::Status _status { Request::Status::INCOMPLETE };
+			bool _isCgi { false };
+			bool _isDirectory { false };
+	};
 }
