@@ -1,8 +1,6 @@
 #include <sstream>
 #include "http/utils.hpp"
 
-using StringMap = std::unordered_map<std::string, std::string>;
-
 namespace http {
 
 	constexpr const char* getMimeType(const std::string &extension) {
@@ -165,18 +163,4 @@ namespace http {
 			default: return "Unknown";
 		}
 	}
-
-	std::string buildResponseHeader(const StatusCode code, const StringMap& headers) {
-		std::ostringstream stream;
-
-		stream << "HTTP/1.1 " << static_cast<std::uint16_t>(code) << " " << stringOf(code) << "\r\n";
-
-		for (const auto& [name, value] : headers) {
-			stream << name << ": " << value << "\r\n";
-		}
-
-		stream << "\r\n";
-		return stream.str();
-	}
-
 }

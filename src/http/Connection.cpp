@@ -31,16 +31,13 @@ namespace http {
 	}
 
 	void Connection::sendResponse() {
-		if (_responseQueue.empty()) {
+		if (_responseQueue.empty())
 			return;
-		}
 
 		auto& response = _responseQueue.front();
-		response.send();
 
-		if (response.getStatus() == Response::Status::SENT_ALL) {
+		if (response.send())
 			_responseQueue.pop();
-		}
 	}
 
 	bool Connection::isTimedOut() const {
@@ -49,12 +46,12 @@ namespace http {
 	}
 
 	void Connection::close() {
-		if (_clientSocket == -1) return;
+		if (_clientSocket == -1)
+			return;
 
-		if (::close(_clientSocket) < 0) {
+		if (::close(_clientSocket) < 0)
 			std::cerr << "Failed to close socket " << _clientSocket << ": " << strerror(errno) << std::endl;
-		}
-
+			
 		_clientSocket = -1;
 	}
 

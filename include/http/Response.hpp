@@ -3,7 +3,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 #include "constants.hpp"
+#include "ResponseBody.hpp"
 
 namespace http {
 	class Response {
@@ -12,22 +14,19 @@ namespace http {
 
 			Response(int clientSocket);
 			Response(const Response&) = delete;
-			~Response() = default;
+			virtual ~Response() = default;
 
 			Response& operator=(const Response&) = delete;
+
+			bool send();
+			void build();
 
 			const Response::Status& getStatus() const;
 			const http::StatusCode getHttpStatusCode() const;
 
 			Response& setHttpStatusCode(const http::StatusCode statusCode);
 			Response& setHeader(Header header, const std::string& value);
-			Response& setBody(const std::string& bodyContent);
-			Response& setFile(const std::string& filePath);
-
-			void send();
-			void build();
-			// void sendStatus(int clientSocket, Status status);
-			// void sendText(const std::string& text);
+			Response& setBody(std::unique_ptr<ResponseBody> body);
 
 		private:
 			int _clientSocket;
@@ -35,10 +34,9 @@ namespace http {
 			http::StatusCode _statusCode { http::StatusCode::NONE };
 			std::unordered_map<std::string, std::string> _headers;
 			std::string _header;
-			std::string _body;
-			std::string _filePath;
-			std::ifstream _fileStream;
+			std::unique_ptr<ResponseBody> _body { nullptr };
+			std::size_t _bytesSent { 0 };
 
-			void _sendBody();
+			bool _sendHeader();
 	};
 }

@@ -35,6 +35,4 @@ namespace http {
 		}
 		return std::distance(begin, pos) + delimiter.size();
 	}
-
-	std::string buildResponseHeader(const StatusCode code, const std::unordered_map<std::string, std::string>& headers);
 }
