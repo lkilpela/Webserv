@@ -16,13 +16,13 @@ public:
 		}
 	}
 private:
-	Config config;
+	const Config& config;
 	std::vector<int> serverSockets;
 
 	int createAndBindSocket(const ServerConfig& config);
-	void handleClient(int clientSockfd);
+	void handleClient(int clientSockfd, const ServerConfig& serverConfig);
 	void handleConnections(int serverSockfd);
-	void sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage);
+	void sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage, const ServerConfig& serverConfig);
 };
 
 

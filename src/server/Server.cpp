@@ -16,6 +16,15 @@
 #include <fcntl.h> // fcntl
 #include <fstream> // std::ifstream
 #include <sstream> // std::stringstream
+#include <filesystem> // fs::canonical
+#include <map> // std::map
+#include <string> // std::string
+#include <vector> // std::vector
+#include <sys/types.h> // ssize_t
+#include <sys/socket.h> // read, write
+#include <errno.h> // errno
+
+namespace fs = std::filesystem;
 
 // Function to determine the content type based on the file extension
 std::string getContentType(const std::string& path) {
@@ -96,7 +105,7 @@ int Server::createAndBindSocket(const ServerConfig& config) {
     return sockfd;
 }
 
-void Server::handleClient(int clientSockfd) {
+void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
     // Handle data from client
     char buffer[BUFFER_SIZE];
     ssize_t bytesRead = read(clientSockfd, buffer, sizeof(buffer));
@@ -107,30 +116,43 @@ void Server::handleClient(int clientSockfd) {
             throw FileSystemError(errno);
         }
     }
+
     // Process data
     std::string rawRequest(buffer, bytesRead);
     std::cout << "Raw request:\n" << rawRequest << std::endl; // Debug
     HttpRequest request = HttpRequest::parse(rawRequest);
     if (!request.validate()) {
         std::cerr << "Invalid request" << std::endl;
-        sendErrorResponse(clientSockfd, HTTP_BAD_REQUEST, HTTP_BAD_REQUEST_MSG);
-        return ;
+        sendErrorResponse(clientSockfd, HTTP_BAD_REQUEST, HTTP_BAD_REQUEST_MSG, serverConfig);
+        return;
     }
     std::cout << "Received request: " << request.method << " " << request.path << std::endl;
-    
+
     // Generate response
     HttpResponse response;
-    response.version = HTTP_1_1;
+    response.version = "HTTP/1.1";
+
+    // Find the matching location block
+    const Location* matchedLocation = nullptr;
+    for (const auto& location : serverConfig.locations) {
+        if (request.path.find(location.path) == 0) {
+            matchedLocation = &location;
+            break;
+        }
+    }
+
+    if (matchedLocation == nullptr) {
+        sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG, serverConfig);
+        return;
+    }
 
     if (request.method == "GET") {
-        std::string filePath = DEFAULT_ERROR_PATH + request.path;
-        if (request.path == "/") {
-            filePath = DEFAULT_INDEX_PATH;
-        } else {
-            filePath = DEFAULT_PATH + request.path;
+        std::string filePath = fs::canonical(matchedLocation->root + request.path.substr(matchedLocation->path.length())).string();
+        if (request.path == matchedLocation->path) {
+            filePath = fs::canonical(matchedLocation->root + "/" + matchedLocation->index).string();
         }
 
-        std::ifstream file(filePath);
+        std::ifstream file(filePath, std::ios::binary);
         if (file) {
             std::stringstream buffer;
             buffer << file.rdbuf();
@@ -140,39 +162,33 @@ void Server::handleClient(int clientSockfd) {
             response.body = buffer.str();
             response.headers["Content-Length"] = std::to_string(response.body.size());
         } else {
-            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
+            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG, serverConfig);
             return;
         }
-    } else if (request.method == "POST") {
-        // Handle file uploads or CGI
-        if (request.path == "/upload") {
-            // Handle file upload
-            // Save the uploaded file to a directory
-            std::ofstream outFile("/Users/lumik/Webserv/uploads/uploaded_file", std::ios::binary);
-            outFile << request.body;
-            outFile.close();
+    } else if (request.method == "POST" && matchedLocation->allowUpload) {
+        // Handle file upload
+        std::string uploadPath = fs::canonical(matchedLocation->uploadDir + "/uploaded_file").string();
+        std::ofstream outFile(uploadPath, std::ios::binary);
+        outFile << request.body;
+        outFile.close();
 
-            response.statusCode = HTTP_OK;
-            response.statusMessage = HTTP_OK_MSG;
-            response.headers["Content-Type"] = "text/plain";
-            response.body = "File uploaded successfully";
-            response.headers["Content-Length"] = std::to_string(response.body.size());
-        } else if (request.path == "/cgi-bin/script.cgi") {
-            // Handle CGI script execution
-            CgiHandler cgiHandler;
-            response = cgiHandler.executeCgi(request);
-        } else {
-            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
-            return;
-        }
+        response.statusCode = HTTP_OK;
+        response.statusMessage = HTTP_OK_MSG;
+        response.headers["Content-Type"] = "text/plain";
+        response.body = "File uploaded successfully";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
+    } else if (request.method == "POST" && !matchedLocation->cgiExtension.empty()) {
+        // Handle CGI script execution
+        CgiHandler cgiHandler;
+        response = cgiHandler.executeCgi(request);
     } else {
-        sendErrorResponse(clientSockfd, HTTP_METHOD_NOT_ALLOWED, HTTP_METHOD_NOT_ALLOWED_MSG);
+        sendErrorResponse(clientSockfd, HTTP_METHOD_NOT_ALLOWED, HTTP_METHOD_NOT_ALLOWED_MSG, serverConfig);
         return;
     }
 
     if (!response.validate()) {
         std::cerr << "Invalid response" << std::endl;
-        sendErrorResponse(clientSockfd, HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG);
+        sendErrorResponse(clientSockfd, HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG, serverConfig);
         return;
     }
 
@@ -181,13 +197,14 @@ void Server::handleClient(int clientSockfd) {
     write(clientSockfd, rawResponse.c_str(), rawResponse.size());
 }
 
-void Server::sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage) {
+void Server::sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage, const ServerConfig& serverConfig) {
     HttpResponse response;
     response.version = "HTTP/1.1";
     response.statusCode = statusCode;
     response.statusMessage = statusMessage;
 
-    std::string errorPagePath = DEFAULT_ERROR_PATH + std::to_string(statusCode) + ".html";
+    auto it = serverConfig.errorPages.find(statusCode);
+    std::string errorPagePath = (it != serverConfig.errorPages.end()) ? fs::canonical(it->second).string() : fs::canonical(DEFAULT_ERROR_PATH + std::to_string(statusCode) + ".html").string();
     std::ifstream file(errorPagePath);
     if (file) {
         std::stringstream buffer;
@@ -210,6 +227,9 @@ void Server::handleConnections(int serverSockfd) {
     std::vector<pollfd> pollfds;
     pollfds.push_back({serverSockfd, POLLIN, 0});
 
+    sockaddr_in clientAddr{};
+    socklen_t clientAddrSize = sizeof(clientAddr);
+
     while (true) {
         int pollCount = poll(pollfds.data(), pollfds.size(), -1);
         if (pollCount == -1) {
@@ -220,8 +240,7 @@ void Server::handleConnections(int serverSockfd) {
             if (pollfds[i].revents & POLLIN) {
                 if (pollfds[i].fd == serverSockfd) {
                     // Accept new connection
-                    sockaddr_in clientAddr{};
-                    socklen_t clientAddrSize = sizeof(clientAddr);
+
                     int clientSockfd = accept(serverSockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
                     if (clientSockfd == -1) {
                         throw NetworkError(errno);
@@ -232,7 +251,12 @@ void Server::handleConnections(int serverSockfd) {
                     std::cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << std::endl;
                 } else {
                     // Handle client data
-                    handleClient(pollfds[i].fd);
+                    for (const auto& serverConfig : config.servers) {
+                        if (serverConfig.port == ntohs(clientAddr.sin_port)) {
+                            handleClient(pollfds[i].fd, serverConfig);
+                            break;
+                        }
+                    }
                     close(pollfds[i].fd);
                     pollfds.erase(pollfds.begin() + i);
                     --i;

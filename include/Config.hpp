@@ -17,6 +17,7 @@ struct Location {
     std::vector<std::string> methods;
     std::string cgiExtension;
     std::string uploadDir;
+    bool allowUpload;
     std::vector<std::string> returnUrl;
 };
 
