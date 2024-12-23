@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 	try {
 		ConfigParser parser;
 		parser.load(argv[1]);
-		
+		Config config;
 		Server server(config);
 		server.listen();
 	} catch (const WSException& e) {

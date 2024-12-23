@@ -21,7 +21,7 @@ class Server {
 	public:
 		Server() = default;
 		// Server(const Config& config);
-		Server(const std::vector<int> ports);
+		Server(const Config& config);
 		~Server();
 		void listen();
 		void processCGI(Request& req);

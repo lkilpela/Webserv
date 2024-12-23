@@ -1,9 +1,9 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
-Server::Server(const std::vector<int> ports) {
+Server::Server(const Config& config) {
 	//need to figure out route mapping
-    for (int port : ports) {
+    for (int port : config.ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)
 			throw std::runtime_error("Failed to create socket");
@@ -12,7 +12,7 @@ Server::Server(const std::vector<int> ports) {
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
-        address.sin_port = ::htons(port);
+        address.sin_port = htons(port);
         if (::bind(serverFd, (struct sockaddr*)&address, sizeof(address)) == -1)
 	        throw std::runtime_error("Failed to bind socket on port " + std::to_string(port));
         if (::listen(serverFd, BACKLOG) < 0)
@@ -93,16 +93,16 @@ Server::~Server() {
 	);
 }
 
-// int main() {
-// 	std::vector<int> ports = {8080, 8081};
-//     try {
-// 		Server server(ports);
-//         server.listen();
-//     } catch (const std::exception& e) {
-//         std::cerr << "Error: " << e.what() << std::endl;
-//         return 1;
-//     }
+/* int main() {
+	std::vector<int> ports = {8080, 8081};
+    try {
+		Server server(ports);
+        server.listen();
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
 
-//     return 0;
-// }
+    return 0;
+} */
 
