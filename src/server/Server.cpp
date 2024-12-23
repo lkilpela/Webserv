@@ -93,16 +93,16 @@ Server::~Server() {
 	);
 }
 
-int main() {
-	std::vector<int> ports = {8080, 8081};
-    try {
-		Server server(ports);
-        server.listen();
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
+// int main() {
+// 	std::vector<int> ports = {8080, 8081};
+//     try {
+// 		Server server(ports);
+//         server.listen();
+//     } catch (const std::exception& e) {
+//         std::cerr << "Error: " << e.what() << std::endl;
+//         return 1;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 
