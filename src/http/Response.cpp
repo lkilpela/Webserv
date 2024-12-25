@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <sys/socket.h>
 #include "http/Response.hpp"
+#include "Error.hpp"
 #include "utils.hpp"
 
 //  Behavior of send()
@@ -17,14 +18,24 @@ namespace http {
 	Response::Response(int clientSocket) : _clientSocket(clientSocket) {}
 
 	bool Response::send() {
-		if (!_sendHeader())
-			return false;
-
-		if (_body == nullptr)
+		if (this->_bytesSent >= _header.size()) {
 			return true;
+		}
 
-		if (_body->send())
-			return true;
+		const ssize_t bytesSent = ::send(
+			_clientSocket,
+			_header.data() + this->_bytesSent,
+			_header.size() - this->_bytesSent,
+			MSG_NOSIGNAL
+		);
+
+		if (bytesSent >= 0) {
+			this->_bytesSent += static_cast<std::size_t>(bytesSent);
+
+			if (this->_bytesSent >= _header.size()) {
+				return true;
+			}
+		}
 
 		return false;
 	}
@@ -37,7 +48,7 @@ namespace http {
 			<< static_cast<std::uint16_t>(_statusCode) << " "
 			<< stringOf(_statusCode) << "\r\n";
 
-		for (const auto& [name, value] : _headers) {
+		for (const auto& [name, value] : _headerByName) {
 			ostream << name << ": " << value << "\r\n";
 		}
 
@@ -45,44 +56,25 @@ namespace http {
 		_header = ostream.str();
 	}
 
-	const Response::Status& Response::getStatus() const {
-		return _status;
-	}
-
-	const http::StatusCode Response::getHttpStatusCode() const {
+	const StatusCode Response::getStatusCode() const {
 		return _statusCode;
 	}
 
-	Response& Response::setHttpStatusCode(const http::StatusCode statusCode) {
+	Response& Response::clear() {
+		_statusCode = StatusCode::NONE_0;
+		_headerByName.clear();
+		_header.clear();
+		_bytesSent = 0;
+		return *this;
+	}
+
+	Response& Response::setStatusCode(const StatusCode statusCode) {
 		_statusCode = statusCode;
 		return *this;
 	}
 
 	Response& Response::setHeader(Header header, const std::string& value) {
-		_headers[stringOf(header)] = value;
+		_headerByName[stringOf(header)] = value;
 		return *this;
-	}
-
-	Response& Response::setBody(std::unique_ptr<ResponseBody> body) {
-		_body = std::move(body);
-		return *this;
-	}
-
-	bool Response::_sendHeader() {
-		const ssize_t bytesSent = ::send(
-			_clientSocket,
-			_header.data() + this->_bytesSent,
-			_header.size() - this->_bytesSent,
-			MSG_NOSIGNAL
-		);
-
-		if (bytesSent >= 0) {
-			this->_bytesSent += static_cast<std::size_t>(bytesSent);
-
-			if (this->_bytesSent >= _header.size())
-				return true;
-		}
-
-		return false;
 	}
 }

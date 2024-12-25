@@ -25,7 +25,7 @@ namespace http {
 			// The matched route does not support the requested http method, return http status 405
 			if (handlerByMethodIt == handlerByMethod.end()) {
 				response
-					.setHttpStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
+					.setStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
 					.setBody(nullptr)
 					.build();
 				return;
@@ -37,7 +37,8 @@ namespace http {
 				handler(request, response);
 			} catch(const std::exception& e) {
 				response
-					.setHttpStatusCode(StatusCode::INTERNAL_SERVER_ERROR_500)
+					.clear()
+					.setStatusCode(StatusCode::INTERNAL_SERVER_ERROR_500)
 					.setBody(nullptr)
 					.build();
 			}
@@ -47,7 +48,7 @@ namespace http {
 
 		// No matching route found, return http status 404
 		response
-			.setHttpStatusCode(StatusCode::NOT_FOUND_404)
+			.setStatusCode(StatusCode::NOT_FOUND_404)
 			.setBody(nullptr)
 			.build();
 	}

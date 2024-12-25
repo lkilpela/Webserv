@@ -39,8 +39,9 @@ namespace http {
 
 		auto& response = _queue.front();
 
-		if (response.send())
+		if (response.send()) {
 			_queue.pop();
+		}
 	}
 
 	bool Connection::isTimedOut() const {
