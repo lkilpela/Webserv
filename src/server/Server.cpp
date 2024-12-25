@@ -26,29 +26,6 @@
 
 namespace fs = std::filesystem;
 
-// Function to determine the content type based on the file extension
-std::string getContentType(const std::string& path) {
-    std::map<std::string, std::string> contentTypes = {
-        {".html", "text/html"},
-        {".htm", "text/html"},
-        {".jpg", "image/jpeg"},
-        {".jpeg", "image/jpeg"},
-        {".png", "image/png"},
-        {".gif", "image/gif"},
-        {".css", "text/css"},
-        {".js", "application/javascript"}
-    };
-
-    size_t dotPos = path.find_last_of(".");
-    if (dotPos != std::string::npos) {
-        std::string extension = path.substr(dotPos);
-        if (contentTypes.find(extension) != contentTypes.end()) {
-            return contentTypes[extension];
-        }
-    }
-    return "application/octet-stream";
-}
-
 void setNonBlocking(int sockfd) {
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	if (flags == -1) {
@@ -58,8 +35,9 @@ void setNonBlocking(int sockfd) {
 		throw NetworkError(errno);
 	}
 }
+
 int Server::createAndBindSocket() {
-    std::cout << "Creating and binding socket for " << config.host << ":" << config.port << std::endl;
+    std::cout << "Creating and binding socket for server " << config.serverName << std::endl;
 	// Create a socket
 	// AF_INET is the address family for IPv4
 	// SOCK_STREAM is the type of socket, it provides sequenced, reliable, two-way, connection-based byte streams
@@ -101,7 +79,7 @@ int Server::createAndBindSocket() {
 		throw NetworkError(errno);
     }
 
-    std::cout << "Socket created and bound for " << config.host << ":" << config.port << std::endl;
+    std::cout << GREEN "Socket created and bound for " RESET << config.host << ":" << config.port << std::endl;
     return sockfd;
 }
 
@@ -119,14 +97,12 @@ void Server::handleClient(int clientSockfd) {
 
     // Process data
     std::string rawRequest(buffer, bytesRead);
-    std::cout << "Raw request:\n" << rawRequest << std::endl; // Debug
+    std::cout << BLUE "Raw request:\n" RESET << rawRequest << std::endl; // Debug
     HttpRequest request = HttpRequest::parse(rawRequest);
     if (!request.validate()) {
-        std::cerr << "Invalid request" << std::endl;
-        sendErrorResponse(clientSockfd, HTTP_BAD_REQUEST, HTTP_BAD_REQUEST_MSG);
-        return;
+        throw RequestError(EINVAL);
     }
-    std::cout << "Received request: " << request.method << " " << request.path << std::endl;
+    std::cout << BLUE "Received request: " RESET << request.method << " " << request.path << std::endl;
 
     // Generate response
     HttpResponse response;
@@ -142,8 +118,7 @@ void Server::handleClient(int clientSockfd) {
     }
 
     if (matchedLocation == nullptr) {
-        sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
-        return;
+        throw RequestError(HTTP_NOT_FOUND);
     }
 
     if (request.method == "GET") {
@@ -158,12 +133,11 @@ void Server::handleClient(int clientSockfd) {
             buffer << file.rdbuf();
             response.statusCode = HTTP_OK;
             response.statusMessage = HTTP_OK_MSG;
-            response.headers["Content-Type"] = getContentType(filePath);
+            response.headers["Content-Type"] = DEFAULT_CONTENT_TYPE;
             response.body = buffer.str();
             response.headers["Content-Length"] = std::to_string(response.body.size());
         } else {
-            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
-            return;
+            throw FileSystemError(errno);
         }
     } else if (request.method == "POST" && matchedLocation->allowUpload) {
         // Handle file upload
@@ -182,14 +156,12 @@ void Server::handleClient(int clientSockfd) {
         CgiHandler cgiHandler;
         response = cgiHandler.executeCgi(request);
     } else {
-        sendErrorResponse(clientSockfd, HTTP_METHOD_NOT_ALLOWED, HTTP_METHOD_NOT_ALLOWED_MSG);
-        return;
+        throw RequestError(EINVAL);
     }
 
     if (!response.validate()) {
         std::cerr << "Invalid response" << std::endl;
-        sendErrorResponse(clientSockfd, HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG);
-        return;
+        throw ResponseError(EINVAL);
     }
 
     std::string rawResponse = response.toString();
@@ -197,33 +169,9 @@ void Server::handleClient(int clientSockfd) {
     write(clientSockfd, rawResponse.c_str(), rawResponse.size());
 }
 
-void Server::sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage) {
-    HttpResponse response;
-    response.version = "HTTP/1.1";
-    response.statusCode = statusCode;
-    response.statusMessage = statusMessage;
-
-    auto it = config.errorPages.find(statusCode);
-    std::string errorPagePath = (it != config.errorPages.end()) ? fs::canonical(it->second).string() : fs::canonical(DEFAULT_ERROR_PATH + std::to_string(statusCode) + ".html").string();
-    std::ifstream file(errorPagePath);
-    if (file) {
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        response.body = buffer.str();
-        response.headers["Content-Type"] = DEFAULT_CONTENT_TYPE;
-    } else {
-        response.body = "<html><body><h1>" + std::to_string(statusCode) + " " + statusMessage + "</h1></body></html>";
-        response.headers["Content-Type"] = DEFAULT_CONTENT_TYPE;
-    }
-    response.headers["Content-Length"] = std::to_string(response.body.size());
-
-    std::string rawResponse = response.toString();
-    std::cout << "Raw error response:\n" << rawResponse << std::endl;
-    write(clientSockfd, rawResponse.c_str(), rawResponse.size());
-}
 
 void Server::handleConnections() {
-    std::cout << "Listening for connections" << std::endl;
+    std::cout << GREEN "Listening for connections " RESET << config.host << ":" << config.port << std::endl;
     std::vector<pollfd> pollfds;
     pollfds.push_back({serverSockfd, POLLIN, 0});
 
