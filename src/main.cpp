@@ -3,6 +3,7 @@
 #include "Error.hpp"
 #include "Server.hpp"
 #include <exception>
+#include <thread>
 
 //#include "Server.hpp"
 
@@ -14,7 +15,19 @@ int main(int argc, char **argv) {
 
 	try {
 		ConfigParser parser;
-		parser.load(argv[1]);
+		Config config = parser.load(argv[1]);
+		std::vector<Server> servers;
+		std::vector<std::thread> threads;
+		for (const auto& serverConfig : config.servers) {
+			threads.push_back(std::thread([serverConfig] {
+				Server server(serverConfig);
+				server.start();
+			}));
+		}
+		for (auto& thread : threads) {
+			thread.join();
+		}
+
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {

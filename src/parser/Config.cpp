@@ -297,15 +297,16 @@ void ConfigParser::printConfig(const Config& config) {
 }
 
 // Function to load the configuration
-void ConfigParser::load(const string& filePath) {
+Config ConfigParser::load(const string& filePath) {
     try {
         Config config;
         parseConfig(filePath, config);
         //printConfig(config);
-        Server server(config);
-        server.start();
+        //Server server(config);
+        //server.start();
+        return config;
     } catch (const ConfigError& e) {
         cout << "Error: " << e.code() << " " << e.what() << endl;
-        
     }
+    return Config();
 }

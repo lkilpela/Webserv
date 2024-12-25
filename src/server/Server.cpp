@@ -58,7 +58,7 @@ void setNonBlocking(int sockfd) {
 		throw NetworkError(errno);
 	}
 }
-int Server::createAndBindSocket(const ServerConfig& config) {
+int Server::createAndBindSocket() {
     std::cout << "Creating and binding socket for " << config.host << ":" << config.port << std::endl;
 	// Create a socket
 	// AF_INET is the address family for IPv4
@@ -105,7 +105,7 @@ int Server::createAndBindSocket(const ServerConfig& config) {
     return sockfd;
 }
 
-void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
+void Server::handleClient(int clientSockfd) {
     // Handle data from client
     char buffer[BUFFER_SIZE];
     ssize_t bytesRead = read(clientSockfd, buffer, sizeof(buffer));
@@ -123,7 +123,7 @@ void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
     HttpRequest request = HttpRequest::parse(rawRequest);
     if (!request.validate()) {
         std::cerr << "Invalid request" << std::endl;
-        sendErrorResponse(clientSockfd, HTTP_BAD_REQUEST, HTTP_BAD_REQUEST_MSG, serverConfig);
+        sendErrorResponse(clientSockfd, HTTP_BAD_REQUEST, HTTP_BAD_REQUEST_MSG);
         return;
     }
     std::cout << "Received request: " << request.method << " " << request.path << std::endl;
@@ -134,7 +134,7 @@ void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
 
     // Find the matching location block
     const Location* matchedLocation = nullptr;
-    for (const auto& location : serverConfig.locations) {
+    for (const auto& location : config.locations) {
         if (request.path.find(location.path) == 0) {
             matchedLocation = &location;
             break;
@@ -142,7 +142,7 @@ void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
     }
 
     if (matchedLocation == nullptr) {
-        sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG, serverConfig);
+        sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
         return;
     }
 
@@ -162,7 +162,7 @@ void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
             response.body = buffer.str();
             response.headers["Content-Length"] = std::to_string(response.body.size());
         } else {
-            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG, serverConfig);
+            sendErrorResponse(clientSockfd, HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG);
             return;
         }
     } else if (request.method == "POST" && matchedLocation->allowUpload) {
@@ -182,13 +182,13 @@ void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
         CgiHandler cgiHandler;
         response = cgiHandler.executeCgi(request);
     } else {
-        sendErrorResponse(clientSockfd, HTTP_METHOD_NOT_ALLOWED, HTTP_METHOD_NOT_ALLOWED_MSG, serverConfig);
+        sendErrorResponse(clientSockfd, HTTP_METHOD_NOT_ALLOWED, HTTP_METHOD_NOT_ALLOWED_MSG);
         return;
     }
 
     if (!response.validate()) {
         std::cerr << "Invalid response" << std::endl;
-        sendErrorResponse(clientSockfd, HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG, serverConfig);
+        sendErrorResponse(clientSockfd, HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG);
         return;
     }
 
@@ -197,14 +197,14 @@ void Server::handleClient(int clientSockfd, const ServerConfig& serverConfig) {
     write(clientSockfd, rawResponse.c_str(), rawResponse.size());
 }
 
-void Server::sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage, const ServerConfig& serverConfig) {
+void Server::sendErrorResponse(int clientSockfd, int statusCode, const std::string& statusMessage) {
     HttpResponse response;
     response.version = "HTTP/1.1";
     response.statusCode = statusCode;
     response.statusMessage = statusMessage;
 
-    auto it = serverConfig.errorPages.find(statusCode);
-    std::string errorPagePath = (it != serverConfig.errorPages.end()) ? fs::canonical(it->second).string() : fs::canonical(DEFAULT_ERROR_PATH + std::to_string(statusCode) + ".html").string();
+    auto it = config.errorPages.find(statusCode);
+    std::string errorPagePath = (it != config.errorPages.end()) ? fs::canonical(it->second).string() : fs::canonical(DEFAULT_ERROR_PATH + std::to_string(statusCode) + ".html").string();
     std::ifstream file(errorPagePath);
     if (file) {
         std::stringstream buffer;
@@ -222,7 +222,7 @@ void Server::sendErrorResponse(int clientSockfd, int statusCode, const std::stri
     write(clientSockfd, rawResponse.c_str(), rawResponse.size());
 }
 
-void Server::handleConnections(int serverSockfd) {
+void Server::handleConnections() {
     std::cout << "Listening for connections" << std::endl;
     std::vector<pollfd> pollfds;
     pollfds.push_back({serverSockfd, POLLIN, 0});
@@ -237,26 +237,19 @@ void Server::handleConnections(int serverSockfd) {
         }
 
         for (size_t i = 0; i < pollfds.size(); ++i) {
-            if (pollfds[i].revents & POLLIN) {
-                if (pollfds[i].fd == serverSockfd) {
+            if (pollfds[i].revents & POLLIN) { // POLLIN is set when there is data to read
+                if (pollfds[i].fd == serverSockfd) { // if the server socket is ready means there is a new connection
                     // Accept new connection
-
                     int clientSockfd = accept(serverSockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
                     if (clientSockfd == -1) {
-                        throw NetworkError(errno);
                         continue;
                     }
                     setNonBlocking(clientSockfd);
-                    pollfds.push_back({clientSockfd, POLLIN, 0});
+                    pollfds.push_back({clientSockfd, POLLIN, 0}); // Add the client socket to the poll list
                     std::cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << std::endl;
-                } else {
+                } else { // Else if the client socket is ready means there is data to read
                     // Handle client data
-                    for (const auto& serverConfig : config.servers) {
-                        if (serverConfig.port == ntohs(clientAddr.sin_port)) {
-                            handleClient(pollfds[i].fd, serverConfig);
-                            break;
-                        }
-                    }
+                    handleClient(pollfds[i].fd);
                     close(pollfds[i].fd);
                     pollfds.erase(pollfds.begin() + i);
                     --i;
