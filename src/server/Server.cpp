@@ -46,6 +46,13 @@ int Server::createAndBindSocket() {
     if (sockfd == -1) {
 		throw NetworkError(errno);
     }
+
+    // Set the receive timeout
+    struct timeval timeout = {5, 0};
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout)) == -1) {
+        throw NetworkError(errno);
+    }
+
 	// Reuse the address
 	// opt is the option value, 1 enables the option
 	// setsockopt is used to set options for the socket
@@ -55,6 +62,7 @@ int Server::createAndBindSocket() {
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
 		throw NetworkError(errno);
     }
+
 	// Bind the socket
 	// sockaddr_in is a structure containing an internet address, used to specify an IPv4 address and port.
 	// AF_INET is the address family for IPv4
@@ -177,8 +185,6 @@ void Server::handleRequest(int clientSockfd) {
 
     sendResponse(clientSockfd, response);
 }
-
-
 
 void Server::handleClient(int clientSockfd) {
     try {
