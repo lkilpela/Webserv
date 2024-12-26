@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
+
 Server::Server(const Config& config) {
 	//need to figure out route mapping
     for (int port : config.ports) {
@@ -44,28 +45,18 @@ void Server::processHttpClient(Request& req, Response& res) {
 
 }
 
-void Server::_cleanUp(){
+void Server::_handleSigInt(int sig){
 	utils::closeFDs(_serverFds);
 	utils::closeFDs(_clientFds);
-}
-
-void Server::_handleSigInt(int sig){
-	//  if (_serverInstance) {
-    //     _serverInstance->_cleanUp();
-    // }
-	this->_cleanUp();
+	std::cout << "done" << std::endl;
 }
 
 void Server::_handleSignals(){
 	signal(SIGPIPE, SIG_IGN);
-	// signal(SIGINT, std::bind(&Server::_handleSigInt, this, std::placeholders::_1));
 	signal(SIGINT, [](int sig) {
         if (_serverInstance) {
             _serverInstance->_handleSigInt(sig);
         }
-		// this->_handleSigInt(sig);
-		// Server* server = reinterpret_cast<Server*>(this); 
-        //     server->_handleSigInt(sig); 
     });
 }
 

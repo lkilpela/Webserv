@@ -15,6 +15,7 @@ NAME			=	webserv
 INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/Utils.hpp \
+					$(INCLUDES)/Server.hpp \
 					$(INCLUDES)/Error.hpp # Add more headers here
 
 OBJ_DIR			=	./obj

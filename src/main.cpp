@@ -2,8 +2,11 @@
 #include "Config.hpp"
 #include "Error.hpp"
 #include <exception>
+#include "Utils.hpp"
 
 #include "Server.hpp"
+
+Server* Server::_serverInstance = nullptr;
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -16,7 +19,10 @@ int main(int argc, char **argv) {
 		parser.load(argv[1]);
 		Config config;
 		Server server(config);
-		server.listen();
+		Server::_serverInstance = &server;
+		server._handleSignals();
+		raise(SIGINT);
+		// server.listen();
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {
