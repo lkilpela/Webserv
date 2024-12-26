@@ -12,6 +12,7 @@
 #include <functional>
 #include <poll.h>
 #include <csignal>
+#include "http/Connection.hpp"
 #define BACKLOG 128
 
 class Request;
@@ -36,7 +37,7 @@ class Server {
 		std::vector<pollfd> _pollfds;
 		std::unordered_map<int, std::pair<Request, Response>> _requestResponseByFd;
 		std::vector<int> _clientFds;
-		std::unordered_map<std::string, std::function<void(Request& req, Response& res)>> _routes;
+		std::unordered_map<int, http::Connection> _connectionByFd;
 
 		void _addClient(std::size_t i);
 		bool _isNewClient(int fd) const;
