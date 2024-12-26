@@ -24,3 +24,4 @@ namespace utils {
 		return std::find(v.begin(), v.end(), element) != v.end();
 	}
 } // namespace utils
+
