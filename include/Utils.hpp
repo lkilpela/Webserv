@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <unistd.h>
 
 namespace utils {
     std::string trim(const std::string& str);
@@ -16,6 +17,7 @@ namespace utils {
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
 	int setNonBlocking(int fd);
+	void closeFDs(std::vector<int> vector);
 	
 	template <typename T>
 	bool isInVector(const T& element, const std::vector<T>& v) {

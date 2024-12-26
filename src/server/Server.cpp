@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
+Server* Server::_serverInstance = nullptr;
+
 Server::Server(const std::vector<int> ports) {
 	//need to figure out route mapping
     for (int port : ports) {
@@ -42,6 +44,31 @@ void Server::processCGI(Request& req) {
 
 void Server::processHttpClient(Request& req, Response& res) {
 
+}
+
+void Server::_cleanUp(){
+	utils::closeFDs(_serverFds);
+	utils::closeFDs(_clientFds);
+}
+
+void Server::_handleSigInt(int sig){
+	//  if (_serverInstance) {
+    //     _serverInstance->_cleanUp();
+    // }
+	this->_cleanUp();
+}
+
+void Server::_handleSignals(){
+	signal(SIGPIPE, SIG_IGN);
+	// signal(SIGINT, std::bind(&Server::_handleSigInt, this, std::placeholders::_1));
+	signal(SIGINT, [](int sig) {
+        if (_serverInstance) {
+            _serverInstance->_handleSigInt(sig);
+        }
+		// this->_handleSigInt(sig);
+		// Server* server = reinterpret_cast<Server*>(this); 
+        //     server->_handleSigInt(sig); 
+    });
 }
 
 void Server::listen() {
@@ -86,11 +113,7 @@ bool Server::_isConnectedClient(int fd) const {
 }
 
 Server::~Server() {
-	std::for_each(
-		_serverFds.begin(),
-		_serverFds.end(),
-		[](int fd){ close(fd); }
-	);
+	utils::closeFDs(_serverFds);
 }
 
 int main() {

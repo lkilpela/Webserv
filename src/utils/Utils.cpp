@@ -93,5 +93,13 @@ namespace utils {
 			return -1;
 		return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
 	}
+
+	void closeFDs(std::vector<int> vector){
+	std::for_each(
+		vector.begin(),
+		vector.end(),
+		[](int fd){ close(fd); }
+	);
+}
 	
 } // namespace utils
