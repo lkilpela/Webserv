@@ -1,10 +1,9 @@
+#include "Utils.hpp"
 
-#include "Payload.hpp"
-
-namespace http {
+namespace utils {
 	Payload::Payload(int socket) : _socket(socket) {}
 
 	bool Payload::isSent() const {
 		return (_bytesSent >= _totalBytes);
 	}
-};
+}

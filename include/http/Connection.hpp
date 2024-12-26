@@ -18,7 +18,6 @@ namespace http {
 			void close();
 
 			bool isTimedOut() const;
-			bool isClosed() const;
 
 		private:
 			int _clientSocket;

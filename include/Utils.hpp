@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstddef>
+#include <filesystem>
+#include <fstream>
+#include <vector>
 #include <string>
 
 namespace utils {
@@ -14,4 +18,38 @@ namespace utils {
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
 
+	class Payload {
+		public:
+			explicit Payload(int socket);
+			virtual ~Payload() = default;
+			virtual void send() = 0;
+			bool isSent() const;
+
+		protected:
+			int _socket;
+			std::size_t _totalBytes { 0 };
+			std::size_t _bytesSent { 0 };
+	};
+
+	class StringPayload : public Payload {
+		public:
+			StringPayload(int socket, const std::string& message);
+			~StringPayload() = default;
+			void send() override;
+			void setMessage(const std::string& message);
+
+		private:
+			std::string _message;
+	};
+
+	class FilePayload : public Payload {
+		public:
+			FilePayload(int socket, const std::filesystem::path& filePath);
+			~FilePayload() = default;
+			void send() override;
+
+		private:
+			std::filesystem::path _filePath;
+			std::ifstream _ifstream;
+	};
 } // namespace utils

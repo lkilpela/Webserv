@@ -63,10 +63,6 @@ namespace http {
 		return (elapsedTime > std::chrono::milliseconds(_msTimeout));
 	}
 
-	bool Connection::isClosed() const {
-		return (_clientSocket == -1 );
-	}
-
 	void Connection::_processBuffer(std::size_t pos) {
 		using enum Request::Status;
 
