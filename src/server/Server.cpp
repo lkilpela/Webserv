@@ -27,13 +27,15 @@
 namespace fs = std::filesystem;
 
 void setNonBlocking(int sockfd) {
-	int flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags == -1) {
-		throw NetworkError(errno);
-	}
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
-		throw NetworkError(errno);
-	}
+    // Get the file status flags
+    int flags = fcntl(sockfd, F_GETFL, 0); // Assume flags = 0x0000 (O_RDONLY)
+    if (flags == -1) {
+        throw NetworkError(errno);
+    }
+    // Set the file status flags
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) { // flags | O_NONBLOCK = 0x0000 | 0x0800 = 0x0800 (O_NONBLOCK)
+        throw NetworkError(errno);
+    }
 }
 
 int Server::createAndBindSocket() {
@@ -115,7 +117,12 @@ HttpResponse createResponse(int statusCode, const std::string& statusMessage, co
 void sendResponse(int clientSockfd, HttpResponse response) {
     std::string rawResponse = response.toString();
     std::cout << "Raw response:\n" << rawResponse << std::endl;
-    write(clientSockfd, rawResponse.c_str(), rawResponse.size());
+    // why write but not send? because write is a system call to write data to a file descriptor
+    // write is used to write data to a file descriptor, send is used to send data to a socket
+    // which one is better? write or send? send is better because it is more portable than write
+    //write(clientSockfd, rawResponse.c_str(), rawResponse.size());
+    // 0 means no flags
+    send(clientSockfd, rawResponse.c_str(), rawResponse.size(), 0);
 }
 
 void Server::handleRequest(int clientSockfd) {
@@ -141,7 +148,7 @@ void Server::handleRequest(int clientSockfd) {
 
     // Generate response
     HttpResponse response;
-    response.version = "HTTP/1.1";
+    response.version = HTTP_1_1;
 
     // Find the matching location block
     const Location* matchedLocation = nullptr;
@@ -153,9 +160,10 @@ void Server::handleRequest(int clientSockfd) {
     }
 
     if (matchedLocation == nullptr) {
-        throw RequestError(HTTP_NOT_FOUND);
+        response = createResponse(HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG, readFile(errorPages[HTTP_NOT_FOUND]));
+        sendResponse(clientSockfd, response);
+        return;
     }
-
     if (request.method == "GET") {
         std::string filePath = fs::canonical(matchedLocation->root + request.path.substr(matchedLocation->path.length())).string();
         if (request.path == matchedLocation->path) {
@@ -203,7 +211,7 @@ void Server::handleClient(int clientSockfd) {
 
 void Server::handleConnections() {
     std::cout << GREEN "Listening for connections " RESET << config.host << ":" << config.port << std::endl;
-    std::vector<pollfd> pollfds;
+    std::vector<pollfd> pollfds; // Poll file descriptors
     pollfds.push_back({serverSockfd, POLLIN, 0});
 
     sockaddr_in clientAddr{};
