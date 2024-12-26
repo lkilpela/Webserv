@@ -1,6 +1,19 @@
 #include "Request.hpp"
 #include <sstream>
 
+// Example of a valid request:
+// GET /index.html HTTP/1.1 : method = GET, path = /index.html, version = HTTP/1.1
+// Host: localhost:8080 : headers["Host"] = localhost:8080
+// User-Agent: curl/7.68.0 : headers["User-Agent"] = curl/7.68.0
+// Accept: */* : headers["Accept"] = */*
+//
+// Example of a valid request with body:
+// POST /upload HTTP/1.1
+// Host: localhost:8080
+// User-Agent: curl/7.68.0
+// Accept: */*
+// Content-Length: 5
+
 HttpRequest HttpRequest::parse(const std::string& rawRequest) {
     HttpRequest request;
     std::istringstream stream(rawRequest);

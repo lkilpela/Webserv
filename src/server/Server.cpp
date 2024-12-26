@@ -83,7 +83,34 @@ int Server::createAndBindSocket() {
     return sockfd;
 }
 
-void Server::handleClient(int clientSockfd) {
+std::string Server::readFile(const std::string& filePath) {
+    std::ifstream file(filePath);
+    if (!file) {
+        throw FileSystemError(errno);
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+HttpResponse createResponse(int statusCode, const std::string& statusMessage, const std::string& message) {
+    HttpResponse response;
+    response.version = HTTP_1_1;
+    response.statusCode = statusCode;
+    response.statusMessage = statusMessage;
+    response.headers["Content-Type"] = "text/html";
+    response.body = message;
+    response.headers["Content-Length"] = std::to_string(response.body.size());
+    return response;
+}
+
+void sendResponse(int clientSockfd, HttpResponse response) {
+    std::string rawResponse = response.toString();
+    std::cout << "Raw response:\n" << rawResponse << std::endl;
+    write(clientSockfd, rawResponse.c_str(), rawResponse.size());
+}
+
+void Server::handleRequest(int clientSockfd) {
     // Handle data from client
     char buffer[BUFFER_SIZE];
     ssize_t bytesRead = read(clientSockfd, buffer, sizeof(buffer));
@@ -126,19 +153,7 @@ void Server::handleClient(int clientSockfd) {
         if (request.path == matchedLocation->path) {
             filePath = fs::canonical(matchedLocation->root + "/" + matchedLocation->index).string();
         }
-
-        std::ifstream file(filePath, std::ios::binary);
-        if (file) {
-            std::stringstream buffer;
-            buffer << file.rdbuf();
-            response.statusCode = HTTP_OK;
-            response.statusMessage = HTTP_OK_MSG;
-            response.headers["Content-Type"] = DEFAULT_CONTENT_TYPE;
-            response.body = buffer.str();
-            response.headers["Content-Length"] = std::to_string(response.body.size());
-        } else {
-            throw FileSystemError(errno);
-        }
+        response = createResponse(HTTP_OK, HTTP_OK_MSG, readFile(filePath));
     } else if (request.method == "POST" && matchedLocation->allowUpload) {
         // Handle file upload
         std::string uploadPath = fs::canonical(matchedLocation->uploadDir + "/uploaded_file").string();
@@ -146,11 +161,7 @@ void Server::handleClient(int clientSockfd) {
         outFile << request.body;
         outFile.close();
 
-        response.statusCode = HTTP_OK;
-        response.statusMessage = HTTP_OK_MSG;
-        response.headers["Content-Type"] = "text/plain";
-        response.body = "File uploaded successfully";
-        response.headers["Content-Length"] = std::to_string(response.body.size());
+        response = createResponse(HTTP_OK, HTTP_OK_MSG, "File uploaded successfully");
     } else if (request.method == "POST" && !matchedLocation->cgiExtension.empty()) {
         // Handle CGI script execution
         CgiHandler cgiHandler;
@@ -164,11 +175,25 @@ void Server::handleClient(int clientSockfd) {
         throw ResponseError(EINVAL);
     }
 
-    std::string rawResponse = response.toString();
-    std::cout << "Raw response:\n" << rawResponse << std::endl;
-    write(clientSockfd, rawResponse.c_str(), rawResponse.size());
+    sendResponse(clientSockfd, response);
 }
 
+
+
+void Server::handleClient(int clientSockfd) {
+    try {
+        handleRequest(clientSockfd);
+    } catch (const std::system_error& e) {
+        std::cout << "System error: " << e.what() << std::endl;
+        if(e.code() == std::errc::no_such_file_or_directory) {
+            sendResponse(clientSockfd, createResponse(HTTP_NOT_FOUND, HTTP_NOT_FOUND_MSG, errorPages[HTTP_NOT_FOUND]));
+        } else {
+            sendResponse(clientSockfd, createResponse(HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG, errorPages[HTTP_INTERNAL_SERVER_ERROR]));
+        }
+    } catch (...) {
+        sendResponse(clientSockfd, createResponse(HTTP_INTERNAL_SERVER_ERROR, HTTP_INTERNAL_SERVER_ERROR_MSG, errorPages[HTTP_INTERNAL_SERVER_ERROR]));
+    }
+}
 
 void Server::handleConnections() {
     std::cout << GREEN "Listening for connections " RESET << config.host << ":" << config.port << std::endl;
