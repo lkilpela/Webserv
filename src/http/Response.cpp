@@ -77,4 +77,8 @@ namespace http {
 		_headerByName[stringOf(header)] = value;
 		return *this;
 	}
+
+	Response& Response::setBody(std::unique_ptr<Payload> body) {
+		_body = std::move(body);
+	}
 }
