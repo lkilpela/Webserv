@@ -22,7 +22,7 @@ struct Location {
 
 struct ServerConfig {
     std::string host;
-    unsigned int port;
+    int port;
     std::string serverName;
     std::map<int, std::string> errorPages;
     std::string clientMaxBodySize;
@@ -31,6 +31,7 @@ struct ServerConfig {
 
 // Multi servers struct
 struct Config {
+    std::vector<int> ports;
     std::vector<ServerConfig> servers;
 };
 
