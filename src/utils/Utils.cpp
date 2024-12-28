@@ -47,18 +47,21 @@ namespace utils {
     }
 
     bool isValidFilePath(const string &path) {
+        // Check for consecutive slashes in the path
+        std::regex consecutive_slashes_regex(R"(//)");
+        if (std::regex_search(path, consecutive_slashes_regex)) {
+            return false;
+        }
         return std::filesystem::exists(path);
     }
 
     bool isValidURL(const string &url) {
-        std::regex urlPattern(
-            R"((http|https)://([^\s/$.?#].[^\s]*)$)");
+        std::regex urlPattern(R"((http|https)://([^\s/$.?#].[^\s]*)$)");
         return std::regex_match(url, urlPattern);
     }
 
     bool isValidSize(const string &size) {
-        std::regex sizePattern(
-            R"(\d+[KMG]?)");
+        std::regex sizePattern(R"(\d+[KMG]?)");
         return std::regex_match(size, sizePattern);
     }
 

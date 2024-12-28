@@ -1,6 +1,7 @@
 #include "Config.hpp"
 #include "Utils.hpp"
 #include "Error.hpp"
+#include "Server.hpp"
 #include <functional> // std::function
 #include <fstream> // std::ifstream, std::getline
 #include <iostream> // std::cout, std::endl
@@ -39,6 +40,9 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
             config.port = utils::parsePort(value);
         }},
         {"server_name", [&](const string &value) {
+            if (!config.serverName.empty()) {
+                throw ConfigError(EINVAL, "Invalid server_name");
+            }
             config.serverName = value;
         }},
         {"error_page", [&](const string &value) {
@@ -294,13 +298,16 @@ void ConfigParser::printConfig(const Config& config) {
 }
 
 // Function to load the configuration
-void ConfigParser::load(const string& filePath) {
+Config ConfigParser::load(const string& filePath) {
     try {
         Config config;
         parseConfig(filePath, config);
-        printConfig(config);
+        //printConfig(config);
+        //Server server(config);
+        //server.start();
+        return config;
     } catch (const ConfigError& e) {
         cout << "Error: " << e.code() << " " << e.what() << endl;
-        
     }
+    return Config();
 }

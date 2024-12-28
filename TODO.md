@@ -1,5 +1,10 @@
 # TODO
 
+## HTTP
+
+1. Valid Request
+
+
 ## CONFIGURATION FILE
 
 - [ ] Choose the port and host of each ’server’.
