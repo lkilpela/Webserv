@@ -20,19 +20,16 @@ int main(int argc, char **argv) {
 		ConfigParser parser;
 		Config config = parser.load(argv[1]);
 		std::vector<Server> servers;
-		std::vector<std::thread> threads;
-		for (const auto& serverConfig : config.servers) {
-			threads.push_back(std::thread([serverConfig] {
-				Server server(serverConfig);
-				server.start();
-			}));
-		}
-		for (auto& thread : threads) {
-			thread.join();
-		}
-
-		parser.load(argv[1]);
-		Config config;
+		// std::vector<std::thread> threads;
+		// for (const auto& serverConfig : config.servers) {
+		// 	threads.push_back(std::thread([serverConfig] {
+		// 		Server server(serverConfig);
+		// 		server.start();
+		// 	}));
+		// }
+		// for (auto& thread : threads) {
+		// 	thread.join();
+		// }
 		Server server(config);
 		Server::_serverInstance = &server;
 		server._handleSignals();
