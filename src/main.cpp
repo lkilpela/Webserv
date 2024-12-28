@@ -7,6 +7,7 @@
 #include "Utils.hpp"
 #include "SignalHandle.hpp"
 #include "Server.hpp"
+#include "http/index.hpp"
 
 volatile sig_atomic_t sigintReceived = 0;
 
@@ -20,7 +21,7 @@ int main(int argc, char **argv) {
 		handleSignals();
 		ConfigParser parser;
 		Config config = parser.load(argv[1]);
-		std::vector<Server> servers;
+std::vector<Server> servers;
 		Server server(config);
 		server.listen();
 	} catch (const WSException& e) {

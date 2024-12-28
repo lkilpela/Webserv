@@ -1,5 +1,5 @@
 #include "Config.hpp"
-#include "Utils.hpp"
+#include "utils/index.hpp"
 #include "Error.hpp"
 #include "Server.hpp"
 #include <functional> // std::function
@@ -308,6 +308,7 @@ Config ConfigParser::load(const string& filePath) {
         return config;
     } catch (const ConfigError& e) {
         cout << "Error: " << e.code() << " " << e.what() << endl;
+
     }
     return Config();
 }

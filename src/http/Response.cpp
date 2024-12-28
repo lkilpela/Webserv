@@ -15,26 +15,24 @@
 // If send() returns -1, assume the socket is not ready for writing, and rely on POLLOUT to resume sending.
 
 namespace http {
-	Response::Response(int clientSocket) : _clientSocket(clientSocket) {}
+	Response::Response(int clientSocket)
+		: _clientSocket(clientSocket)
+		, _header(utils::StringPayload(clientSocket, "")) {
+	}
 
 	bool Response::send() {
-		if (this->_bytesSent >= _header.size()) {
+		if (!_header.isSent()) {
+			_header.send();
+			return false;
+		}
+
+		if (_body == nullptr) {
 			return true;
 		}
 
-		const ssize_t bytesSent = ::send(
-			_clientSocket,
-			_header.data() + this->_bytesSent,
-			_header.size() - this->_bytesSent,
-			MSG_NOSIGNAL
-		);
-
-		if (bytesSent >= 0) {
-			this->_bytesSent += static_cast<std::size_t>(bytesSent);
-
-			if (this->_bytesSent >= _header.size()) {
-				return true;
-			}
+		_body->send();
+		if (_body->isSent()) {
+			return true;
 		}
 
 		return false;
@@ -53,7 +51,7 @@ namespace http {
 		}
 
 		ostream << "\r\n";
-		_header = ostream.str();
+		_header.setMessage(ostream.str());
 	}
 
 	const StatusCode Response::getStatusCode() const {
@@ -63,8 +61,8 @@ namespace http {
 	Response& Response::clear() {
 		_statusCode = StatusCode::NONE_0;
 		_headerByName.clear();
-		_header.clear();
-		_bytesSent = 0;
+		_header.setMessage("");
+		_body.reset();
 		return *this;
 	}
 
@@ -78,7 +76,7 @@ namespace http {
 		return *this;
 	}
 
-	Response& Response::setBody(std::unique_ptr<Payload> body) {
+	Response& Response::setBody(std::unique_ptr<utils::Payload> body) {
 		_body = std::move(body);
 	}
 }

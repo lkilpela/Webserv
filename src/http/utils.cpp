@@ -76,6 +76,7 @@ namespace http {
 			case TRAILER: return "Trailer";
 			case TRANSFER_ENCODING: return "Transfer-Encoding";
 			case CACHE_CONTROL: return "Cache-Control";
+			case CONNECTION: return "Connection";
 			case EXPECT: return "Expect";
 			case HOST: return "Host";
 			case MAX_FORWARDS: return "Max-Forwards";

@@ -13,7 +13,22 @@ namespace http {
 		_routes[route]["DELETE"] = handler;
 	}
 
+	/**
+	 * Handle client request based on the registed `Handler` (callback).
+	 * This method call will modify response object in a way defined in callback
+	 * 
+	 * @param request The request object must be COMPLETE or BAD_REQUEST
+	 * @param response
+	 */
 	void Router::handle(Request& request, Response& response) {
+		if (request.getStatus() == Request::Status::BAD_REQUEST) {
+			response
+				.setStatusCode(StatusCode::BAD_REQUEST_400)
+				.setBody(nullptr)
+				.build();
+			return;
+		}
+
 		const std::string route = request.getUrl().path;
 		auto it = _routes.find(route);
 

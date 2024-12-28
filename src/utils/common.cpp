@@ -1,38 +1,44 @@
-#include "Utils.hpp"
+#include "utils/common.hpp"
 #include "Error.hpp"
 #include <regex> // std::regex, std::regex_match
 #include <filesystem> // std::filesystem
 #include <stdexcept> // std::invalid_argument, std::out_of_range
-#include <fcntl.h>
-
 
 using std::string;
 using std::vector;
 
 namespace utils {
-
-    // Utility functions for validation
     bool parseBool(const string &value) {
-        if (value == "on") return true;
-        if (value == "off") return false;
+        if (value == "on") {
+			return true;
+		}
+
+        if (value == "off") {
+			return false;
+		}
+		
         throw ConfigError(EINVAL, "Invalid boolean value");
     }
 
     int parsePort(const string &value) {
         std::regex port_regex("^[0-9]+$");
+
         if (!std::regex_match(value, port_regex)) {
             throw ConfigError(EINVAL, "Invalid port number");
         }
 
         int port = std::stoi(value);
+
         if (port <= 0 || port > 65535) {
             throw ConfigError(ERANGE, "Port number out of range");
         }
+
         return port;
     }
 
     void validateMethods(const vector<string> &methods) {
         vector<string> validMethods = {"GET", "POST", "DELETE"};
+
         for (const auto &method : methods) {
             if (std::find(validMethods.begin(), validMethods.end(), method) == validMethods.end()) {
                 throw ConfigError(EINVAL, "Invalid method");
@@ -47,29 +53,28 @@ namespace utils {
     }
 
     bool isValidFilePath(const string &path) {
-        // Check for consecutive slashes in the path
-        std::regex consecutive_slashes_regex(R"(//)");
-        if (std::regex_search(path, consecutive_slashes_regex)) {
-            return false;
-        }
         return std::filesystem::exists(path);
     }
 
     bool isValidURL(const string &url) {
-        std::regex urlPattern(R"((http|https)://([^\s/$.?#].[^\s]*)$)");
+        std::regex urlPattern(
+            R"((http|https)://([^\s/$.?#].[^\s]*)$)");
         return std::regex_match(url, urlPattern);
     }
 
     bool isValidSize(const string &size) {
-        std::regex sizePattern(R"(\d+[KMG]?)");
+        std::regex sizePattern(
+            R"(\d+[KMG]?)");
         return std::regex_match(size, sizePattern);
     }
 
     void validateErrorPage(const string &code, const string &path) {
         std::regex code_regex("^[1-5][0-9][0-9]$");
+
         if (!std::regex_match(code, code_regex)) {
             throw ConfigError(EINVAL, "Invalid error code");
         }
+
         if (!isValidFilePath(path)) {
             throw ConfigError(EINVAL, "Invalid error page path");
         }
@@ -83,26 +88,12 @@ namespace utils {
     }
 
     string removeComments(const std::string& str) {
-    size_t commentPos = str.find('#');
-    if (commentPos != string::npos) {
-            return str.substr(0, commentPos);
-        }
-        return str;
+		size_t commentPos = str.find('#');
+
+		if (commentPos != string::npos) {
+			return str.substr(0, commentPos);
+		}
+
+		return str;
     }
-
-	int setNonBlocking(int fd) {
-		int flag = fcntl(fd, F_GETFL, 0);
-		if (flag == -1)
-			return -1;
-		return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
-	}
-
-	void closeFDs(std::vector<int> vector){
-	std::for_each(
-		vector.begin(),
-		vector.end(),
-		[](int fd){ close(fd); }
-	);
-}
-	
 } // namespace utils

@@ -9,9 +9,10 @@
 
 namespace http {
 
-	Connection::Connection(int clientSocket, int msTimeout)
+	Connection::Connection(int clientSocket, int msTimeout, std::function<void (Request&, Response&)> process)
 		: _clientSocket(clientSocket)
 		, _msTimeout(msTimeout)
+		, _process(process)
 		, _lastReceived(std::chrono::steady_clock::now()) {
 	}
 
@@ -19,28 +20,38 @@ namespace http {
 		_requestBuffer.reserve(_requestBuffer.size() + size);
 		_requestBuffer.insert(_requestBuffer.end(), buffer, buffer + size);
 		_lastReceived = std::chrono::steady_clock::now();
+		_processBuffer();
 
-		std::size_t pos = findBlankLine(_requestBuffer.begin(), _requestBuffer.end());
+		if (_request.getStatus() != Request::Status::INCOMPLETE) {
+			Response response(_clientSocket);
 
-		if (pos == std::string::npos && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
-			_queue.emplace(
-				Request(Request::Status::BAD_REQUEST),
-				Response(_clientSocket)
-			);
-			return;
+			_process(_request, response);
+			_processedQueue.emplace(std::move(_request), std::move(response));
+			_request.clear();
 		}
-
-		_processBuffer(pos);
 	}
 
 	void Connection::sendResponse() {
-		if (_queue.empty())
+		if (_processedQueue.empty()) {
 			return;
+		}
 
-		auto& response = _queue.front();
+		auto& [req, res] = _processedQueue.front();
 
-		if (response.send()) {
-			_queue.pop();
+		if (res.send()) {
+			const auto code = res.getStatusCode();
+			auto header = req.getHeader(Header::CONNECTION);
+
+			if (
+				(header.has_value() && *header == "close")
+				|| code == StatusCode::BAD_REQUEST_400
+				|| code == StatusCode::INTERNAL_SERVER_ERROR_500
+			) {
+				this->close();
+				return;
+			}
+
+			_processedQueue.pop();
 		}
 	}
 
@@ -64,17 +75,23 @@ namespace http {
 	}
 
 	bool Connection::isClosed() const {
-		return (_clientSocket == -1 );
+		return (_clientSocket == -1);
 	}
 
-	void Connection::_processBuffer(std::size_t pos) {
+	// Unfinished
+	void Connection::_processBuffer() {
 		using enum Request::Status;
 
-		Request req = Request::parse(_requestBuffer.begin(), _requestBuffer.end());
+		std::size_t pos = findBlankLine(_requestBuffer.begin(), _requestBuffer.end());
 
-		if (req.getStatus() == COMPLETE || req.getStatus() == BAD_REQUEST) {
-			_queue.emplace(std::move(req), Response { _clientSocket });
-			// update _requestBuffer
+		if (pos == std::string::npos && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
+			_request.setStatus(BAD_REQUEST);
+			return;
+		}
+
+		if (pos != std::string::npos) {
+			// parse here
+
 		}
 	}
 }
