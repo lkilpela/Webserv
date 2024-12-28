@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 		handleSignals();
 		ConfigParser parser;
 		Config config = parser.load(argv[1]);
-std::vector<Server> servers;
+		std::vector<Server> servers;
 		Server server(config);
 		server.listen();
 	} catch (const WSException& e) {
