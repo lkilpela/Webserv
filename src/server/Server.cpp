@@ -1,8 +1,27 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
+Server::Server(std::vector<int>ports) {
+    for (int port : ports) {
+        int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
+        if (serverFd == -1)
+			throw std::runtime_error("Failed to create socket");
+		if (utils::setNonBlocking(serverFd) == -1)
+			throw std::runtime_error("Nonblocking failed");
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = INADDR_ANY;
+        address.sin_port = htons(port);
+        if (::bind(serverFd, (struct sockaddr*)&address, sizeof(address)) == -1)
+	        throw std::runtime_error("Failed to bind socket on port " + std::to_string(port));
+        if (::listen(serverFd, BACKLOG) < 0)
+            throw std::runtime_error("Failed to listen on port " + std::to_string(port));
+        _serverFds.push_back(serverFd);
+		_pollfds.push_back({serverFd, POLLIN, 0});
+    }
+}
+
 Server::Server(const Config& config) {
-	//need to figure out route mapping
     for (int port : config.ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)
@@ -47,7 +66,7 @@ void Server::processHttpClient(Request& req, Response& res) {
 void Server::_handleSigInt(int sig){
 	utils::closeFDs(_serverFds);
 	utils::closeFDs(_clientFds);
-	std::cout << "done" << std::endl;
+	printf("done\n");
 }
 
 void Server::_handleSignals(){
@@ -60,7 +79,7 @@ void Server::_handleSignals(){
 }
 
 void Server::listen() {
-	while (true) {
+	while (_pollfds.size()) {
         if (::poll(_pollfds.data(), _pollfds.size(), 0) == -1)
 			perror("Poll failed");
         for (auto it = _pollfds.begin(); it != _pollfds.end();) {
@@ -133,7 +152,7 @@ Server::~Server() {
 	utils::closeFDs(_serverFds);
 }
 
-/* int main() {
+int main() {
 	std::vector<int> ports = {8080, 8081};
     try {
 		Server server(ports);
@@ -144,5 +163,5 @@ Server::~Server() {
     }
 
     return 0;
-} */
+}
 

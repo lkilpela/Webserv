@@ -21,8 +21,8 @@ int main(int argc, char **argv) {
 		Server server(config);
 		Server::_serverInstance = &server;
 		server._handleSignals();
-		raise(SIGINT);
-		// server.listen();
+		server.listen();
+		// raise(SIGINT);
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {

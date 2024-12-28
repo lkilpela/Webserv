@@ -21,7 +21,7 @@ class Response;
 class Server {
 	public:
 		Server() = default;
-		// Server(const Config& config);
+		Server::Server(std::vector<int>ports); // for testing purposes
 		Server(const Config& config);
 		~Server();
 		void listen();
