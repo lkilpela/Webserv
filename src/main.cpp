@@ -4,7 +4,6 @@
 #include "Server.hpp"
 #include <exception>
 #include <thread>
-#include "Utils.hpp"
 #include "SignalHandle.hpp"
 #include "Server.hpp"
 #include "http/index.hpp"
