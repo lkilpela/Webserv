@@ -1,8 +1,8 @@
 #include "Server.hpp"
 #include "Utils.hpp"
-#include "SignalHandle.hpp"
 
 Server::Server(const Config& config) {
+	//need to figure out route mapping
     for (int port : config.ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)
@@ -45,54 +45,20 @@ void Server::processHttpClient(Request& req, Response& res) {
 }
 
 void Server::listen() {
-	while (_pollfds.size()) {
-		if (sigintReceived){
-			utils::closeFDs(_clientFds);
-			utils::closeFDs(_serverFds);
-			break;
-		}
-
+	while (true) {
         if (::poll(_pollfds.data(), _pollfds.size(), 0) == -1)
 			perror("Poll failed");
-        for (auto it = _pollfds.begin(); it != _pollfds.end();) {
-			auto& connection = _connectionByFd[it->fd];
-			if (connection.isTimedOut()) {
-				_connectionByFd.erase(it->fd);
-				it = _pollfds.erase(it);
-				continue;
+        for (std::size_t i = 0; i < _pollfds.size(); i++) {
+			const int fd = _pollfds[i].fd;			
+			if (_isNewClient(fd)) {
+				_addClient(fd);
+			} else {
+				auto& [req, res] = _requestResponseByFd.at(fd);
+				if (_isConnectedClient(fd))
+					processHttpClient(req, res);					
+				else
+					processCGI(req);
 			}
-
-			if (it->revents == POLLHUP) {
-				connection.close();
-				_connectionByFd.erase(it->fd);
-				it = _pollfds.erase(it);
-				continue;
-			}
-
-			if (it->revents == POLLIN) {
-				if (utils::isInVector<int>(it->fd, _serverFds)) {
-					
-				} else if (utils::isInVector<int>(it->fd, _clientFds)) {
-					unsigned char buffer[2048];
-
-					ssize_t bytesRead = recv(it->fd, buffer, 2048, MSG_NOSIGNAL);
-
-					// client closed connection successfully
-					if (bytesRead == 0) {
-						connection.close();
-						_connectionByFd.erase(it->fd);
-						it = _pollfds.erase(it);
-						continue;
-					}
-
-					connection.readRequest(buffer, bytesRead);
-				} else {
-
-				}
-			} else if (it->revents == POLLOUT) {
-				connection.sendResponse();
-			}
-			it++;			
 		}
     }
 }
@@ -111,7 +77,32 @@ void Server::_addClient(std::size_t i) {
 	_pollfds.push_back(clientPollData);
 }
 
-Server::~Server() {
-	utils::closeFDs(_serverFds);
+bool Server::_isNewClient(int fd) const {
+	return utils::isInVector<int>(fd, _serverFds);
 }
+
+bool Server::_isConnectedClient(int fd) const {
+	return utils::isInVector<int>(fd, _clientFds);
+}
+
+Server::~Server() {
+	std::for_each(
+		_serverFds.begin(),
+		_serverFds.end(),
+		[](int fd){ close(fd); }
+	);
+}
+
+/* int main() {
+	std::vector<int> ports = {8080, 8081};
+    try {
+		Server server(ports);
+        server.listen();
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
+} */
 

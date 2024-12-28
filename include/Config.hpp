@@ -17,12 +17,13 @@ struct Location {
     std::vector<std::string> methods;
     std::string cgiExtension;
     std::string uploadDir;
+    bool allowUpload;
     std::vector<std::string> returnUrl;
 };
 
 struct ServerConfig {
     std::string host;
-    unsigned int port;
+    int port;
     std::string serverName;
     std::map<int, std::string> errorPages;
     std::string clientMaxBodySize;
@@ -31,6 +32,7 @@ struct ServerConfig {
 
 // Multi servers struct
 struct Config {
+    std::vector<int> ports;
     std::vector<ServerConfig> servers;
 };
 
@@ -40,6 +42,6 @@ public:
     void parseConfig(const std::string &filename, Config &config);
     void parseGlobal(const std::string &line, ServerConfig &config);
     void parseLocation(const std::string &line, Location &currentLocation);
-	void load(const std::string& filePath);
+	Config load(const std::string& filePath);
 	void printConfig(const Config& config);
 };
