@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <string>
 
 namespace utils {
@@ -13,4 +14,4 @@ namespace utils {
     bool isValidURL(const std::string &url);
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
-} // namespace utils
+}

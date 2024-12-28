@@ -2,7 +2,7 @@
 
 #include <string>
 #include <iostream>
-#include <cerrno> 
+#include <cerrno>
 
 class WSException {
 public:
@@ -56,6 +56,10 @@ public:
     : WSException(err) {}
 };
 
+class FileNotFoundException : public std::runtime_error {
+	public:
+		explicit FileNotFoundException(const std::string& fileName) : std::runtime_error(fileName) {};
+};
 
 /* PRIMARY EXCEPTION CLASSES
 1. ConfigException
@@ -88,7 +92,7 @@ public:
 
 /* COMMON ERROR CODES:
 
-- `recv`: 
+- `recv`:
   - `EAGAIN` or `EWOULDBLOCK`: The socket is marked non-blocking and the receive operation would block.
   - `EBADF`: The socket argument is not a valid file descriptor.
   - `ECONNRESET`: Connection reset by peer.

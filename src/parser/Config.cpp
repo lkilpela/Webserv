@@ -1,5 +1,5 @@
 #include "Config.hpp"
-#include "Utils.hpp"
+#include "utils/index.hpp"
 #include "Error.hpp"
 #include <functional> // std::function
 #include <fstream> // std::ifstream, std::getline
@@ -300,6 +300,6 @@ void ConfigParser::load(const string& filePath) {
         printConfig(config);
     } catch (const ConfigError& e) {
         cout << "Error: " << e.code() << " " << e.what() << endl;
-        
+
     }
 }
