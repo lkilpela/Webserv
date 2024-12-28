@@ -1,25 +1,6 @@
 #include "Server.hpp"
 #include "Utils.hpp"
-
-Server::Server(std::vector<int>ports) {
-    for (int port : ports) {
-        int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (serverFd == -1)
-			throw std::runtime_error("Failed to create socket");
-		if (utils::setNonBlocking(serverFd) == -1)
-			throw std::runtime_error("Nonblocking failed");
-        sockaddr_in address{};
-        address.sin_family = AF_INET;
-        address.sin_addr.s_addr = INADDR_ANY;
-        address.sin_port = htons(port);
-        if (::bind(serverFd, (struct sockaddr*)&address, sizeof(address)) == -1)
-	        throw std::runtime_error("Failed to bind socket on port " + std::to_string(port));
-        if (::listen(serverFd, BACKLOG) < 0)
-            throw std::runtime_error("Failed to listen on port " + std::to_string(port));
-        _serverFds.push_back(serverFd);
-		_pollfds.push_back({serverFd, POLLIN, 0});
-    }
-}
+#include "SignalHandle.hpp"
 
 Server::Server(const Config& config) {
     for (int port : config.ports) {
@@ -63,28 +44,18 @@ void Server::processHttpClient(Request& req, Response& res) {
 
 }
 
-void Server::_handleSigInt(int sig){
-	utils::closeFDs(_serverFds);
-	utils::closeFDs(_clientFds);
-	printf("done\n");
-}
-
-void Server::_handleSignals(){
-	signal(SIGPIPE, SIG_IGN);
-	signal(SIGINT, [](int sig) {
-        if (_serverInstance) {
-            _serverInstance->_handleSigInt(sig);
-        }
-    });
-}
-
 void Server::listen() {
 	while (_pollfds.size()) {
+		if (sigintReceived){
+			utils::closeFDs(_clientFds);
+			utils::closeFDs(_serverFds);
+			break;
+		}
+
         if (::poll(_pollfds.data(), _pollfds.size(), 0) == -1)
 			perror("Poll failed");
         for (auto it = _pollfds.begin(); it != _pollfds.end();) {
 			auto& connection = _connectionByFd[it->fd];
-
 			if (connection.isTimedOut()) {
 				_connectionByFd.erase(it->fd);
 				it = _pollfds.erase(it);
@@ -140,28 +111,7 @@ void Server::_addClient(std::size_t i) {
 	_pollfds.push_back(clientPollData);
 }
 
-bool Server::_isNewClient(int fd) const {
-	return utils::isInVector<int>(fd, _serverFds);
-}
-
-bool Server::_isConnectedClient(int fd) const {
-	return utils::isInVector<int>(fd, _clientFds);
-}
-
 Server::~Server() {
 	utils::closeFDs(_serverFds);
-}
-
-int main() {
-	std::vector<int> ports = {8080, 8081};
-    try {
-		Server server(ports);
-        server.listen();
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-
-    return 0;
 }
 

@@ -5,10 +5,11 @@
 #include <exception>
 #include <thread>
 #include "Utils.hpp"
+#include "SignalHandle.hpp"
 
 #include "Server.hpp"
 
-Server* Server::_serverInstance = nullptr;
+volatile sig_atomic_t sigintReceived = 0;
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -17,6 +18,7 @@ int main(int argc, char **argv) {
 	}
 
 	try {
+		handleSignals();
 		ConfigParser parser;
 		Config config = parser.load(argv[1]);
 		std::vector<Server> servers;
@@ -31,8 +33,6 @@ int main(int argc, char **argv) {
 		// 	thread.join();
 		// }
 		Server server(config);
-		Server::_serverInstance = &server;
-		server._handleSignals();
 		server.listen();
 		// raise(SIGINT);
 	} catch (const WSException& e) {
