@@ -1,29 +1,19 @@
 #pragma once
 
 #include <cstddef>
+#include <string.h>
 #include <filesystem>
 #include <fstream>
-#include <vector>
-#include <string>
 
 namespace utils {
-    std::string trim(const std::string& str);
-    std::string removeComments(const std::string& str);
-    bool parseBool(const std::string &value);
-    int parsePort(const std::string &value);
-    void validateMethods(const std::vector<std::string> &methods);
-    bool isValidIP(const std::string &ip);
-    bool isValidFilePath(const std::string &path);
-    bool isValidURL(const std::string &url);
-    bool isValidSize(const std::string &size);
-    void validateErrorPage(const std::string &code, const std::string &path);
-
 	class Payload {
 		public:
 			explicit Payload(int socket);
+			Payload(Payload&&) noexcept = default;
 			virtual ~Payload() = default;
 			virtual void send() = 0;
 			bool isSent() const;
+			std::size_t getSizeInBytes() const;
 
 		protected:
 			int _socket;
@@ -34,6 +24,7 @@ namespace utils {
 	class StringPayload : public Payload {
 		public:
 			StringPayload(int socket, const std::string& message);
+			StringPayload(StringPayload&&) noexcept = default;
 			~StringPayload() = default;
 			void send() override;
 			void setMessage(const std::string& message);
@@ -45,6 +36,7 @@ namespace utils {
 	class FilePayload : public Payload {
 		public:
 			FilePayload(int socket, const std::filesystem::path& filePath);
+			FilePayload(FilePayload&&) noexcept = default;
 			~FilePayload() = default;
 			void send() override;
 
@@ -52,4 +44,4 @@ namespace utils {
 			std::filesystem::path _filePath;
 			std::ifstream _ifstream;
 	};
-} // namespace utils
+}

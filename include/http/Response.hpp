@@ -4,13 +4,14 @@
 #include <memory>
 #include <unordered_map>
 #include "constants.hpp"
-#include "Utils.hpp"
+#include "utils/Payload.hpp"
 
 namespace http {
 	class Response {
 		public:
 			Response(int clientSocket);
 			Response(const Response&) = delete;
+			Response(Response&&) noexcept = default;
 			~Response() = default;
 
 			Response& operator=(const Response&) = delete;

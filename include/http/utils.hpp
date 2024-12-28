@@ -30,9 +30,11 @@ namespace http {
 	std::size_t findBlankLine(const Iterator begin, const Iterator end) {
 		static constexpr std::vector<std::uint8_t> delimiter = {'\r', '\n', '\r', '\n'};
 		auto pos = std::search(begin, end, delimiter.begin(), delimiter.end());
+
 		if (pos == end) {
 			return std::string::npos;
 		}
+		
 		return std::distance(begin, pos) + delimiter.size();
 	}
 }

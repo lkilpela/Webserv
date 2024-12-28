@@ -29,7 +29,7 @@ namespace http {
 		if (_body == nullptr) {
 			return true;
 		}
-		
+
 		_body->send();
 		if (_body->isSent()) {
 			return true;
@@ -62,6 +62,7 @@ namespace http {
 		_statusCode = StatusCode::NONE_0;
 		_headerByName.clear();
 		_header.setMessage("");
+		_body.reset();
 		return *this;
 	}
 

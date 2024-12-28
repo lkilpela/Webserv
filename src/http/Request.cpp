@@ -18,30 +18,46 @@
 
 namespace http {
 
-	Request::Request(Status status) : _status(status) {
+	Request::Request(Status status) : _status(status) {}
 
+	void Request::clear() {
+		_method.clear();
+		_url = Url();
+		_version.clear();
+		_headers.clear();
+		_body.clear();
+		_status = Request::Status::INCOMPLETE;
 	}
 
-	Request::Request(Request&& request)
-		: _method(std::move(request._method))
-		, _url(std::move(request._url))
-		, _version(std::move(request._version))
-		, _headers(std::move(request._headers))
-		, _body(std::move(request._body))
-		, _isCgi(request._isCgi)
-		, _isDirectory(request._isDirectory)
-		, _status(request._status) {
-			request._isCgi = false;
-			request._isDirectory = false;
-			request._status = Request::Status::INCOMPLETE;
+	const std::string& Request::getMethod() const {
+		return _method;
 	}
 
-	const std::string& Request::getMethod() const { return _method; }
-	const Url& Request::getUrl() const { return _url; }
-	const std::string& Request::getVersion() const { return _version; }
-	const std::span<const std::uint8_t> Request::getBody() const { return std::span<const std::uint8_t>(_body); }
-	const std::string& Request::getBodyAsFile() const { return _filePath; }
-	const Request::Status& Request::getStatus() const { return _status; }
+	const Url& Request::getUrl() const {
+		return _url;
+	}
+
+	const std::string& Request::getVersion() const {
+		return _version;
+	}
+
+	std::optional<std::string> Request::getHeader(Header header) const {
+		auto it = _headers.find(stringOf(header));
+
+		if (it == _headers.end()) {
+			return std::nullopt;
+		}
+
+		return it->second;
+	}
+
+	const std::span<const std::uint8_t> Request::getBody() const {
+		return std::span<const std::uint8_t>(_body);
+	}
+
+	Request::Status Request::getStatus() const {
+		return _status;
+	}
 
 	Request& Request::setMethod(const std::string& method) {
 		_method = method;
@@ -63,13 +79,10 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setStatus(const Request::Status& status) {
+	Request& Request::setStatus(Request::Status status) {
 		_status = status;
 		return *this;
 	}
-
-	bool Request::isCgi() const { return _isCgi; }
-	bool Request::isDirectory() const { return _isDirectory; }
 
 	// std::optional<Request> Request::parse(
 	// 	const std::string& rawRequest,
