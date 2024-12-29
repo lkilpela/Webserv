@@ -3,6 +3,8 @@
 #include <string>
 #include <unordered_map>
 #include <algorithm>
+#include <initializer_list>
+#include <iterator>
 #include "constants.hpp"
 
 namespace http {
@@ -34,7 +36,16 @@ namespace http {
 		if (pos == end) {
 			return std::string::npos;
 		}
-		
+
 		return std::distance(begin, pos) + delimiter.size();
+	}
+
+	template <typename Iterator>
+	Iterator findDelimiter(
+		const Iterator begin,
+		const Iterator end,
+		std::initializer_list<typename std::iterator_traits<Iterator>::value_type> delimiter
+	) {
+		return std::search(begin, end, delimiter.begin(), delimiter.end());
 	}
 }

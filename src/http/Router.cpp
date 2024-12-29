@@ -16,12 +16,12 @@ namespace http {
 	/**
 	 * Handle client request based on the registed `Handler` (callback).
 	 * This method call will modify response object in a way defined in callback
-	 * 
+	 *
 	 * @param request The request object must be COMPLETE or BAD_REQUEST
 	 * @param response
 	 */
 	void Router::handle(Request& request, Response& response) {
-		if (request.getStatus() == Request::Status::BAD_REQUEST) {
+		if (request.getStatus() == Request::Status::BAD) {
 			response
 				.setStatusCode(StatusCode::BAD_REQUEST_400)
 				.setBody(nullptr)

@@ -29,6 +29,11 @@ namespace http {
 		_status = Request::Status::INCOMPLETE;
 	}
 
+	bool Request::isChunked() const {
+		auto header = getHeader(Header::TRANSFER_ENCODING);
+		return (header.has_value() && *header == "chunked");
+	}
+
 	const std::string& Request::getMethod() const {
 		return _method;
 	}
@@ -79,9 +84,49 @@ namespace http {
 		return *this;
 	}
 
+	Request& Request::setHeader(const std::string& name, const std::string& value) {
+		_headers[name] = value;
+		return *this;
+	}
+
+	Request& Request::appendBody(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end) noexcept {
+		_body.insert(_body.end(), std::move_iterator(begin), std::move_iterator(end));
+		return *this;
+	}
+
 	Request& Request::setStatus(Request::Status status) {
 		_status = status;
 		return *this;
+	}
+
+	bool Request::parseHeaders(Request& request, const std::string& rawHeader) {
+		std::istringstream istream(rawHeader);
+		std::string line;
+		std::string method;
+	 	Url url;
+	 	std::string version;
+
+		std::getline(istream, line);
+
+		request.setMethod(method).setVersion(version);
+
+		while (std::getline(istream, line) && line != "\r") {
+			std::size_t delimiter = line.find(": ");
+
+			if (delimiter == std::string::npos) {
+				return false;
+			}
+
+			std::string name = line.substr(0, delimiter);
+			// must validate `name`
+			std::string value = line.substr(delimiter + 2);
+			request.setHeader(name, value);
+		}
+
+
+		auto hostHeader = request.getHeader(Header::HOST);
+
+		return true;
 	}
 
 	// std::optional<Request> Request::parse(

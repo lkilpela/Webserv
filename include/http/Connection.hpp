@@ -30,7 +30,10 @@ namespace http {
 			std::queue<std::pair<Request, Response>> _processedQueue;
 			Request _request { Request::Status::INCOMPLETE };
 			std::chrono::steady_clock::time_point _lastReceived;
-			
+
 			void _processBuffer();
+			void _handleHeader();
+			void _handleChunkedBody();
+			void _handleBody();
 	};
 }

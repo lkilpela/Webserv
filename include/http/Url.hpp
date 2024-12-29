@@ -29,18 +29,8 @@ namespace http {
         std::string fragment;
 
 		Url() = default;
-		
-		Url(Url&& url)
-			: scheme(std::move(url.scheme))
-			, user(std::move(url.user))
-			, password(std::move(url.password))
-			, host(std::move(url.host))
-			, port(std::move(url.port))
-			, path(std::move(url.path))
-			, query(std::move(url.query))
-			, fragment(std::move(url.fragment)) {
-		}
-
+		Url(const std::string& url);
+		Url(Url&&) = default;
 		Url& operator=(const Url& url) = default;
 
 	};

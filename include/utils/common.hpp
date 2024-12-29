@@ -14,4 +14,18 @@ namespace utils {
     bool isValidURL(const std::string &url);
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
+
+	template <typename T>
+	void move(std::vector<T>& dest, std::vector<T>& src, std::size_t n) {
+		if (n > src.size()) {
+			throw std::out_of_range("src vector has less bytes to move");
+		}
+
+		dest.insert(
+			dest.end(),
+			std::move_iterator(src.begin()),
+			std::move_iterator(src.begin() + n)
+		);
+		src.erase(src.begin(), src.begin() + n);
+	};
 }

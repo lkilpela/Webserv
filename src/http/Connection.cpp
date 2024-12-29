@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <iostream>
+#include <algorithm>
 #include <array>
 #include "http/Connection.hpp"
 #include "http/utils.hpp"
@@ -39,13 +40,13 @@ namespace http {
 		auto& [req, res] = _processedQueue.front();
 
 		if (res.send()) {
-			const auto code = res.getStatusCode();
-			auto header = req.getHeader(Header::CONNECTION);
+			const auto responseStatusCode = res.getStatusCode();
+			auto connectionHeader = req.getHeader(Header::CONNECTION);
 
 			if (
-				(header.has_value() && *header == "close")
-				|| code == StatusCode::BAD_REQUEST_400
-				|| code == StatusCode::INTERNAL_SERVER_ERROR_500
+				(connectionHeader.has_value() && *connectionHeader == "close")
+				|| responseStatusCode == StatusCode::BAD_REQUEST_400
+				|| responseStatusCode == StatusCode::INTERNAL_SERVER_ERROR_500
 			) {
 				this->close();
 				return;
@@ -78,20 +79,66 @@ namespace http {
 		return (_clientSocket == -1);
 	}
 
-	// Unfinished
 	void Connection::_processBuffer() {
-		using enum Request::Status;
+		if (_request.getStatus() == Request::Status::INCOMPLETE) {
+			_handleHeader();
+		}
 
-		std::size_t pos = findBlankLine(_requestBuffer.begin(), _requestBuffer.end());
+		if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
+			if (_request.isChunked()) {
+				_handleChunkedBody();
+			} else {
+				_handleBody();
+			}
+		}
+	}
 
-		if (pos == std::string::npos && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
-			_request.setStatus(BAD_REQUEST);
+	void Connection::_handleHeader() {
+		auto begin = _requestBuffer.begin();
+		auto end = _requestBuffer.end();
+		auto it = findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
+
+		if (it == end && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
+			_request.setStatus(Request::Status::BAD);
 			return;
 		}
 
-		if (pos != std::string::npos) {
-			// parse here
+		if (it != end) {
+			std::string rawHeader(begin, it + 4);
+			_requestBuffer.erase(begin, it + 4);
 
+			if (Request::parseHeaders(_request, rawHeader)) {
+				_request.setStatus(Request::Status::HEADER_COMPLETE);
+			} else {
+				_request.setStatus(Request::Status::BAD);
+			}
+		}
+	}
+
+	void Connection::_handleChunkedBody() {
+		auto begin = _requestBuffer.begin();
+		auto end = _requestBuffer.end();
+		auto it = findDelimiter(begin, end, {0, '\r', '\n', '\r', '\n'});
+
+		if (it != end) {
+			_request.appendBody(_requestBuffer.begin(), it);
+			_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
+			_request.setStatus(COMPLETE);
+		}
+	}
+
+	void Connection::_handleBody() {
+		std::size_t bodySize = _request.getBodySize();
+
+		if (bodySize == 0) {
+			_request.setStatus(Request::Status::COMPLETE);
+			return;
+		}
+
+		if (_requestBuffer.size() >= bodySize) {
+			_request.appendBody(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
+			_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
+			_request.setStatus(Request::Status::COMPLETE);
 		}
 	}
 }
