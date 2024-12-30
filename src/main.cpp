@@ -1,10 +1,14 @@
 #include <iostream>
 #include "Config.hpp"
 #include "Error.hpp"
+#include "Server.hpp"
 #include <exception>
+#include <thread>
+#include "SignalHandle.hpp"
+#include "Server.hpp"
 #include "http/index.hpp"
 
-//#include "Server.hpp"
+volatile sig_atomic_t sigintReceived = 0;
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -13,11 +17,12 @@ int main(int argc, char **argv) {
 	}
 
 	try {
+		handleSignals();
 		ConfigParser parser;
-		parser.load(argv[1]);
-
-		//Server server(config);
-		///server.listen();
+		Config config = parser.load(argv[1]);
+		std::vector<Server> servers;
+		Server server(config);
+		server.listen();
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {
