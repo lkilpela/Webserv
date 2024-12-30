@@ -18,8 +18,8 @@ int main(int argc, char **argv) {
 
 	try {
 		handleSignals();
-		ConfigParser parser;
-		Config config = parser.load(argv[1]);
+		ConfigParser parser(argv[1]);
+		Config config = parser.load();
 		std::vector<Server> servers;
 		Server server(config);
 		server.listen();
