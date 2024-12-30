@@ -1,13 +1,21 @@
 #include "Server.hpp"
-#include "Utils.hpp"
+#include ".hpp"
 #include "SignalHandle.hpp"
+
+void setNonBlocking(int fd) {
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1)
+		throw std::runtime_error("Failed to get file descriptor flags");
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		throw std::runtime_error("Failed to set file descriptor flags");
+}
 
 Server::Server(const Config& config) {
     for (int port : config.ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)
 			throw std::runtime_error("Failed to create socket");
-		if (utils::setNonBlocking(serverFd) == -1)
+		if (setNonBlocking(serverFd) == -1)
 			throw std::runtime_error("Nonblocking failed");
         sockaddr_in address{};
         address.sin_family = AF_INET;
@@ -26,7 +34,7 @@ void Server::processCGI(Request& req) {
 	int pipefd[2];
 	if(pipe(pipefd) == -1)
 		perror("Pipe failed");
-	if (utils::setNonBlocking(pipefd[0]) == -1)
+	if (setNonBlocking(pipefd[0]) == -1)
 		perror("Pipe nonblocking failed");
 	pollfd cgiData { pipefd[0], POLLIN, 0 };
 	_pollfds.push_back(cgiData);
@@ -115,3 +123,14 @@ Server::~Server() {
 	utils::closeFDs(_serverFds);
 }
 
+// Member router cho Server
+// call router.get | .post | .delete based on configuration file
+// router.get("/static", hander function)
+// handler function can phai viet rieng
+// When adding new Connection, we need to pass router.handle to Connection constructor new Connection(socket, timeout, router.handle)
+
+// router object in server object
+// router access config and read routes and their methods
+// router.get() for routes that have GET and provide handler
+// router.post()  for routes that have POST handler
+// // router object has been fully initialized

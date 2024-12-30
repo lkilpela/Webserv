@@ -75,6 +75,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
     }
 }
 
+//filePath = config/webserv.conf
 std::string ConfigParser::getConfigPath(const string &value) const {
     return std::filesystem::canonical(filePath).parent_path() / value;
 
@@ -83,6 +84,8 @@ std::string ConfigParser::getConfigPath(const string &value) const {
 void ConfigParser::parseLocation(const string &line, Location &currentLocation) {
     static const ParserMap locationParsers = {
         {"root", [&](const string &value) {
+            // value = default
+            // fullPath = getConfigPath(default)
             std::string fullPath = getConfigPath(value);
             if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
                 throw ConfigError(EINVAL, "Invalid root");
@@ -303,6 +306,10 @@ void ConfigParser::printConfig(const Config& config) {
     for (const auto& server : config.servers) {
         printServerConfig(server);
     }
+}
+
+std::string Config::getabsolutepath(const std::string &path) {
+    return std::filesystem::canonical(path).parent_path().string();
 }
 
 // Function to load the configuration

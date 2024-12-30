@@ -24,8 +24,12 @@ namespace http {
 		if (request.getStatus() == Request::Status::BAD_REQUEST) {
 			response
 				.setStatusCode(StatusCode::BAD_REQUEST_400)
-				.setBody(nullptr)
+				.setHeader(Header::CONTENT_TYPE, "text/html")
+				// root + all the resource files
+				.setBody(locations.root + locations.errorPages[400])
 				.build();
+				.setBody(config.rootPath + "/uploads/abc.text")
+				Config::getRootPath() -> absolute path to webserv folder where .
 			return;
 		}
 
