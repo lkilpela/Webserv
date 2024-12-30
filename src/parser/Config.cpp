@@ -83,7 +83,8 @@ std::string ConfigParser::getConfigPath(const string &value) const {
 void ConfigParser::parseLocation(const string &line, Location &currentLocation) {
     static const ParserMap locationParsers = {
         {"root", [&](const string &value) {
-            if (!currentLocation.root.empty() || !utils::isValidFilePath(value)) {
+            std::string fullPath = getConfigPath(value);
+            if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
                 throw ConfigError(EINVAL, "Invalid root");
             }
             currentLocation.root = fullPath;
@@ -122,7 +123,8 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
             currentLocation.cgiExtension = value;
         }},
         {"upload_dir", [&](const string &value) {
-            if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(value)) {
+            std::string fullPath = getConfigPath(value);
+            if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(fullPath)) {
                 throw ConfigError(EINVAL, "Invalid upload_dir");
             }
             currentLocation.uploadDir = fullPath;
@@ -318,7 +320,6 @@ Config ConfigParser::load() {
         return config;
     } catch (const ConfigError& e) {
         cout << "Error: " << e.code() << " " << e.what() << endl;
-
     }
     return Config();
 }
