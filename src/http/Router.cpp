@@ -1,6 +1,9 @@
 #include "Router.hpp"
+#include "utils.hpp"
 
 namespace http {
+	Router::Router(Config config) : _config(config) {}
+
 	void Router::get(const std::string& route, Handler handler) {
 		_routes[route]["GET"] = handler;
 	}
@@ -24,7 +27,8 @@ namespace http {
 		if (request.getStatus() == Request::Status::BAD) {
 			response
 				.setStatusCode(StatusCode::BAD_REQUEST_400)
-				.setBody(nullptr)
+				.setHeader(Header::CONTENT_TYPE, getMimeType("html"))
+				.setBody(_config.rootPath + "/config/default/400.html");
 				.build();
 			return;
 		}
@@ -41,7 +45,8 @@ namespace http {
 			if (handlerByMethodIt == handlerByMethod.end()) {
 				response
 					.setStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
-					.setBody(nullptr)
+					.setHeader(Header::CONTENT_TYPE, getMimeType("html"))
+					.setBody(_config.rootPath + "/config/default/405.html");
 					.build();
 				return;
 			}
@@ -54,7 +59,8 @@ namespace http {
 				response
 					.clear()
 					.setStatusCode(StatusCode::INTERNAL_SERVER_ERROR_500)
-					.setBody(nullptr)
+					.setHeader(Header::CONTENT_TYPE, getMimeType("html"))
+					.setBody(_config.rootPath + "/config/default/500.html");
 					.build();
 			}
 
@@ -64,7 +70,8 @@ namespace http {
 		// No matching route found, return http status 404
 		response
 			.setStatusCode(StatusCode::NOT_FOUND_404)
-			.setBody(nullptr)
+			.setHeader(Header::CONTENT_TYPE, getMimeType("html"))
+			.setBody(_config.rootPath + "/config/default/404.html");
 			.build();
 	}
 }
