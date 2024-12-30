@@ -1,10 +1,11 @@
 #include <iostream>
 #include "Config.hpp"
 #include "Error.hpp"
+#include "Server.hpp"
 #include <exception>
 #include "http/index.hpp"
 
-//#include "Server.hpp"
+volatile sig_atomic_t sigintReceived = 0;
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
