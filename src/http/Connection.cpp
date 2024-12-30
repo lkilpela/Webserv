@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <array>
 #include "http/Connection.hpp"
-#include "http/utils.hpp"
+#include "utils/common.hpp"
 
 namespace http {
 
@@ -96,7 +96,7 @@ namespace http {
 	void Connection::_handleHeader() {
 		auto begin = _requestBuffer.begin();
 		auto end = _requestBuffer.end();
-		auto it = findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
+		auto it = utils::findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
 
 		if (it == end && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
 			_request.setStatus(Request::Status::BAD);
@@ -118,7 +118,7 @@ namespace http {
 	void Connection::_handleChunkedBody() {
 		auto begin = _requestBuffer.begin();
 		auto end = _requestBuffer.end();
-		auto it = findDelimiter(begin, end, {0, '\r', '\n', '\r', '\n'});
+		auto it = utils::findDelimiter(begin, end, {0, '\r', '\n', '\r', '\n'});
 
 		if (it != end) {
 			_request.appendBody(_requestBuffer.begin(), it);
