@@ -23,7 +23,7 @@ namespace http {
 		_lastReceived = std::chrono::steady_clock::now();
 		_processBuffer();
 
-		if (_request.getStatus() != Request::Status::INCOMPLETE) {
+		if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
 			Response response(_clientSocket);
 
 			_process(_request, response);
@@ -104,7 +104,7 @@ namespace http {
 		}
 
 		if (it != end) {
-			std::string rawHeader(begin, it + 4);
+			std::string rawHeader(std::move_iterator(begin), std::move_iterator(it + 4));
 			_requestBuffer.erase(begin, it + 4);
 
 			if (Request::parseHeaders(_request, rawHeader)) {
@@ -123,7 +123,7 @@ namespace http {
 		if (it != end) {
 			_request.appendBody(_requestBuffer.begin(), it);
 			_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
-			_request.setStatus(COMPLETE);
+			_request.setStatus(Request::Status::COMPLETE);
 		}
 	}
 
