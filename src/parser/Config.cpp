@@ -318,17 +318,16 @@ void ConfigParser::printConfig(const Config& config) {
 
 // Function to load the configuration
 Config ConfigParser::load() {
-	//try {
-		Config config;
-		parseConfig(filePath, config);
-		printConfig(config);
-		//Server server(config);
-		//server.start();
-		return config;
-	/*} catch (const ConfigError& e) {
-		cout << "Error: " << e.code() << " " << e.what() << endl;
-	} catch (const std::exception& e) {
-		cout << "Unexpected Error: " << e.what() << endl;
-	}
-	return Config();*/
+    try {
+        Config config;
+        parseConfig(filePath, config);
+        //printConfig(config);
+        //Server server(config);
+        //server.start();
+        return config;
+    } catch (const ConfigError& e) {
+        cout << "Error: " << e.code() << " " << e.what() << endl;
+
+    }
+    return Config();
 }
