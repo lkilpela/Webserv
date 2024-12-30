@@ -303,6 +303,10 @@ void ConfigParser::printConfig(const Config& config) {
     }
 }
 
+std::string Config::getAbsolutePath(const std::string &path) {
+    return std::filesystem::canonical(path).parent_path().string();
+}
+
 // Function to load the configuration
 Config ConfigParser::load() {
     try {
