@@ -3,6 +3,7 @@
 #include <regex> // std::regex, std::regex_match
 #include <filesystem> // std::filesystem
 #include <stdexcept> // std::invalid_argument, std::out_of_range
+#include <iostream>
 
 using std::string;
 using std::vector;
@@ -16,7 +17,7 @@ namespace utils {
         if (value == "off") {
 			return false;
 		}
-		
+
         throw ConfigError(EINVAL, "Invalid boolean value");
     }
 
@@ -80,7 +81,7 @@ namespace utils {
         }
     }
 
-    // Utility functions for parsing
+    // // Utility functions for parsing
     string trim(const string& str) {
         size_t first = str.find_first_not_of(" \t;");
         size_t last = str.find_last_not_of(" \t;");
@@ -96,4 +97,17 @@ namespace utils {
 
 		return str;
     }
+
+	std::string lowerCase(std::string str) {
+		std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+			return std::tolower(c);
+		});
+
+		return str;
+	}
 } // namespace utils
+
+int main(void) {
+	std::cout << utils::trim("Hello ") << std::endl;
+	return 0;
+}

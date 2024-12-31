@@ -3,7 +3,7 @@
 namespace http {
 	constexpr std::size_t MAX_REQUEST_HEADER_SIZE = 8 * 1024; // 8KB
 
-	enum class Header {
+	enum class Header : int {
 		ACCEPT_CHARSET,
 		ACCEPT_ENCODING,
 		ACCEPT_LANGUAGE,
@@ -48,7 +48,8 @@ namespace http {
    		CONTENT_RANGE,
    		MIME_VERSION,
    		TRAILER,
-   		TRANSFER_ENCODING
+   		TRANSFER_ENCODING,
+		LENGTH
 	};
 
 	enum class StatusCode : std::uint16_t {

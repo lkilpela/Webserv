@@ -7,8 +7,9 @@
 #include <iterator>
 
 namespace utils {
-    std::string trim(const std::string& str);
-    std::string removeComments(const std::string& str);
+    std::string trim(const std::string &str);
+    std::string removeComments(const std::string &str);
+	std::string lowerCase(std::string str);
     bool parseBool(const std::string &value);
     int parsePort(const std::string &value);
     void validateMethods(const std::vector<std::string> &methods);

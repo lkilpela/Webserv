@@ -1,4 +1,6 @@
 #include <sstream>
+#include <regex>
+#include "utils/common.hpp"
 #include "http/utils.hpp"
 
 namespace http {
@@ -163,5 +165,69 @@ namespace http {
 			case HTTP_VERSION_NOT_SUPPORTED_505: return "Http Version Not Supported";
 			default: return "Unknown";
 		}
+	}
+
+	bool hasHeaderName(const std::string &headerName) {
+		for (int i = 0; i < static_cast<int>(Header::LENGTH); i++) {
+			Header header = static_cast<Header>(i);
+
+			if (utils::lowerCase(stringOf(header)) == utils::lowerCase(headerName)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool isValidHeaderField(const std::string &headerField) {
+		std::regex headerFieldRegex(R"(^([a-zA-Z0-9!#$%&'*+.^_`|~-]+):\s*(.*)\s*$)");
+
+		if (!std::regex_match(headerField, headerFieldRegex)) {
+			return false;
+		}
+
+		std::string headerName = headerField.substr(0, headerField.find(":"));
+
+		if (!hasHeaderName(headerName)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestLine) {
+		std::regex requestLineRegex(R"(^(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|TRACE|CONNECT) (\S+) HTTP\/1\.1\r\n$)");
+		std::smatch matches;
+
+		if (!std::regex_match(rawRequestLine, matches, requestLineRegex)) {
+			throw std::invalid_argument("Malformed or invalid request line");
+		}
+
+		std::istringstream istream(rawRequestLine);
+		std::string method;
+	 	std::string uri;
+	 	std::string version;
+
+		istream >> method >> uri >> version;
+		return { method, uri, version };
+	}
+
+	std::unordered_map<std::string, std::string> parseRequestHeaders(const std::string &rawRequestHeader) {
+		std::unordered_map<std::string, std::string> headerByName;
+		std::istringstream istream;
+		std::string line;
+
+		while (std::getline(istream, line) && line != "\r") {
+			if (!isValidHeaderField(line)) {
+				continue;
+			}
+
+			std::size_t colonPos = line.find(":");
+			std::string name = line.substr(0, colonPos);
+			std::string header = line.substr(colonPos + 1);
+			headerByName[name] = header;
+		}
+
+		return headerByName;
 	}
 }

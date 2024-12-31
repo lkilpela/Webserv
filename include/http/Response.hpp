@@ -20,6 +20,7 @@ namespace http {
 
 			void build();
 
+			int getClientSocket() const;
 			const StatusCode getStatusCode() const;
 
 			Response& clear();
