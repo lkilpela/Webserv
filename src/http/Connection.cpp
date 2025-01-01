@@ -104,27 +104,47 @@ namespace http {
 		}
 
 		if (it != end) {
-			std::string rawHeader(std::move_iterator(begin), std::move_iterator(it + 4));
+			std::string rawRequestHeader(std::move_iterator(begin), std::move_iterator(it + 4));
 			_requestBuffer.erase(begin, it + 4);
 
-			if (Request::parseHeaders(_request, rawHeader)) {
+			try {
+				_request = std::move(Request::parseHeader(rawRequestHeader));
 				_request.setStatus(Request::Status::HEADER_COMPLETE);
-			} else {
+			} catch (const std::invalid_argument &e) {
 				_request.setStatus(Request::Status::BAD);
 			}
 		}
 	}
 
 	void Connection::_handleChunkedBody() {
-		auto begin = _requestBuffer.begin();
-		auto end = _requestBuffer.end();
-		auto it = utils::findDelimiter(begin, end, {0, '\r', '\n', '\r', '\n'});
+		static constexpr std::array<uint8_t, 2> crlf {'\r', '\n'};
+		std::vector<uint8_t> buffer;
+		buffer.reserve(_requestBuffer.size());
 
-		if (it != end) {
-			_request.appendBody(_requestBuffer.begin(), it);
-			_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
-			_request.setStatus(Request::Status::COMPLETE);
+		while (true) {
+			auto begin = _requestBuffer.begin();
+			auto end = _requestBuffer.end();
+			auto firstIt = std::search(begin, end, crlf.begin(), crlf.end());
+			auto secondIt = (firstIt == end) ? end : std::search(firstIt + 2, end, crlf.begin(), crlf.end());
+
+			if (firstIt == end || secondIt == end) {
+				return;
+			}
+
+			std::size_t chunkSize;
+			if (std::distance(firstIt + 2, secondIt))
+			buffer.insert(buffer.begin(), firstIt + 2, secondIt);
+			_requestBuffer.erase(begin, secondIt + 2);
 		}
+
+		_request.appendBody(buffer.begin(), buffer.end());
+		// auto it = utils::findDelimiter(begin, end, {0, '\r', '\n', '\r', '\n'});
+
+		// if (it != end) {
+		// 	_request.appendBody(_requestBuffer.begin(), it);
+		// 	_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
+		// 	_request.setStatus(Request::Status::COMPLETE);
+		// }
 	}
 
 	void Connection::_handleBody() {

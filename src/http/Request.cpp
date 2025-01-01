@@ -17,7 +17,6 @@
 // If recv() returns -1 and the socket is non-blocking, assume it’s a temporary error and retry when POLLIN is triggered again.
 
 namespace http {
-
 	Request::Request(Status status) : _status(status) {}
 
 	void Request::clear() {
@@ -69,8 +68,13 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setUrl(const Url& url) {
+	Request& Request::setUrl(const Url &url) {
 		_url = url;
+		return *this;
+	}
+
+	Request& Request::setUrl(Url &&url) {
+		_url = std::move(url);
 		return *this;
 	}
 
@@ -99,33 +103,30 @@ namespace http {
 		return *this;
 	}
 
-	bool Request::parseHeaders(Request& request, const std::string& rawHeader) {
-		std::istringstream istream(rawHeader);
-		std::string line;
-		std::string method;
-	 	Url url;
-	 	std::string version;
+	/**
+	 * @brief Parse the given string request header into a http::Request object
+	 *
+	 * @param rawRequestHeader The http request header in string format.
+	 *
+	 * @return http::Request request
+	 *
+	 * @throw std::invalid_argument
+	 */
+	Request Request::parseHeader(const std::string &rawRequestHeader) {
+		Request request;
 
-		std::getline(istream, line);
+		const auto &[method, uri, version] = parseRequestLine(rawRequestHeader);
+		const auto headersByNames = parseRequestHeaders(rawRequestHeader);
+		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
 
-		request.setMethod(method).setVersion(version);
-
-		while (std::getline(istream, line) && line != "\r") {
-			std::size_t delimiter = line.find(": ");
-
-			if (delimiter == std::string::npos) {
-				return false;
-			}
-
-			std::string name = line.substr(0, delimiter);
-			// must validate `name`
-			std::string value = line.substr(delimiter + 2);
+		for (const auto &[name, value] : headersByNames) {
 			request.setHeader(name, value);
 		}
 
-
-		auto hostHeader = request.getHeader(Header::HOST);
-
-		return true;
+		request
+			.setMethod(method)
+			.setUrl(std::move(url))
+			.setVersion(version);
+		return request;
 	}
 }

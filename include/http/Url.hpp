@@ -29,10 +29,13 @@ namespace http {
         std::string fragment;
 
 		Url() = default;
-		Url(const std::string& url);
-		Url(Url&&) = default;
-		Url& operator=(const Url& url) = default;
+		Url(const Url &) = default;
+		Url(Url &&) noexcept = default;
 
+		Url &operator=(const Url &) = default;
+		Url &operator=(Url &&) noexcept = default;
+
+		static Url parse(const std::string &url);
 	};
 
 }

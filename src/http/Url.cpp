@@ -2,7 +2,9 @@
 #include "http/Url.hpp"
 
 namespace http {
-	Url::Url(const std::string& url) {
+	Url Url::parse(const std::string& url) {
+		Url result;
+
 		std::regex urlRegex(
 			R"(^(?:(https?)://)?" // Scheme
 			R"((?:([^:@]+)(?::([^@]+))?@)?)" // User and Password
@@ -13,17 +15,20 @@ namespace http {
 			R"(#?(.*)?)$)", // Fragment
 			std::regex::extended
     	);
-		std::smatch matchedResult;
+		std::smatch matches;
 
-		if (std::regex_match(url, matchedResult, urlRegex)) {
-			scheme = matchedResult[1].str();
-			user = matchedResult[2].str();
-			password = matchedResult[3].str();
-			host = matchedResult[4].str();
-			port = matchedResult[5].str();
-			path = matchedResult[6].str();
-			query = matchedResult[7].str();
-			fragment = matchedResult[8].str();
+		if (std::regex_match(url, matches, urlRegex)) {
+			throw std::invalid_argument("Invalid URL");
 		}
+
+		result.scheme = matches[1].str();
+		result.user = matches[2].str();
+		result.password = matches[3].str();
+		result.host = matches[4].str();
+		result.port = matches[5].str();
+		result.path = matches[6].str();
+		result.query = matches[7].str();
+		result.fragment = matches[8].str();
+		return result;
 	}
 }

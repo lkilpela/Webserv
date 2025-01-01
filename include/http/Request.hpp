@@ -21,10 +21,11 @@ namespace http {
 
 			Request() = default;
 			explicit Request(Status status);
-			Request(const Request&) = delete;
-			Request(Request&&) noexcept = default;
+			Request(const Request &) = delete;
+			Request(Request &&) noexcept = default;
 			~Request() = default;
-			Request& operator=(const Request&) = delete;
+			Request& operator=(const Request &) = default;
+			Request& operator=(Request &&) noexcept = default;
 
 			void clear();
 
@@ -39,14 +40,15 @@ namespace http {
 			Request::Status getStatus() const;
 
 			Request& setMethod(const std::string& method);
-			Request& setUrl(const Url& url);
+			Request& setUrl(const Url &url);
+			Request& setUrl(Url &&url);
 			Request& setVersion(const std::string& version);
 			Request& setHeader(Header header, const std::string& value);
 			Request& setHeader(const std::string& name, const std::string& value);
 			Request& appendBody(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end) noexcept;
 			Request& setStatus(Request::Status status);
 
-			static bool parseHeaders(Request& request, const std::string& rawHeader);
+			static Request parseHeader(const std::string &rawRequestHeader);
 
 		private:
 			std::string _method;

@@ -195,15 +195,22 @@ namespace http {
 		return true;
 	}
 
-	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestLine) {
-		std::regex requestLineRegex(R"(^(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|TRACE|CONNECT) (\S+) HTTP\/1\.1\r\n$)");
+	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestHeader) {
+		std::size_t pos = rawRequestHeader.find("\r\n");
+
+		if (pos == std::string::npos) {
+			throw std::invalid_argument("Couldn't find ");
+		}
+
+		std::string requestLine = rawRequestHeader.substr(0, pos);
+		std::regex requestLineRegex(R"(^(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|TRACE|CONNECT) (\S+) HTTP\/1\.1$)");
 		std::smatch matches;
 
-		if (!std::regex_match(rawRequestLine, matches, requestLineRegex)) {
+		if (!std::regex_match(requestLine, matches, requestLineRegex)) {
 			throw std::invalid_argument("Malformed or invalid request line");
 		}
 
-		std::istringstream istream(rawRequestLine);
+		std::istringstream istream(requestLine);
 		std::string method;
 	 	std::string uri;
 	 	std::string version;
