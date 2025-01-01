@@ -46,7 +46,8 @@ OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 ################################################################################
 # RULES
 ################################################################################
-vpath %.cpp $(SRC_DIR) $(SRC_DIR)/parser $(SRC_DIR)/http $(SRC_DIR)/utils
+vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser  \ $(SRC_DIR)/utils \ $(SRC_DIR)/server \
+			$(SRC_DIR)/http 
 # Add more paths here
 
 all: $(NAME)
