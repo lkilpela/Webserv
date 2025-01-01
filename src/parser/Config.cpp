@@ -1,7 +1,7 @@
 #include "Config.hpp"
 #include "common.hpp"
 #include "Error.hpp"
-#include "Server.hpp"
+//#include "Server.hpp"
 #include <functional> // std::function
 #include <fstream> // std::ifstream, std::getline
 #include <iostream> // std::cout, std::endl
@@ -24,8 +24,7 @@ using std::endl;
 using ParserFunction = std::function<void(const string&)>;
 using ParserMap = std::unordered_map<string, ParserFunction>;
 
-
-void ConfigParser::parseKeyValue(const string &line, const ParserMap &parsers) {
+void parseKeyValue(const string &line, const ParserMap &parsers) {
     istringstream iss(line);
     string key, value;
     if (iss >> key) {
