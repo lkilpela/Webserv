@@ -17,12 +17,11 @@ int main(int argc, char **argv) {
 	}
 
 	try {
-		handleSignals();
+		//handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
-		std::vector<Server> servers;
-		Server server(config);
-		server.listen();
+		//Server server(config);
+		//server.listen();
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {
