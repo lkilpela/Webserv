@@ -40,6 +40,7 @@ class ConfigParser {
 private:
     std::string filePath;
 public:
+    ConfigParser(const std::string &path): filePath(path) {};    
     // Function to parse the configuration text
     void parseConfig(const std::string &filename, Config &config);
     void parseGlobal(const std::string &line, ServerConfig &config);
@@ -47,5 +48,4 @@ public:
 	Config load();
 	void printConfig(const Config& config);
     std::string getConfigPath(const std::string &value) const;
-    void parseKeyValue(const string &line, const ParserMap &parsers);
 };
