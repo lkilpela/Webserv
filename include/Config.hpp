@@ -47,4 +47,5 @@ public:
 	Config load();
 	void printConfig(const Config& config);
     std::string getConfigPath(const std::string &value) const;
+    void parseKeyValue(const string &line, const ParserMap &parsers);
 };

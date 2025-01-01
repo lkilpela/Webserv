@@ -24,6 +24,22 @@ using std::endl;
 using ParserFunction = std::function<void(const string&)>;
 using ParserMap = std::unordered_map<string, ParserFunction>;
 
+
+void ConfigParser::parseKeyValue(const string &line, const ParserMap &parsers) {
+    istringstream iss(line);
+    string key, value;
+    if (iss >> key) {
+        getline(iss, value);
+        value = utils::trim(utils::removeComments(value));
+        auto it = parsers.find(key);
+        if (it != parsers.end()) {
+            it->second(value);
+        } else {
+            throw ConfigError(EINVAL, "Invalid directive in configuration block");
+        }
+    }
+}
+
 // Function to parse global configuration lines
 void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
     static const ParserMap globalParsers = {
@@ -61,18 +77,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
         }}
     };
 
-    istringstream iss(line);
-    string key, value;
-    if (iss >> key) {
-        getline(iss, value);
-        value = utils::trim(utils::removeComments(value));
-        auto it = globalParsers.find(key);
-        if (it != globalParsers.end()) {
-            it->second(value);
-        } else {
-            throw ConfigError(EINVAL, "Invalid directive in server block");
-        }
-    }
+    parseKeyValue(line, globalParsers);
 }
 
 //filePath = config/webserv.conf
@@ -149,18 +154,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
         }}
     };
 
-    istringstream iss(line);
-    string key, value;
-    if (iss >> key) {
-        getline(iss, value);
-        value = utils::trim(utils::removeComments(value));
-        auto it = locationParsers.find(key);
-        if (it != locationParsers.end()) {
-            it->second(value);
-        } else {
-            throw ConfigError(EINVAL, "Invalid directive in location block");
-        }
-    }
+    parseKeyValue(line, locationParsers);
 }
 
 void ConfigParser::parseConfig(const string &filename, Config& config) {
@@ -313,7 +307,7 @@ Config ConfigParser::load() {
     try {
         Config config;
         parseConfig(filePath, config);
-        //printConfig(config);
+        printConfig(config);
         //Server server(config);
         //server.start();
         return config;
