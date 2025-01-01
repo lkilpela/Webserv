@@ -24,8 +24,7 @@ using std::endl;
 using ParserFunction = std::function<void(const string&)>;
 using ParserMap = std::unordered_map<string, ParserFunction>;
 
-
-void ConfigParser::parseKeyValue(const string &line, const ParserMap &parsers) {
+void parseKeyValue(const string &line, const ParserMap &parsers) {
     istringstream iss(line);
     string key, value;
     if (iss >> key) {
