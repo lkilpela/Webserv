@@ -2,7 +2,7 @@
 
 #include <string>
 #include <iostream>
-#include <cerrno>
+#include <cerrno> 
 
 class WSException {
 public:
@@ -92,7 +92,7 @@ class FileNotFoundException : public std::runtime_error {
 
 /* COMMON ERROR CODES:
 
-- `recv`:
+- `recv`: 
   - `EAGAIN` or `EWOULDBLOCK`: The socket is marked non-blocking and the receive operation would block.
   - `EBADF`: The socket argument is not a valid file descriptor.
   - `ECONNRESET`: Connection reset by peer.
