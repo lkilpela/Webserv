@@ -16,11 +16,10 @@ INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/common.hpp \
 					$(INCLUDES)/Error.hpp \
-					$(INCLUDES)/Router.hpp \
 					$(INCLUDES)/http/Router.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \
-					$(INCLUDES)/http/URL.hpp \
+					$(INCLUDES)/http/Url.hpp \
 					$(INCLUDES)/utils/Payload.hpp
 
  # Add more headers here
