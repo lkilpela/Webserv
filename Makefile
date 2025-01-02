@@ -15,14 +15,28 @@ NAME			=	webserv
 INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/common.hpp \
-					$(INCLUDES)/Error.hpp
+					$(INCLUDES)/Error.hpp \
+					$(INCLUDES)/Router.hpp \
+					$(INCLUDES)/http/Router.hpp \
+					$(INCLUDES)/http/Request.hpp \
+					$(INCLUDES)/http/Response.hpp \
+					$(INCLUDES)/http/URL.hpp \
+					$(INCLUDES)/utils/Payload.hpp
+
  # Add more headers here
 
 OBJ_DIR			=	./obj
 SRC_DIR			=	./src
 SRCS			=	Config.cpp \
 					common.cpp \
-					main.cpp
+					main.cpp \
+					Router.cpp \
+					Request.cpp \
+					Response.cpp \
+					utils.cpp \
+					Payload.cpp \
+					StringPayload.cpp
+
 # Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
@@ -30,22 +44,22 @@ OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 ################################################################################
 # RULES
 ################################################################################
-vpath %.cpp $(SRC_DIR) $(SRC_DIR)/parser
+vpath %.cpp $(SRC_DIR) $(SRC_DIR)/parser $(SRC_DIR)/http $(SRC_DIR)/utils
 # Add more paths here
 
 all: $(NAME)
-
-$(NAME): $(OBJECTS)
-	@echo "--------------------------------------------"
-	@$(CXX_FULL) $(OBJECTS) -o $(NAME)
-	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
-	@echo "--------------------------------------------"
 
 $(OBJ_DIR)/%.o: %.cpp $(M_HEADERS)
 	@mkdir -p $(OBJ_DIR)
 	@echo "Compiling $< to $@"
 	@$(CXX_FULL) -c $< -o $@
 	@echo "$(G)Compiled: $< $(RC)"
+
+$(NAME): $(OBJECTS)
+	@echo "--------------------------------------------"
+	@$(CXX_FULL) $(OBJECTS) -o $(NAME)
+	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
+	@echo "--------------------------------------------"
 
 clean:
 	@rm -rf $(NAME).dSYM/ $(OBJ_DIR)/
