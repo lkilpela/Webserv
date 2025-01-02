@@ -7,6 +7,7 @@
 #include <array>
 #include "http/Connection.hpp"
 #include "utils/common.hpp"
+#include "http/utils.hpp"
 
 namespace http {
 
@@ -117,34 +118,45 @@ namespace http {
 	}
 
 	void Connection::_handleChunkedBody() {
-		static constexpr std::array<uint8_t, 2> crlf {'\r', '\n'};
 		std::vector<uint8_t> buffer;
+		bool isChunkEnd = false;
+		std::size_t currentPos = 0;
+		auto begin = _requestBuffer.begin();
+		auto end = _requestBuffer.end();
+
 		buffer.reserve(_requestBuffer.size());
 
 		while (true) {
-			auto begin = _requestBuffer.begin();
-			auto end = _requestBuffer.end();
-			auto firstIt = std::search(begin, end, crlf.begin(), crlf.end());
-			auto secondIt = (firstIt == end) ? end : std::search(firstIt + 2, end, crlf.begin(), crlf.end());
+			auto start = begin + currentPos;
+			auto firstIt = utils::findDelimiter(start, end, {'\r', '\n'});
+			auto secondIt = (firstIt == end) ? end : utils::findDelimiter(firstIt + 2, end, {'\r', '\n'});;
 
 			if (firstIt == end || secondIt == end) {
 				return;
 			}
 
-			std::size_t chunkSize;
-			if (std::distance(firstIt + 2, secondIt))
+			std::size_t chunkSize = parseChunkSize(std::string(start, firstIt));
+
+			if (chunkSize == 0) {
+				isChunkEnd = true;
+				currentPos += secondIt + 2 - start;
+				break;
+			}
+
+			if (std::distance(firstIt + 2, secondIt) != chunkSize) {
+				throw std::invalid_argument("Chunk size and chunk data mismatch");
+			}
+
 			buffer.insert(buffer.begin(), firstIt + 2, secondIt);
-			_requestBuffer.erase(begin, secondIt + 2);
+			currentPos += secondIt + 2 - start;
 		}
 
 		_request.appendBody(buffer.begin(), buffer.end());
-		// auto it = utils::findDelimiter(begin, end, {0, '\r', '\n', '\r', '\n'});
+		_requestBuffer.erase(begin, begin + currentPos);
 
-		// if (it != end) {
-		// 	_request.appendBody(_requestBuffer.begin(), it);
-		// 	_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
-		// 	_request.setStatus(Request::Status::COMPLETE);
-		// }
+		if (isChunkEnd) {
+			_request.setStatus(Request::Status::COMPLETE);
+		}
 	}
 
 	void Connection::_handleBody() {

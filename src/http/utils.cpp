@@ -195,6 +195,19 @@ namespace http {
 		return true;
 	}
 
+	std::size_t parseChunkSize(const std::string &chunkSizeLine) {
+		std::size_t semicolonPos = chunkSizeLine.find(";");
+		std::size_t chunkSize;
+
+		if (semicolonPos == std::string::npos) {
+			std::istringstream stream(chunkSizeLine);
+
+			if (!(stream >> std::hex >> chunkSize)) {
+				throw std::invalid_argument("Failed to parse chunk size");
+			}
+		}
+	}
+
 	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestHeader) {
 		std::size_t pos = rawRequestHeader.find("\r\n");
 

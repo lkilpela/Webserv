@@ -13,6 +13,7 @@ namespace http {
 	bool hasHeaderName(const std::string &headerName);
 	bool isValidHeaderField(const std::string &headerField);
 
+	std::size_t parseChunkSize(const std::string &chunkSizeLine);
 	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestHeader);
 	std::unordered_map<std::string, std::string> parseRequestHeaders(const std::string &rawRequestHeader);
 }
