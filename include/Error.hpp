@@ -6,54 +6,48 @@
 
 class WSException {
 public:
-    WSException(int err)
-    : errorCode(err, std::system_category()) {}
+    WSException(int err, const std::string& msg = "")
+    : errorCode(err, std::system_category())
+    , message(msg.empty() ? std::system_category().message(err) : msg) {}
+
     virtual ~WSException() = default;
 
-    std::error_code code() const noexcept { return errorCode; }
+    virtual std::error_code code() const noexcept { return errorCode; } // Return the error code from system
+    virtual const char* what() const noexcept { message.c_str(); } // Return a custom message
 private:
     std::error_code errorCode;
+    std::string message;
 };
 
 // Default ConfigError exception
 class ConfigError : public WSException {
 public:
-    ConfigError(int err, const std::string& msg)
-    : WSException(err), message(msg) {}
-
-    const char* what() const noexcept { return message.c_str(); }
-private:
-    std::string message;
+    using WSException::WSException; // Inherit constructors from WSException
 };
 
 class NetworkError : public WSException {
 public:
-    NetworkError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class RequestError : public WSException {
 public:
-    RequestError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class ResponseError : public WSException {
 public:
-    ResponseError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class RuntimeError : public WSException {
 public:
-    RuntimeError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class FileSystemError : public WSException {
 public:
-    FileSystemError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class FileNotFoundException : public std::runtime_error {
