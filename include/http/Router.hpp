@@ -4,18 +4,22 @@
 #include <functional>
 #include "Request.hpp"
 #include "Response.hpp"
+#include "Config.hpp"
 
 namespace http {
 	class Router {
 		public:
 			using Handler = std::function<void(Request&, Response&)>;
 
-			void get(const std::string& route, Handler handler);
-			void post(const std::string& route, Handler handler);
-			void del(const std::string& route, Handler handler);
+			void get(const std::string& route, const Location& config, Handler handler);
+			void post(const std::string& route, const Location& config, Handler handler);
+			void del(const std::string& route, const Location& config, Handler handler);
 			void handle(Request& req, Response& res);
 
+			void addRoute(const std::string& route, const Location& config, Handler handler);
+
 		private:
-			std::unordered_map<std::string, std::unordered_map<std::string, Handler>> _routes;
+			std::unordered_map<std::string, std::unordered_map<std::string, Handler>> _routes; //route -> method -> handler
+			std::unordered_map<std::string, Location> _locationConfigs; // route -> location config
 	};
 }

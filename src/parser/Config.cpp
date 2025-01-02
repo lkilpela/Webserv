@@ -305,6 +305,7 @@ std::string Config::getabsolutepath(const std::string &path) {
     return std::filesystem::canonical(path).parent_path().string();
 }
 
+
 // Function to load the configuration
 Config ConfigParser::load() {
     try {
