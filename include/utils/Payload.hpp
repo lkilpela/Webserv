@@ -43,7 +43,8 @@ namespace utils {
 
 	class FilePayload : public Payload {
 		public:
-			FilePayload(int socket, const std::filesystem::path& filePath);
+			//FilePayload(int socket, const std::filesystem::path& filePath);
+			FilePayload(int socket, const std::string& filePath);
 			FilePayload(FilePayload&&) noexcept = default;
 			~FilePayload() = default;
 
