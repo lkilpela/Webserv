@@ -92,8 +92,7 @@ namespace http {
 	std::string Response::getBody() const {
 =======
 	// Function to get the body of the response
-	std::string getBody() const {
->>>>>>> df5dd25 (Refactor Response class to separate getBody method implementation and clean up main function)
+	std::string Response::getBody() const {
 		if (_body) {
 			return _body->toString();
 		}

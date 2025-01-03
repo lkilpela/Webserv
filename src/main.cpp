@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 
         // Register the GET handler
         router.get(handleGetRequest);
-		simulateRequest(router, "http://localhost:8080/u");
+		simulateRequest(router, "http://localhost:8080//");
 
 		//Server server(config);
 		//server.listen();
