@@ -83,20 +83,17 @@ int main(int argc, char **argv) {
 		//handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
-		ServerConfig serverConfig = config.servers[1];
+		ServerConfig serverConfig = config.servers[0];
+
+        // Debug: Print loaded error pages
+        // for (const auto& [code, path] : serverConfig.errorPages) {
+        //    std::cout << "Error page " << code << ": " << path << std::endl;
+        //}
 
 		//Test the router 
 		http::Router router;
-<<<<<<< HEAD
-        router.addLocations(serverConfig);
-
-        // Register the GET handler
-        router.get(handleGetRequest);
-		simulateRequest(router, "http://localhost:8080/uploads");
-=======
 		initializeRouter(router, serverConfig);
 		simulateRequest(router, "http://localhost:8080/static/");
->>>>>>> 27d366f (Refactor Router to support simplified handler registration and improve location management)
 
 		//Server server(config);
 		//server.listen();
