@@ -1,5 +1,6 @@
 #include "Server.hpp"
-#include "Utils.hpp"
+#include "http/Connection.hpp"
+#include "utils/index.hpp"
 #include "SignalHandle.hpp"
 
 Server::Server(const Config& config) {
@@ -40,10 +41,6 @@ void Server::processCGI(Request& req) {
 	close(pipefd[1]);
 }
 
-void Server::processHttpClient(Request& req, Response& res) {
-
-}
-
 void Server::listen() {
 	while (_pollfds.size()) {
 		if (sigintReceived){
@@ -71,7 +68,8 @@ void Server::listen() {
 
 			if (it->revents == POLLIN) {
 				if (utils::isInVector<int>(it->fd, _serverFds)) {
-					
+					_addConnection(it->fd);
+					_connectionByFd.emplace(it->fd, );
 				} else if (utils::isInVector<int>(it->fd, _clientFds)) {
 					unsigned char buffer[2048];
 
@@ -86,8 +84,6 @@ void Server::listen() {
 					}
 
 					connection.readRequest(buffer, bytesRead);
-				} else {
-
 				}
 			} else if (it->revents == POLLOUT) {
 				connection.sendResponse();
@@ -97,19 +93,29 @@ void Server::listen() {
     }
 }
 
-void Server::_addClient(std::size_t i) {
+void Server::_addConnection(int fd) {
+	http::Connection connection(fd, 5000, [&](Request& req, Response& res) {
+		// access server through this
+		// access ServerConfig
+		// if (req.getUrl().path ends with "abc.py") {
+		//    this is CGI request then do something with it
+		// }
+	});
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
-	int clientFd = ::accept(_pollfds[i].fd, (struct sockaddr*)&clientAddr, &addrLen);
+	int clientFd = ::accept(fd, (struct sockaddr*)&clientAddr, &addrLen);
 	if (clientFd < 0) {
 		// May use std::cerr for logging error
 		perror("Failed to accept connection");
 		return;
 	}
-	pollfd clientPollData { clientFd, POLLIN, 0 };
+	pollfd clientPollData { fd, POLLIN, 0 };
 	_clientFds.push_back(clientFd);
 	_pollfds.push_back(clientPollData);
+	_connectionByFd.emplace(connection);
 }
+
+
 
 Server::~Server() {
 	utils::closeFDs(_serverFds);

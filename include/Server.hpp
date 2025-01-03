@@ -33,6 +33,6 @@ class Server {
 		std::vector<int> _clientFds;
 		std::unordered_map<int, http::Connection> _connectionByFd;
 
-		void _addClient(std::size_t i);
+		void _addConnection(int fd);
 		void _addRoute(std::string, std::function<void(Request& req, Response& res)>);
 };
