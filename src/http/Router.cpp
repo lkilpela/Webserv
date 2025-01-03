@@ -4,41 +4,16 @@
 
 namespace http {
 	void Router::get(const Location& config, Handler handler) {
-		std::cout << "Router::get request received" << std::endl;
-
-		// Log the config details
-		std::cout << YELLOW "Log config details" RESET << std::endl;
-        std::cout << "Config path: " << config.path << std::endl;
-        std::cout << "Config methods: ";
-        for (const auto& method : config.methods) {
-            std::cout << method << " ";
-        }
-        std::cout << std::endl;
-
-		// Check if the GET in the config.methods
-		if (std::find(config.methods.begin(), config.methods.end(), "GET") == config.methods.end()) {
-			std::cerr << "GET method not allowed for this location" << std::endl;
-			throw RouterError(EINVAL, "GET method not allowed for this location");
-		}
-		// If allowed, add to route 
 		_routes[config.path]["GET"] = handler;
 		_locationConfigs[config.path] = config;
 	}
 
 	void Router::post(const Location& config, Handler handler) {
-		std::cout << "Router::post request received" << std::endl;
-		if (std::find(config.methods.begin(), config.methods.end(), "POST") == config.methods.end()) {
-			throw RouterError(EINVAL, "POST method not allowed for this location");
-		}
 		_routes[config.path]["POST"] = handler;
 		_locationConfigs[config.path] = config;
 	}
 
 	void Router::del(const Location& config, Handler handler) {
-		std::cout << "Router::del request received" << std::endl;
-		if (std::find(config.methods.begin(), config.methods.end(), "DELETE") == config.methods.end()) {
-			throw RouterError(EINVAL, "DELETE method not allowed for this location");
-		}
 		_routes[config.path]["DELETE"] = handler;
 		_locationConfigs[config.path] = config;
 	}
@@ -88,7 +63,7 @@ namespace http {
 			std::cout << "Location Not found" << std::endl;
 			response
 				.setStatusCode(StatusCode::NOT_FOUND_404)
-				.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[404])) // need to fix this
+				.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[404]))
 				.build();
 			return;
 		}
@@ -106,7 +81,7 @@ namespace http {
 				std::cout << "Method not allowed" << std::endl;
 				response
 					.setStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
-					.setBody(nullptr) // need to fix this
+					.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[405])) // need to fix this
 					.build();
 				return;
 			}
@@ -120,7 +95,7 @@ namespace http {
 				response
 					.clear()
 					.setStatusCode(StatusCode::INTERNAL_SERVER_ERROR_500)
-					.setBody(nullptr) // need to fix this
+					.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[500]))
 					.build();
 			}
 
