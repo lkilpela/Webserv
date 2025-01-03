@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "Error.hpp"
 
 namespace http {
 
