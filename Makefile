@@ -17,10 +17,12 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/common.hpp \
 					$(INCLUDES)/Error.hpp \
 					$(INCLUDES)/http/Router.hpp \
+					$(INCLUDES)/http/utils.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \
 					$(INCLUDES)/http/Url.hpp \
-					$(INCLUDES)/utils/Payload.hpp
+					$(INCLUDES)/utils/Payload.hpp \
+
 
  # Add more headers here
 
@@ -29,12 +31,13 @@ SRC_DIR			=	./src
 SRCS			=	Config.cpp \
 					common.cpp \
 					main.cpp \
+					utils.cpp \
 					Router.cpp \
 					Request.cpp \
 					Response.cpp \
-					utils.cpp \
 					Payload.cpp \
-					StringPayload.cpp
+					StringPayload.cpp \
+					FilePayload.cpp
 
 # Add more sources here
 
