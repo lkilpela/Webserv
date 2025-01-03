@@ -39,14 +39,15 @@ namespace http {
 			const std::span<const std::uint8_t> getBody() const;
 			Request::Status getStatus() const;
 
+			Request& appendBody(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end) noexcept;
+			Request& setBodySize(std::size_t size);
+			Request& setHeader(const std::string& name, const std::string& value);
+			Request& setHeader(Header header, const std::string& value);
 			Request& setMethod(const std::string& method);
+			Request& setStatus(Request::Status status);
 			Request& setUrl(const Url &url);
 			Request& setUrl(Url &&url);
 			Request& setVersion(const std::string& version);
-			Request& setHeader(Header header, const std::string& value);
-			Request& setHeader(const std::string& name, const std::string& value);
-			Request& appendBody(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end) noexcept;
-			Request& setStatus(Request::Status status);
 
 			static Request parseHeader(const std::string &rawRequestHeader);
 

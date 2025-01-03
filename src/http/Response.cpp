@@ -3,7 +3,8 @@
 #include <sys/socket.h>
 #include "http/Response.hpp"
 #include "Error.hpp"
-#include "utils.hpp"
+#include "utils/index.hpp"
+#include "http/utils.hpp"
 
 //  Behavior of send()
 // When send() returns:

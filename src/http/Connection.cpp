@@ -105,7 +105,8 @@ namespace http {
 		}
 
 		if (it != end) {
-			std::string rawRequestHeader(std::move_iterator(begin), std::move_iterator(it + 4));
+			std::string rawRequestHeader(begin, it + 4);
+			// std::string rawRequestHeader(std::move_iterator(begin), std::move_iterator(it + 4));
 			_requestBuffer.erase(begin, it + 4);
 
 			try {
@@ -144,10 +145,11 @@ namespace http {
 			}
 
 			if (std::distance(firstIt + 2, secondIt) != chunkSize) {
-				throw std::invalid_argument("Chunk size and chunk data mismatch");
+				_request.setStatus(Request::Status::BAD);
+				return;
 			}
 
-			buffer.insert(buffer.begin(), firstIt + 2, secondIt);
+			buffer.insert(buffer.end(), firstIt + 2, secondIt);
 			currentPos += secondIt + 2 - start;
 		}
 

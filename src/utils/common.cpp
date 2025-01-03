@@ -106,8 +106,3 @@ namespace utils {
 		return str;
 	}
 } // namespace utils
-
-int main(void) {
-	std::cout << utils::trim("Hello ") << std::endl;
-	return 0;
-}
