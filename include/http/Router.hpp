@@ -17,7 +17,7 @@ namespace http {
 			void handle(Request& req, Response& res);
 
 			void addLocations(const ServerConfig& serverConfig);
-
+			//void handleGetRequest(Location loc, Request& request, Response& response);
 
 		private:
 			ServerConfig _serverConfig;
