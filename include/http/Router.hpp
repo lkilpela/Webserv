@@ -11,15 +11,16 @@ namespace http {
 		public:
 			using Handler = std::function<void(Request&, Response&)>;
 
-			void get(const std::string& route, const Location& config, Handler handler);
-			void post(const std::string& route, const Location& config, Handler handler);
-			void del(const std::string& route, const Location& config, Handler handler);
+			void get(const Location& config, Handler handler);
+			void post(const Location& config, Handler handler);
+			void del(const Location& config, Handler handler);
 			void handle(Request& req, Response& res);
 
-			void addRoute(const std::string& route, const Location& config, Handler handler);
 
 		private:
 			std::unordered_map<std::string, std::unordered_map<std::string, Handler>> _routes; //route -> method -> handler
 			std::unordered_map<std::string, Location> _locationConfigs; // route -> location config
+
+			const Location* findBestMatchingLocation(const std::string& url) const;
 	};
 }
