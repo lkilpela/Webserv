@@ -301,9 +301,9 @@ void ConfigParser::printConfig(const Config& config) {
     }
 }
 
-std::string Config::getabsolutepath(const std::string &path) {
+/* std::string Config::getabsolutepath(const std::string &path) {
     return std::filesystem::canonical(path).parent_path().string();
-}
+} */
 
 
 // Function to load the configuration
@@ -311,7 +311,7 @@ Config ConfigParser::load() {
     try {
         Config config;
         parseConfig(filePath, config);
-        printConfig(config);
+        //printConfig(config);
         //Server server(config);
         //server.start();
         return config;
