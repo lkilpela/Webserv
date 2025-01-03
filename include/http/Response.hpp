@@ -28,6 +28,13 @@ namespace http {
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 
+			std::string getBody() const {
+				if (_body) {
+					return _body->toString();
+				}
+				return "";
+			} 
+
 		private:
 			//int _clientSocket;
 			StatusCode _statusCode { StatusCode::NONE_0 };
