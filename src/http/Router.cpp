@@ -4,11 +4,16 @@
 
 namespace http {
 
+	/* locations path:
+	** /
+	** /static/
+	** /cgi-bin/
+	** /uploads/
+	*/
 	void Router::addLocations(const ServerConfig& serverConfig) {
 		_serverConfig = serverConfig;
 		for (const auto& location : serverConfig.locations) {
 			_locationConfigs[location.path] = location;
-			std::cout << "Location path: " << location.path << std::endl;
 		}
 	}
 
@@ -28,15 +33,37 @@ namespace http {
 		const Location* bestMatch = nullptr;
 		size_t longestMatch = 0;
 
+		std::cout << "Finding best matching location for URL: " << url << std::endl;
+
 		for (const auto& [path, config] : _locationConfigs) {
-			std::cout << "Path: " << path << std::endl;
-			std::cout << "URL: " << url << std::endl;
 			if (url.substr(0, path.size()) == path && path.length() > longestMatch) {
 				bestMatch = &config;
 				longestMatch = path.length();
 			}
 		}
+
+		if (bestMatch) {
+        	std::cout << "Best match found: " << bestMatch->root << std::endl;
+		} else {
+			std::cout << "No matching location found for URL: " << url << std::endl;
+		}
 		return bestMatch;
+	}
+
+	inline bool isValidPath(const std::string& path) {
+		// Check if the path starts and ends with a single slash
+		if (path.empty() || path.front() != '/' || path.back() != '/') {
+			return false;
+		}
+
+		// Check for multiple consecutive slashes
+		for (size_t i = 1; i < path.size(); ++i) {
+			if (path[i] == '/' && path[i - 1] == '/') {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -47,32 +74,20 @@ namespace http {
 	 * @param response
 	 */
 	void Router::handle(Request& request, Response& response) {
-/* 		if (request.getStatus() == Request::Status::BAD_REQUEST) {
-			response
-				.setStatusCode(StatusCode::BAD_REQUEST_400)
-				.setHeader(Header::CONTENT_TYPE, "text/html")
-				// root + all the resource files
-				.setBody(locations.root + locations.errorPages[400])
-				.build();
-				.setBody(config.rootPath + "/uploads/abc.text")
-				Config::getRootPath() -> absolute path to webserv folder where .
-			return;
-		} */
+		std::string route = request.getUrl().path;
 
-		const std::string& route = request.getUrl().path;
+		if (!isValidPath(route)) {
+			response.setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
+			return;
+		}
 
 		// Find the best matching LocationConfig for the requested route
 		const Location* location = findBestMatchingLocation(route);
 
-		//ServerConfig serverConfig;
-
-		// No matching location found, return http status 404
+		// No matching location found, return HTTP status 404 with the error page
 		if (!location) {
-			std::cout << "Location Not found" << std::endl;
-			response
-				.setStatusCode(StatusCode::NOT_FOUND_404)
-				.setBody(std::make_unique<utils::FilePayload>(0, _serverConfig.errorPages[404]))
-				.build();
+			std::cerr << "[ERROR] Location not found: " << route << std::endl;
+			response.setFileResponse(response, StatusCode::NOT_FOUND_404, _serverConfig.errorPages[404]);
 			return;
 		}
 
@@ -81,39 +96,20 @@ namespace http {
 
 		// Matched a route
 		if (it != _routes.end()) {
-	
-			// The matched route does not support the requested http method, return http status 405
-			/*if (handlerByMethodIt == handlerByMethod.end()) {
-				std::cout << "Method not allowed" << std::endl;
-				response
-					.setStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
-					.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[405])) // need to fix this
-					.build();
-				return;
-			}*/
-
 			// Execute the handler, return http status 500 if an exception occurs
 			try {
-				std::cout << "Handler found" << std::endl;
 				const auto handler = it->second;
-
 				handler(*location, request, response);
 			} catch(const std::exception& e) {
-				response
-					.clear()
-					.setStatusCode(StatusCode::INTERNAL_SERVER_ERROR_500)
-					.setBody(std::make_unique<utils::FilePayload>(0, _serverConfig.errorPages[500]))
-					.build();
+				response.clear();
+				response.setFileResponse(response, StatusCode::INTERNAL_SERVER_ERROR_500, _serverConfig.errorPages[500]);
 			}
-
 			return;
 		} else {
-			std::cout << "Method not allowed" << std::endl;
-			response
-				.setStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
-				.setBody(std::make_unique<utils::FilePayload>(0, _serverConfig.errorPages[405]))
-				.build();
+			// No handler found for the requested method, return http status 405
+			response.setFileResponse(response, StatusCode::METHOD_NOT_ALLOWED_405, _serverConfig.errorPages[405]);
 			return;
 		}
 	}
 }
+
