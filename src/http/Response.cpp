@@ -86,6 +86,14 @@ namespace http {
 		return *this;
 	}
 
+	// Function to get the body of the response
+	std::string getBody() const {
+		if (_body) {
+			return _body->toString();
+		}
+		return "";
+	} 
+
 	// Function to set the response for string payloads
 	void Response::setStringResponse(Response& res, StatusCode statusCode, const std::string& body) {
 		res.setStatusCode(statusCode);

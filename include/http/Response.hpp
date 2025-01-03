@@ -28,12 +28,7 @@ namespace http {
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 
-			std::string getBody() const {
-				if (_body) {
-					return _body->toString();
-				}
-				return "";
-			} 
+			std::string getBody() const;
 
 			// Function to set the response for string payloads
 			void setStringResponse(Response& res, StatusCode statusCode, const std::string& body);

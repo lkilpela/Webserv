@@ -46,7 +46,6 @@ void simulateRequest(http::Router& router, const std::string& url) {
 
     // Print the response status and body
     std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
-    // Assuming getBody() returns a pointer to a payload object with a toString() method
     std::cout << "Response body: \n" << response.getBody() << std::endl;
 }
 
@@ -62,19 +61,13 @@ int main(int argc, char **argv) {
 		Config config = parser.load();
 		ServerConfig serverConfig = config.servers[0];
 
-        // Debug: Print loaded error pages
-        // for (const auto& [code, path] : serverConfig.errorPages) {
-        //    std::cout << "Error page " << code << ": " << path << std::endl;
-        //}
-
 		//Test the router 
 		http::Router router;
-		//initRouter(router, serverConfig);
         router.addLocations(serverConfig);
 
         // Register the GET handler
         router.get(handleGetRequest);
-		simulateRequest(router, "http://localhost:8080//static/");
+		simulateRequest(router, "http://localhost:8080/u");
 
 		//Server server(config);
 		//server.listen();
