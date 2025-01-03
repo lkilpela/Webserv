@@ -20,7 +20,7 @@ namespace http {
 
 			void build();
 
-			const StatusCode getStatusCode() const;
+			StatusCode getStatusCode() const;
 
 			Response& clear();
 			Response& setStatusCode(const StatusCode statusCode);
@@ -28,7 +28,7 @@ namespace http {
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 
 		private:
-			int _clientSocket;
+			//int _clientSocket;
 			StatusCode _statusCode { StatusCode::NONE_0 };
 			std::unordered_map<std::string, std::string> _headerByName;
 			utils::StringPayload _header;

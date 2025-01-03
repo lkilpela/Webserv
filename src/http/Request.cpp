@@ -1,9 +1,9 @@
+#include "http/utils.hpp"
 #include <sstream>
 #include <cstring>
 #include <array>
 #include <algorithm>
 #include <sys/socket.h>
-#include "utils.hpp"
 #include "http/Request.hpp"
 
 // Behavior of recv()
@@ -15,6 +15,7 @@
 // To detect non-blocking cases (EAGAIN/EWOULDBLOCK):
 
 // If recv() returns -1 and the socket is non-blocking, assume it’s a temporary error and retry when POLLIN is triggered again.
+
 
 namespace http {
 
