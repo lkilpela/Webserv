@@ -3,12 +3,14 @@
 #include <string>
 #include <unordered_map>
 #include <algorithm>
+#include <iterator>
+#include <vector>
 #include "constants.hpp"
 
 namespace http {
 	constexpr const char* getMimeType(const std::string& extension);
-	constexpr const char* stringOf(Header header);
-	constexpr const char* stringOf(StatusCode code);
+	const char* stringOf(Header header);
+	const char* stringOf(StatusCode code);
 
 	/**
 	 * @brief Searches for the header-body delimiter in an HTTP request.
@@ -28,7 +30,7 @@ namespace http {
 	 */
 	template <typename Iterator>
 	std::size_t findBlankLine(const Iterator begin, const Iterator end) {
-		static constexpr std::vector<std::uint8_t> delimiter = {'\r', '\n', '\r', '\n'};
+		static std::vector<std::uint8_t> delimiter = {'\r', '\n', '\r', '\n'}; // compiler complaint about constexpr c++20 so removed constexpr
 		auto pos = std::search(begin, end, delimiter.begin(), delimiter.end());
 
 		if (pos == end) {

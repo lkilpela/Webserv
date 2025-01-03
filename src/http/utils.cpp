@@ -63,7 +63,7 @@ namespace http {
 		return "application/unknown";
 	}
 
-	constexpr const char* stringOf(Header header) {
+	const char* stringOf(Header header) {
 		using enum Header;
 
 		switch (header) {
@@ -116,7 +116,7 @@ namespace http {
 		}
 	}
 
-	constexpr const char* stringOf(StatusCode code) {
+	const char* stringOf(StatusCode code) {
 		using enum http::StatusCode;
 
 		switch (code) {
