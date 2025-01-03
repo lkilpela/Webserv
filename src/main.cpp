@@ -27,6 +27,31 @@ void handleGetRequest(Location loc, http::Request& req, http::Response& res) {
         std::cerr << "Unexpected error: " << e.what() << std::endl;
         res.setStringResponse(res, http::StatusCode::INTERNAL_SERVER_ERROR_500, "Internal Server Error");
     }
+<<<<<<< HEAD
+=======
+    router.addLocations(serverConfig);
+    router.get([](Location loc, http::Request& req, http::Response& res) {
+        (void)req; // Avoid unused parameter warning
+        const std::string& filePath = loc.root + "/" + loc.index;
+        std::cout << YELLOW "Serving file: " RESET << filePath << std::endl;
+        try {
+            // Set the response body to the file contents using FilePayload
+            res.setStatusCode(http::StatusCode::OK_200);
+            res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
+            res.build();
+        } catch (const std::ios_base::failure& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+            res.setStatusCode(http::StatusCode::NOT_FOUND_404);
+            res.setBody(std::make_unique<utils::StringPayload>(0, "File not found"));
+            res.build();
+        } catch (const std::exception& e) {
+            std::cerr << "Unexpected error: " << e.what() << std::endl;
+            res.setStatusCode(http::StatusCode::INTERNAL_SERVER_ERROR_500);
+            res.setBody(std::make_unique<utils::StringPayload>(0, "Internal Server Error"));
+            res.build();
+        }
+    });
+>>>>>>> 27d366f (Refactor Router to support simplified handler registration and improve location management)
 }
 
 // Function to simulate a request
@@ -41,6 +66,10 @@ void simulateRequest(http::Router& router, const std::string& url) {
 
     // Print the response status and body
     std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
+<<<<<<< HEAD
+=======
+    // Assuming getBody() returns a pointer to a payload object with a toString() method
+>>>>>>> 27d366f (Refactor Router to support simplified handler registration and improve location management)
     std::cout << "Response body: \n" << response.getBody() << std::endl;
 }
 
@@ -58,11 +87,16 @@ int main(int argc, char **argv) {
 
 		//Test the router 
 		http::Router router;
+<<<<<<< HEAD
         router.addLocations(serverConfig);
 
         // Register the GET handler
         router.get(handleGetRequest);
 		simulateRequest(router, "http://localhost:8080/uploads");
+=======
+		initializeRouter(router, serverConfig);
+		simulateRequest(router, "http://localhost:8080/static/");
+>>>>>>> 27d366f (Refactor Router to support simplified handler registration and improve location management)
 
 		//Server server(config);
 		//server.listen();

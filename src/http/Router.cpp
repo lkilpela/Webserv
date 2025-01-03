@@ -3,19 +3,25 @@
 #include "Error.hpp"
 
 namespace http {
-	void Router::get(const Location& config, Handler handler) {
-		_routes[config.path]["GET"] = handler;
-		_locationConfigs[config.path] = config;
+
+	void Router::addLocations(const ServerConfig& serverConfig) {
+		_serverConfig = serverConfig;
+		for (const auto& location : serverConfig.locations) {
+			_locationConfigs[location.path] = location;
+			std::cout << "Location path: " << location.path << std::endl;
+		}
 	}
 
-	void Router::post(const Location& config, Handler handler) {
-		_routes[config.path]["POST"] = handler;
-		_locationConfigs[config.path] = config;
+	void Router::get(Handler handler) {
+		_routes["GET"] = handler;
 	}
 
-	void Router::del(const Location& config, Handler handler) {
-		_routes[config.path]["DELETE"] = handler;
-		_locationConfigs[config.path] = config;
+	void Router::post(Handler handler) {
+		_routes["POST"] = handler;
+	}
+
+	void Router::del(Handler handler) {
+		_routes["DELETE"] = handler;
 	}
 
 	const Location* Router::findBestMatchingLocation(const std::string& url) const {
@@ -23,6 +29,8 @@ namespace http {
 		size_t longestMatch = 0;
 
 		for (const auto& [path, config] : _locationConfigs) {
+			std::cout << "Path: " << path << std::endl;
+			std::cout << "URL: " << url << std::endl;
 			if (url.substr(0, path.size()) == path && path.length() > longestMatch) {
 				bestMatch = &config;
 				longestMatch = path.length();
@@ -56,49 +64,55 @@ namespace http {
 		// Find the best matching LocationConfig for the requested route
 		const Location* location = findBestMatchingLocation(route);
 
-		ServerConfig serverConfig;
+		//ServerConfig serverConfig;
 
 		// No matching location found, return http status 404
 		if (!location) {
 			std::cout << "Location Not found" << std::endl;
 			response
 				.setStatusCode(StatusCode::NOT_FOUND_404)
-				.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[404]))
+				.setBody(std::make_unique<utils::FilePayload>(0, _serverConfig.errorPages[404]))
 				.build();
 			return;
 		}
 
 		// Find the handler for the requested http method
-		const auto it = _routes.find(location->path);
+		const auto it = _routes.find(request.getMethod());
 
 		// Matched a route
 		if (it != _routes.end()) {
-			const auto& handlerByMethod = it->second;
-			const auto handlerByMethodIt = handlerByMethod.find(request.getMethod());
-
+	
 			// The matched route does not support the requested http method, return http status 405
-			if (handlerByMethodIt == handlerByMethod.end()) {
+			/*if (handlerByMethodIt == handlerByMethod.end()) {
 				std::cout << "Method not allowed" << std::endl;
 				response
 					.setStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
 					.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[405])) // need to fix this
 					.build();
 				return;
-			}
+			}*/
 
 			// Execute the handler, return http status 500 if an exception occurs
 			try {
 				std::cout << "Handler found" << std::endl;
-				const auto handler = handlerByMethodIt->second;
-				handler(request, response);
+				const auto handler = it->second;
+
+				handler(*location, request, response);
 			} catch(const std::exception& e) {
 				response
 					.clear()
 					.setStatusCode(StatusCode::INTERNAL_SERVER_ERROR_500)
-					.setBody(std::make_unique<utils::FilePayload>(0, serverConfig.errorPages[500]))
+					.setBody(std::make_unique<utils::FilePayload>(0, _serverConfig.errorPages[500]))
 					.build();
 			}
 
+			return;
+		} else {
+			std::cout << "Method not allowed" << std::endl;
+			response
+				.setStatusCode(StatusCode::METHOD_NOT_ALLOWED_405)
+				.setBody(std::make_unique<utils::FilePayload>(0, _serverConfig.errorPages[405]))
+				.build();
 			return;
 		}
 	}
