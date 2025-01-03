@@ -36,12 +36,6 @@ namespace http {
 			// Function to set the response for file payloads
 			void setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath);
 
-			// Function to set the response for string payloads
-			void setStringResponse(Response& res, StatusCode statusCode, const std::string& body);
-
-			// Function to set the response for file payloads
-			void setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath);
-
 		private:
 			//int _clientSocket;
 			StatusCode _statusCode { StatusCode::NONE_0 };
