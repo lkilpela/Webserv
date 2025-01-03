@@ -30,17 +30,33 @@ int main(int argc, char **argv) {
 		if (serverConfig.locations.size() == 0) {
 			throw ConfigError(EINVAL, "No locations found in the configuration file");
 		}
-		router.get(serverConfig.locations[0], [](http::Request& req, http::Response& res) {
+		router.get(serverConfig.locations[0], [&serverConfig](http::Request& req, http::Response& res) {
 			std::cout << "GET request received" << std::endl;
 			(void)req; // Avoid unused parameter warning
-			res.setStatusCode(http::StatusCode::OK_200);
-			res.setBody(std::make_unique<utils::StringPayload>(0, "Hello, World!"));
+
+			const std::string& filePath = serverConfig.locations[0].root + "/index.html";
+			try {
+				// Set the response body to the file contents using FilePayload
+				res.setStatusCode(http::StatusCode::OK_200);
+				res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
+				res.build();
+			} catch (const std::ios_base::failure& e) {
+				std::cerr << "Error: " << e.what() << std::endl;
+				res.setStatusCode(http::StatusCode::NOT_FOUND_404);
+				res.setBody(std::make_unique<utils::StringPayload>(0, "File not found"));
+				res.build();
+			} catch (const std::exception& e) {
+				std::cerr << "Unexpected error: " << e.what() << std::endl;
+				res.setStatusCode(http::StatusCode::INTERNAL_SERVER_ERROR_500);
+				res.setBody(std::make_unique<utils::StringPayload>(0, "Internal Server Error"));
+				res.build();
+			}
 		});
 
       // Simulate a request
         http::Request request;
         request.setMethod("GET");
-		std::string s = "/";
+		std::string s = "http://localhost:8080/";
         request.setUrl(http::parseUri(s.begin(), s.end())); // Make sure this matches the location path
         request.setStatus(http::Request::Status::COMPLETE);
 
@@ -50,7 +66,7 @@ int main(int argc, char **argv) {
  		// Print the response status and body
         std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
         // Assuming getBody() returns a pointer to a payload object with a toString() method
-        //std::cout << "Response body: " << response.setBody() << std::endl;
+        std::cout << "Response body: " << response.getBody() << std::endl;
 
 		//Server server(config);
 		//server.listen();
