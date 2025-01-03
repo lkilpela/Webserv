@@ -18,11 +18,11 @@ void initializeRouter(http::Router& router, const ServerConfig& serverConfig) {
     if (serverConfig.locations.size() == 0) {
         throw ConfigError(EINVAL, "No locations found in the configuration file");
     }
-    router.get(serverConfig.locations[0], [&serverConfig](http::Request& req, http::Response& res) {
-        std::cout << "GET request received" << std::endl;
+    router.addLocations(serverConfig);
+    router.get([](Location loc, http::Request& req, http::Response& res) {
         (void)req; // Avoid unused parameter warning
-
-        const std::string& filePath = serverConfig.locations[0].root + "/index.html";
+        const std::string& filePath = loc.root + "/" + loc.index;
+        std::cout << YELLOW "Serving file: " RESET << filePath << std::endl;
         try {
             // Set the response body to the file contents using FilePayload
             res.setStatusCode(http::StatusCode::OK_200);
@@ -55,7 +55,7 @@ void simulateRequest(http::Router& router, const std::string& url) {
     // Print the response status and body
     std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
     // Assuming getBody() returns a pointer to a payload object with a toString() method
-    std::cout << "Response body: " << response.getBody() << std::endl;
+    std::cout << "Response body: \n" << response.getBody() << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -68,12 +68,12 @@ int main(int argc, char **argv) {
 		//handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
-		ServerConfig serverConfig = config.servers[0];
+		ServerConfig serverConfig = config.servers[1];
 
 		//Test the router 
 		http::Router router;
 		initializeRouter(router, serverConfig);
-		simulateRequest(router, "http://localhost:8080/");
+		simulateRequest(router, "http://localhost:8080/static/");
 
 		//Server server(config);
 		//server.listen();
