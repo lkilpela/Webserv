@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "Error.hpp"
 
 namespace http {
 
@@ -47,24 +48,24 @@ namespace http {
 
 	template <typename Iterator>
 	Url parseUri(const Iterator begin, const Iterator end) {
-		Uri result;
+		Url result;
 
 		// RFC 3986, 3.1. Scheme
 		auto i = begin;
-		if (i == end || !isAlphaChar(*begin))
-			throw RequestError{"Invalid scheme"};
+		if (i == end || !std::isalpha(*begin))
+			throw RequestError(EINVAL, "Invalid scheme");
 
 		result.scheme.push_back(*i++);
 
-		for (; i != end && (isAlphaChar(*i) || isDigitChar(*i) || *i == '+' || *i == '-' || *i == '.'); ++i)
+		for (; i != end && (std::isalpha(*i) || std::isdigit(*i) || *i == '+' || *i == '-' || *i == '.'); ++i)
 			result.scheme.push_back(*i);
 
 		if (i == end || *i++ != ':')
-			throw RequestError{"Invalid scheme"};
+			throw RequestError(EINVAL, "Invalid scheme");
 		if (i == end || *i++ != '/')
-			throw RequestError{"Invalid scheme"};
+			throw RequestError(EINVAL, "Invalid scheme");
 		if (i == end || *i++ != '/')
-			throw RequestError{"Invalid scheme"};
+			throw RequestError(EINVAL, "Invalid scheme");
 
 		// RFC 3986, 3.2. Authority
 		std::string authority = std::string(i, end);
