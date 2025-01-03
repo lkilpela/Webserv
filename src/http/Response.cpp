@@ -87,7 +87,7 @@ namespace http {
 	}
 
 	// Function to get the body of the response
-	std::string getBody() const {
+	std::string Response::getBody() const {
 		if (_body) {
 			return _body->toString();
 		}
