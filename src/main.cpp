@@ -13,33 +13,25 @@
 
 //volatile sig_atomic_t sigintReceived = 0;
 
-// Function to initialize the router and set up the GET handler
-void initializeRouter(http::Router& router, const ServerConfig& serverConfig) {
-    if (serverConfig.locations.size() == 0) {
-        throw ConfigError(EINVAL, "No locations found in the configuration file");
+// Function to handle GET requests
+void handleGetRequest(Location loc, http::Request& req, http::Response& res) {
+    (void)req; // Avoid unused parameter warning
+    const std::string& filePath = loc.root + "/" + loc.index;
+    std::cout << YELLOW "Serving file: " RESET << filePath << std::endl;
+    try {
+        // Set the response body to the file contents using FilePayload
+        res.setFileResponse(res, http::StatusCode::OK_200, filePath);
+    } catch (const std::ios_base::failure& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        res.setStatusCode(http::StatusCode::NOT_FOUND_404);
+        res.setBody(std::make_unique<utils::StringPayload>(0, "File not found"));
+        res.build();
+        
+        res.setStringResponse(res, http::StatusCode::NOT_FOUND_404, "File not found");
+    } catch (const std::exception& e) {
+        std::cerr << "Unexpected error: " << e.what() << std::endl;
+        res.setStringResponse(res, http::StatusCode::INTERNAL_SERVER_ERROR_500, "Internal Server Error");
     }
-    router.addLocations(serverConfig);
-    router.get([](Location loc, http::Request& req, http::Response& res) {
-        (void)req; // Avoid unused parameter warning
-        const std::string& filePath = loc.root + "/" + loc.index;
-        std::cout << YELLOW "Serving file: " RESET << filePath << std::endl;
-        try {
-            // Set the response body to the file contents using FilePayload
-            res.setStatusCode(http::StatusCode::OK_200);
-            res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
-            res.build();
-        } catch (const std::ios_base::failure& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
-            res.setStatusCode(http::StatusCode::NOT_FOUND_404);
-            res.setBody(std::make_unique<utils::StringPayload>(0, "File not found"));
-            res.build();
-        } catch (const std::exception& e) {
-            std::cerr << "Unexpected error: " << e.what() << std::endl;
-            res.setStatusCode(http::StatusCode::INTERNAL_SERVER_ERROR_500);
-            res.setBody(std::make_unique<utils::StringPayload>(0, "Internal Server Error"));
-            res.build();
-        }
-    });
 }
 
 // Function to simulate a request
@@ -68,12 +60,21 @@ int main(int argc, char **argv) {
 		//handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
-		ServerConfig serverConfig = config.servers[1];
+		ServerConfig serverConfig = config.servers[0];
+
+        // Debug: Print loaded error pages
+        // for (const auto& [code, path] : serverConfig.errorPages) {
+        //    std::cout << "Error page " << code << ": " << path << std::endl;
+        //}
 
 		//Test the router 
 		http::Router router;
-		initializeRouter(router, serverConfig);
-		simulateRequest(router, "http://localhost:8080/static/");
+		//initRouter(router, serverConfig);
+        router.addLocations(serverConfig);
+
+        // Register the GET handler
+        router.get(handleGetRequest);
+		simulateRequest(router, "http://localhost:8080//static/");
 
 		//Server server(config);
 		//server.listen();
