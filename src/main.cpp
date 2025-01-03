@@ -21,12 +21,7 @@ void handleGetRequest(Location loc, http::Request& req, http::Response& res) {
     try {
         // Set the response body to the file contents using FilePayload
         res.setFileResponse(res, http::StatusCode::OK_200, filePath);
-    } catch (const std::ios_base::failure& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        res.setStatusCode(http::StatusCode::NOT_FOUND_404);
-        res.setBody(std::make_unique<utils::StringPayload>(0, "File not found"));
-        res.build();
-        
+    } catch (const std::ios_base::failure& e) {        
         res.setStringResponse(res, http::StatusCode::NOT_FOUND_404, "File not found");
     } catch (const std::exception& e) {
         std::cerr << "Unexpected error: " << e.what() << std::endl;
