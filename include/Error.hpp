@@ -13,7 +13,7 @@ public:
     virtual ~WSException() = default;
 
     virtual std::error_code code() const noexcept { return errorCode; } // Return the error code from system
-    virtual const char* what() const noexcept { message.c_str(); } // Return a custom message
+    virtual const char* what() const noexcept { return message.c_str(); } // Return a custom message
 private:
     std::error_code errorCode;
     std::string message;
@@ -26,6 +26,11 @@ public:
 };
 
 class NetworkError : public WSException {
+public:
+    using WSException::WSException;
+};
+
+class RouterError : public WSException {
 public:
     using WSException::WSException;
 };
