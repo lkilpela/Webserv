@@ -86,4 +86,17 @@ namespace http {
 		return *this;
 	}
 
+	// Function to set the response for string payloads
+	void Response::setStringResponse(Response& res, StatusCode statusCode, const std::string& body) {
+		res.setStatusCode(statusCode);
+		res.setBody(std::make_unique<utils::StringPayload>(0, body));
+		res.build();
+	}
+
+	// Function to set the response for file payloads
+	void Response::setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath) {
+		res.setStatusCode(statusCode);
+		res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
+		res.build();
+	}
 }
