@@ -118,8 +118,8 @@ namespace http {
 	// 	}
 	// }
 
-	// constexpr const char* stringOf(StatusCode code) {
-	// 	using enum http::StatusCode;
+	constexpr const char* stringOf(StatusCode code) {
+		using enum http::StatusCode;
 
 	// 	switch (code) {
 	// 		case CONTINUE_100: return "Continue";
