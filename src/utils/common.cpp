@@ -3,6 +3,7 @@
 #include <regex> // std::regex, std::regex_match
 #include <filesystem> // std::filesystem
 #include <stdexcept> // std::invalid_argument, std::out_of_range
+#include <iostream>
 
 using std::string;
 using std::vector;
@@ -16,7 +17,7 @@ namespace utils {
         if (value == "off") {
 			return false;
 		}
-		
+
         throw ConfigError(EINVAL, "Invalid boolean value");
     }
 
@@ -80,12 +81,27 @@ namespace utils {
         }
     }
 
-    // Utility functions for parsing
+    // // Utility functions for parsing
     string trim(const string& str) {
         size_t first = str.find_first_not_of(" \t;");
         size_t last = str.find_last_not_of(" \t;");
         return (first == string::npos) ? "" : str.substr(first, (last - first + 1));
     }
+
+	std::string trimSpace(const std::string& str) {
+		// Find the first non-space character
+		auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char ch) {
+			return std::isspace(ch);
+		});
+
+		// Find the last non-space character
+		auto end = std::find_if_not(str.rbegin(), str.rend(), [](unsigned char ch) {
+			return std::isspace(ch);
+		}).base();
+
+		// Create a substring without leading and trailing spaces
+		return (start < end) ? std::string(start, end) : std::string();
+	}
 
     string removeComments(const std::string& str) {
 		size_t commentPos = str.find('#');
@@ -96,4 +112,12 @@ namespace utils {
 
 		return str;
     }
+
+	std::string lowerCase(std::string str) {
+		std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+			return std::tolower(c);
+		});
+
+		return str;
+	}
 } // namespace utils

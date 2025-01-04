@@ -3,7 +3,8 @@
 #include <sys/socket.h>
 #include "http/Response.hpp"
 #include "Error.hpp"
-#include "utils.hpp"
+#include "utils/index.hpp"
+#include "http/utils.hpp"
 
 //  Behavior of send()
 // When send() returns:
@@ -54,6 +55,10 @@ namespace http {
 		_header.setMessage(ostream.str());
 	}
 
+	int Response::getClientSocket() const {
+		return _clientSocket;
+	}
+
 	const StatusCode Response::getStatusCode() const {
 		return _statusCode;
 	}
@@ -78,5 +83,6 @@ namespace http {
 
 	Response& Response::setBody(std::unique_ptr<utils::Payload> body) {
 		_body = std::move(body);
+		return *this;
 	}
 }

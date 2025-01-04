@@ -32,6 +32,7 @@ struct ServerConfig {
 
 // Multi servers struct
 struct Config {
+    static std::string getAbsolutePath(const std::string &path);
     std::vector<int> ports;
     std::vector<ServerConfig> servers;
 };

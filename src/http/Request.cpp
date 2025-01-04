@@ -1,10 +1,12 @@
+#include <iostream>
 #include <sstream>
 #include <cstring>
 #include <array>
 #include <algorithm>
 #include <sys/socket.h>
-#include "utils.hpp"
+#include "utils/index.hpp"
 #include "http/Request.hpp"
+#include "http/utils.hpp"
 
 // Behavior of recv()
 // When recv() returns:
@@ -17,7 +19,6 @@
 // If recv() returns -1 and the socket is non-blocking, assume it’s a temporary error and retry when POLLIN is triggered again.
 
 namespace http {
-
 	Request::Request(Status status) : _status(status) {}
 
 	void Request::clear() {
@@ -27,6 +28,11 @@ namespace http {
 		_headers.clear();
 		_body.clear();
 		_status = Request::Status::INCOMPLETE;
+	}
+
+	bool Request::isChunked() const {
+		auto header = getHeader(Header::TRANSFER_ENCODING);
+		return (header.has_value() && *header == "chunked");
 	}
 
 	const std::string& Request::getMethod() const {
@@ -51,6 +57,10 @@ namespace http {
 		return it->second;
 	}
 
+	std::size_t Request::getBodySize() const {
+		return _bodySize;
+	}
+
 	const std::span<const std::uint8_t> Request::getBody() const {
 		return std::span<const std::uint8_t>(_body);
 	}
@@ -59,18 +69,18 @@ namespace http {
 		return _status;
 	}
 
-	Request& Request::setMethod(const std::string& method) {
-		_method = method;
+	Request& Request::appendBody(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end) noexcept {
+		_body.insert(_body.end(), std::move_iterator(begin), std::move_iterator(end));
 		return *this;
 	}
 
-	Request& Request::setUrl(const Url& url) {
-		_url = url;
+	Request& Request::setBodySize(std::size_t size) {
+		_bodySize = size;
 		return *this;
 	}
 
-	Request& Request::setVersion(const std::string& version) {
-		_version = version;
+	Request& Request::setHeader(const std::string& name, const std::string& value) {
+		_headers[name] = value;
 		return *this;
 	}
 
@@ -79,54 +89,62 @@ namespace http {
 		return *this;
 	}
 
+	Request& Request::setMethod(const std::string& method) {
+		_method = method;
+		return *this;
+	}
+
 	Request& Request::setStatus(Request::Status status) {
 		_status = status;
 		return *this;
 	}
 
-	// std::optional<Request> Request::parse(
-	// 	const std::string& rawRequest,
-	// 	std::function<bool(const std::string&)> validate
-	// ) {
-	// 	if (!validate(rawRequest)) {
-	// 		return std::nullopt;
-	// 	}
+	Request& Request::setUrl(const Url &url) {
+		_url = url;
+		return *this;
+	}
 
-	// 	std::istringstream stream(rawRequest);
-	// 	std::string line;
-	// 	std::string method;
-	// 	std::string uri;
-	// 	std::string version;
-	// 	std::string body;
+	Request& Request::setUrl(Url &&url) {
+		_url = std::move(url);
+		return *this;
+	}
 
-	// 	std::getline(stream, line);
+	Request& Request::setVersion(const std::string& version) {
+		_version = version;
+		return *this;
+	}
 
-	// 	std::istringstream requestLineStream(line);
+	/**
+	 * @brief Parse the given string request header into a http::Request object
+	 *
+	 * @param rawRequestHeader The http request header in string format.
+	 *
+	 * @return http::Request request
+	 *
+	 * @throw std::invalid_argument
+	 */
+	Request Request::parseHeader(const std::string &rawRequestHeader) {
+		Request request;
 
-	// 	requestLineStream >> method >> uri >> version;
+		const auto &[method, uri, version] = parseRequestLine(rawRequestHeader);
+		const auto &headersByNames = parseRequestHeaders(rawRequestHeader);
+		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
 
-	// 	Request request;
-	// 	request.setMethod(method).setUri(uri).setVersion(version);
+		for (const auto &[name, value] : headersByNames) {
+			request.setHeader(name, value);
+		}
 
-	// 	while (std::getline(stream, line) && line != "\r") {
-	// 		std::size_t delimiter = line.find(": ");
-	// 		std::string key = line.substr(0, delimiter);
-	// 		std::string value = line.substr(delimiter + 2);
-	// 		request.setHeader(key, value);
-	// 	}
+		auto contentLength = request.getHeader(Header::CONTENT_LENGTH);
 
-	// 	while (std::getline(stream, line) && line != "\r") {
-	// 		body.
-	// 	}
-	// 	return request;
-	// }
+		if (contentLength.has_value()) {
+			request.setBodySize(std::stoul(*contentLength));
+		}
 
-	// std::variant<Request, HttpError> Request::create(int clientSocket) {
-	// 	unsigned char buffer[1024];
-
-	// 	std::memset(buffer, 0, 1024);
-	// 	ssize_t bytesRead = ::recv(clientSocket, buffer, 1023, 0);
-	// 	if (bytesRead )
-	// }
-
+		request
+			.setMethod(method)
+			.setUrl(std::move(url))
+			.setVersion(version)
+			.setStatus(Status::HEADER_COMPLETE);
+		return request;
+	}
 }
