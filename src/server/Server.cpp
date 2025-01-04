@@ -2,13 +2,22 @@
 #include "http/Connection.hpp"
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
+#include "Connection.hpp"
+
+int setNonBlocking(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1)
+		return -1;
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		return -1;
+}
 
 Server::Server(const Config& config) {
     for (int port : config.ports) {
         int serverFd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (serverFd == -1)
 			throw std::runtime_error("Failed to create socket");
-		if (utils::setNonBlocking(serverFd) == -1)
+		if (setNonBlocking(serverFd) == -1)
 			throw std::runtime_error("Nonblocking failed");
         sockaddr_in address{};
         address.sin_family = AF_INET;
@@ -27,7 +36,7 @@ void Server::processCGI(Request& req) {
 	int pipefd[2];
 	if(pipe(pipefd) == -1)
 		perror("Pipe failed");
-	if (utils::setNonBlocking(pipefd[0]) == -1)
+	if (setNonBlocking(pipefd[0]) == -1)
 		perror("Pipe nonblocking failed");
 	pollfd cgiData { pipefd[0], POLLIN, 0 };
 	_pollfds.push_back(cgiData);
@@ -115,9 +124,6 @@ void Server::_addConnection(int fd) {
 	_connectionByFd.emplace(connection);
 }
 
-
-
 Server::~Server() {
 	utils::closeFDs(_serverFds);
 }
-

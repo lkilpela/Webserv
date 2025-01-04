@@ -19,6 +19,7 @@ namespace utils {
     bool isValidURL(const std::string &url);
     bool isValidSize(const std::string &size);
     void validateErrorPage(const std::string &code, const std::string &path);
+	void closeFDs(const std::vector<int>& serverFds);
 
 	template <typename Iterator>
 	Iterator findDelimiter(
@@ -27,5 +28,10 @@ namespace utils {
 		std::initializer_list<typename std::iterator_traits<Iterator>::value_type> delimiter
 	) {
 		return std::search(begin, end, delimiter.begin(), delimiter.end());
+	}
+
+	template <typename T>
+	bool isInVector(const T& element, const std::vector<T>& vec) {
+    	return std::find(vec.begin(), vec.end(), element) != vec.end();
 	}
 }

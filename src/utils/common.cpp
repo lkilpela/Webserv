@@ -4,6 +4,7 @@
 #include <filesystem> // std::filesystem
 #include <stdexcept> // std::invalid_argument, std::out_of_range
 #include <iostream>
+#include <unistd.h>
 
 using std::string;
 using std::vector;
@@ -120,4 +121,8 @@ namespace utils {
 
 		return str;
 	}
+	void closeFDs(const std::vector<int>& serverFds) {
+    for (int fd : serverFds)
+        close(fd);
+	}	
 } // namespace utils
