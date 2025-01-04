@@ -1,3 +1,4 @@
+#include <iostream>
 #include <regex>
 #include "http/Url.hpp"
 
@@ -5,22 +6,48 @@ namespace http {
 	Url Url::parse(const std::string& url) {
 		Url result;
 
-		std::regex urlRegex(
-			R"(^(?:(https?)://)?" // Scheme
-			R"((?:([^:@]+)(?::([^@]+))?@)?)" // User and Password
-			R"(([^:/?#]+))" // Host
-			R"(?::(\d+))?" // Port
-			R"((/[^?#]*)?)" // Path
-			R"(\??([^#]*))?" // Query
-			R"(#?(.*)?)$)", // Fragment
-			std::regex::extended
-    	);
+		// std::cout << "URL=" << url << std::endl;
+		// std::regex urlRegex(
+		// 	R"(^(?:(https?)://)?" // Scheme
+		// 	R"((?:([^:@]+)(?::([^@]+))?@)?)" // User and Password
+		// 	R"(([^:/?#]+))" // Host
+		// 	R"(?::(\d+))?" // Port
+		// 	R"((/[^?#]*)?)" // Path
+		// 	R"(\??([^#]*))?" // Query
+		// 	R"(#?(.*)?)$)", // Fragment
+		// 	std::regex::extended
+    	// );
+		// std::regex urlRegex(
+		// 	R"(^(https?://)?)"					// Optional "https://" or "http://"
+		// 	R"(([^:@/\s]+(?::([^@/\s]+))?)@?)"	// Optional username:password@
+		// 	R"([^/\s:]+)"                 		// Domain or IP address
+		// 	R"((?::(\d+))?)"              		// Optional port
+		// 	R"(/([^?\s#]+))"              		// Resource path
+		// 	R"((\?([^#\s]+))?)"           		// Optional query string
+		// 	R"((#([^#\s]+))?)"            		// Optional fragment
+		// 	R"($)",
+		// 	std::regex::extended
+    	// );
+
+// 		std::regex urlRegex(
+//     R"(^https?://)?"                           // Optional "https://" or "http://"
+//     R"(([^:@/\s]+(?:[:](?:[^@/\s]+))?@)?)"      // Optional username:password@
+//     R"([^/\s:]+)"                               // Domain or IP address
+//     R"((?::(\d+))?)"                            // Optional port
+//     R"(/([^?\s#]+))"                            // Resource path
+//     R"((\?([^#\s]+))?)"                         // Optional query string
+//     R"((#([^#\s]+))?)"                          // Optional fragment
+//     R"($)",
+//     std::regex::extended
+// );
+
+		std::regex urlRegex(R"((https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?(/.*)?)", std::regex::extended);
 		std::smatch matches;
 
-		if (std::regex_match(url, matches, urlRegex)) {
+		if (!std::regex_match(url, matches, urlRegex)) {
 			throw std::invalid_argument("Invalid URL");
 		}
-
+		std::cout << "After regex_match()" << std::endl;
 		result.scheme = matches[1].str();
 		result.user = matches[2].str();
 		result.password = matches[3].str();
@@ -30,5 +57,10 @@ namespace http {
 		result.query = matches[7].str();
 		result.fragment = matches[8].str();
 		return result;
+	}
+
+	std::ostream &operator<<(std::ostream &ostream, const Url &url) {
+		ostream << url.scheme << url.user << url.password << url.host << url.port << url.path << url.query << url.fragment;
+		return ostream;
 	}
 }

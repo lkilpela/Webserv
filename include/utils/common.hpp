@@ -8,6 +8,7 @@
 
 namespace utils {
     std::string trim(const std::string &str);
+	std::string trimSpace(const std::string& str);
     std::string removeComments(const std::string &str);
 	std::string lowerCase(std::string str);
     bool parseBool(const std::string &value);

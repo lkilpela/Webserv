@@ -237,8 +237,9 @@ namespace http {
 	}
 
 	std::unordered_map<std::string, std::string> parseRequestHeaders(const std::string &rawRequestHeader) {
+		auto pos = rawRequestHeader.find("\r\n");
 		std::unordered_map<std::string, std::string> headerByName;
-		std::istringstream istream;
+		std::istringstream istream(rawRequestHeader.substr(pos + 2));
 		std::string line;
 
 		while (std::getline(istream, line) && line != "\r") {
@@ -248,7 +249,7 @@ namespace http {
 
 			std::size_t colonPos = line.find(":");
 			std::string name = line.substr(0, colonPos);
-			std::string header = line.substr(colonPos + 1);
+			std::string header = utils::trimSpace(line.substr(colonPos + 1));
 			headerByName[name] = header;
 		}
 

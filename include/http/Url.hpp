@@ -38,4 +38,6 @@ namespace http {
 		static Url parse(const std::string &url);
 	};
 
+	std::ostream &operator<<(std::ostream &ostream, const Url &url);
+
 }

@@ -88,6 +88,21 @@ namespace utils {
         return (first == string::npos) ? "" : str.substr(first, (last - first + 1));
     }
 
+	std::string trimSpace(const std::string& str) {
+		// Find the first non-space character
+		auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char ch) {
+			return std::isspace(ch);
+		});
+
+		// Find the last non-space character
+		auto end = std::find_if_not(str.rbegin(), str.rend(), [](unsigned char ch) {
+			return std::isspace(ch);
+		}).base();
+
+		// Create a substring without leading and trailing spaces
+		return (start < end) ? std::string(start, end) : std::string();
+	}
+
     string removeComments(const std::string& str) {
 		size_t commentPos = str.find('#');
 

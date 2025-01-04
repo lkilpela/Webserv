@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sstream>
 #include <cstring>
 #include <array>
@@ -126,9 +127,12 @@ namespace http {
 		Request request;
 
 		const auto &[method, uri, version] = parseRequestLine(rawRequestHeader);
-		const auto headersByNames = parseRequestHeaders(rawRequestHeader);
+		auto headersByNames = parseRequestHeaders(rawRequestHeader);
 		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
 
+		// std::string url = headersByNames[stringOf(Header::HOST)] + uri;
+		// std::string url = "example.com" + uri;
+		// std::cout << url << std::endl;
 		for (const auto &[name, value] : headersByNames) {
 			request.setHeader(name, value);
 		}
