@@ -88,7 +88,7 @@ void Server::listen() {
 			} else if (it->revents == POLLOUT) {
 				connection.sendResponse();
 			}
-			it++;			
+			it++;
 		}
     }
 }

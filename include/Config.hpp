@@ -32,16 +32,20 @@ struct ServerConfig {
 
 // Multi servers struct
 struct Config {
+    static std::string getAbsolutePath(const std::string &path);
     std::vector<int> ports;
     std::vector<ServerConfig> servers;
 };
 
 class ConfigParser {
+private:
+    std::string filePath;
 public:
     // Function to parse the configuration text
     void parseConfig(const std::string &filename, Config &config);
     void parseGlobal(const std::string &line, ServerConfig &config);
     void parseLocation(const std::string &line, Location &currentLocation);
-	Config load(const std::string& filePath);
+	Config load();
 	void printConfig(const Config& config);
+    std::string getConfigPath(const std::string &value) const;
 };
