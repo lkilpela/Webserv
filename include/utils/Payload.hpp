@@ -43,8 +43,7 @@ namespace utils {
 
 	class FilePayload : public Payload {
 		public:
-			//FilePayload(int socket, const std::filesystem::path& filePath);
-			FilePayload(int socket, const std::string& filePath);
+			FilePayload(int socket, const std::filesystem::path& filePath);
 			FilePayload(FilePayload&&) noexcept = default;
 			~FilePayload() = default;
 
@@ -57,8 +56,7 @@ namespace utils {
         	}
 
 		private:
-			//std::filesystem::path _filePath;
-			std::string _filePath;
+			std::filesystem::path _filePath;
 			mutable std::ifstream _ifstream; // mutable means it can be modified even in a const method
 	};
 }
