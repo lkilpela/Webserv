@@ -4,22 +4,21 @@
 #include "Error.hpp"
 
 namespace utils {
-	//FilePayload::FilePayload(int socket, const std::filesystem::path& filePath)
-	FilePayload::FilePayload(int socket, const std::string& filePath)
+	FilePayload::FilePayload(int socket, const std::filesystem::path& filePath)
 		: Payload(socket),
 		_filePath(filePath)
 	{
+		std::cout << "FilePath: " << filePath << std::endl;
 		(void) socket;
 		if (!std::filesystem::exists(filePath)) {
-			//throw FileNotFoundException(_filePath.filename());
-			throw FileNotFoundException(_filePath);
+			throw FileNotFoundException(_filePath.filename());
 		}
 
 		_totalBytes = std::filesystem::file_size(filePath);
 		_ifstream.open(filePath, std::ios::binary);
 
 		if (!_ifstream.is_open()) {
-			throw std::ios_base::failure("Failed to open " + _filePath);
+			throw std::ios_base::failure("Failed to open " + _filePath.string());
 		}
 	}
 
@@ -36,7 +35,7 @@ namespace utils {
 
 		if (_ifstream.bad() || (_ifstream.fail() && !_ifstream.eof())) {
 			_ifstream.close();
-			throw std::ios_base::failure("Failed to read " + _filePath);
+			throw std::ios_base::failure("Failed to read " + _filePath.string());
 		}
 
 		const ssize_t bytesSent = ::send(_socket, buffer.data(), bytesRead, MSG_NOSIGNAL);
