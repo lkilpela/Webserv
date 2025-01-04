@@ -216,7 +216,7 @@ namespace http {
 		std::size_t pos = rawRequestHeader.find("\r\n");
 
 		if (pos == std::string::npos) {
-			throw std::invalid_argument("Couldn't find ");
+			throw std::invalid_argument("Couldn't find the request line");
 		}
 
 		std::string requestLine = rawRequestHeader.substr(0, pos);
@@ -237,7 +237,7 @@ namespace http {
 	}
 
 	std::unordered_map<std::string, std::string> parseRequestHeaders(const std::string &rawRequestHeader) {
-		auto pos = rawRequestHeader.find("\r\n");
+		std::size_t pos = rawRequestHeader.find("\r\n");
 		std::unordered_map<std::string, std::string> headerByName;
 		std::istringstream istream(rawRequestHeader.substr(pos + 2));
 		std::string line;
@@ -251,6 +251,10 @@ namespace http {
 			std::string name = line.substr(0, colonPos);
 			std::string header = utils::trimSpace(line.substr(colonPos + 1));
 			headerByName[name] = header;
+		}
+
+		if (headerByName.find(stringOf(Header::HOST)) == headerByName.end()) {
+			throw std::invalid_argument("No Host found in header request");
 		}
 
 		return headerByName;

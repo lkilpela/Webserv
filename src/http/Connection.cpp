@@ -10,7 +10,6 @@
 #include "http/utils.hpp"
 
 namespace http {
-
 	Connection::Connection(int clientSocket, int msTimeout, std::function<void (Request&, Response&)> process)
 		: _clientSocket(clientSocket)
 		, _msTimeout(msTimeout)
@@ -43,6 +42,7 @@ namespace http {
 		if (res.send()) {
 			const auto responseStatusCode = res.getStatusCode();
 			auto connectionHeader = req.getHeader(Header::CONNECTION);
+			_processedQueue.pop();
 
 			if (
 				(connectionHeader.has_value() && *connectionHeader == "close")
@@ -52,8 +52,6 @@ namespace http {
 				this->close();
 				return;
 			}
-
-			_processedQueue.pop();
 		}
 	}
 
@@ -63,9 +61,7 @@ namespace http {
 		}
 
 		if (::close(_clientSocket) < 0) {
-			std::cerr
-				<< "Failed to close socket " << _clientSocket << ": "
-				<< strerror(errno) << std::endl;
+			std::cerr << "Failed to close socket " << _clientSocket << ": " << strerror(errno) << std::endl;
 		}
 
 		_clientSocket = -1;
@@ -106,12 +102,10 @@ namespace http {
 
 		if (it != end) {
 			std::string rawRequestHeader(begin, it + 4);
-			// std::string rawRequestHeader(std::move_iterator(begin), std::move_iterator(it + 4));
 			_requestBuffer.erase(begin, it + 4);
 
 			try {
 				_request = std::move(Request::parseHeader(rawRequestHeader));
-				_request.setStatus(Request::Status::HEADER_COMPLETE);
 			} catch (const std::invalid_argument &e) {
 				_request.setStatus(Request::Status::BAD);
 			}

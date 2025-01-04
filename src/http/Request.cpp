@@ -127,12 +127,9 @@ namespace http {
 		Request request;
 
 		const auto &[method, uri, version] = parseRequestLine(rawRequestHeader);
-		auto headersByNames = parseRequestHeaders(rawRequestHeader);
+		const auto &headersByNames = parseRequestHeaders(rawRequestHeader);
 		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
 
-		// std::string url = headersByNames[stringOf(Header::HOST)] + uri;
-		// std::string url = "example.com" + uri;
-		// std::cout << url << std::endl;
 		for (const auto &[name, value] : headersByNames) {
 			request.setHeader(name, value);
 		}
@@ -146,7 +143,8 @@ namespace http {
 		request
 			.setMethod(method)
 			.setUrl(std::move(url))
-			.setVersion(version);
+			.setVersion(version)
+			.setStatus(Status::HEADER_COMPLETE);
 		return request;
 	}
 }
