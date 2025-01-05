@@ -15,7 +15,7 @@ struct Location {
     std::string autoIndex;
     bool isAutoIndex;
     std::vector<std::string> methods;
-    std::string cgiExtension;
+    std::string cgiExtension; // need to change to vector to handle multiple extensions
     std::string uploadDir;
     bool allowUpload;
     std::vector<std::string> returnUrl;
