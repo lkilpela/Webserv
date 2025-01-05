@@ -78,7 +78,7 @@ void Server::listen() {
 			if (it->revents == POLLIN) {
 				if (utils::isInVector<int>(it->fd, _serverFds)) {
 					_addConnection(it->fd);
-					_connectionByFd.emplace(it->fd, );
+					_connectionByFd.emplace(it->fd, connection);
 				} else if (utils::isInVector<int>(it->fd, _clientFds)) {
 					unsigned char buffer[2048];
 
