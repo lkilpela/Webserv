@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 		//handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
-		ServerConfig serverConfig = config.servers[0];
+		ServerConfig serverConfig = config.servers[1];
 
 		//Test the router 
 		http::Router router;
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 
         // Register the GET handler
         router.get(handleGetRequest);
-		simulateRequest(router, "http://localhost:8080//");
+		simulateRequest(router, "http://localhost:8080/uploads");
 
 		//Server server(config);
 		//server.listen();
