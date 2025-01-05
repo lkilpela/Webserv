@@ -23,7 +23,6 @@ class Server {
 		Server(const Config& config);
 		~Server();
 		void listen();
-		void processCGI(Request& req);
 		void processHttpClient(Request& req, Response& res);
 
 	private:

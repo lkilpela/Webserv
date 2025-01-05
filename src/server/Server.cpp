@@ -3,6 +3,7 @@
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
 #include "Connection.hpp"
+#include <unistd.h>
 
 int setNonBlocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -32,24 +33,6 @@ Server::Server(const Config& config) {
     }
 }
 
-void Server::processCGI(Request& req) {
-	int pipefd[2];
-	if(pipe(pipefd) == -1)
-		perror("Pipe failed");
-	if (setNonBlocking(pipefd[0]) == -1)
-		perror("Pipe nonblocking failed");
-	pollfd cgiData { pipefd[0], POLLIN, 0 };
-	_pollfds.push_back(cgiData);
-	pid_t pid = fork();
-	if (pid == 0){
-		close(pipefd[0]);
-		if (dup2(pipefd[1], STDOUT_FILENO) == -1)
-			perror("Dup2 failed");
-			//exceve
-	} else
-	close(pipefd[1]);
-}
-
 void Server::listen() {
 	while (_pollfds.size()) {
 		if (sigintReceived){
@@ -58,7 +41,7 @@ void Server::listen() {
 			break;
 		}
 
-        if (::poll(_pollfds.data(), _pollfds.size(), 0) == -1)
+        if (::poll(_pollfds.data(), _pollfds.size(), 50) == -1)
 			perror("Poll failed");
         for (auto it = _pollfds.begin(); it != _pollfds.end();) {
 			auto& connection = _connectionByFd[it->fd];
@@ -102,14 +85,57 @@ void Server::listen() {
     }
 }
 
+char **makeEnv(Request& req){
+	char **res = new char*[10];
+
+	res[0] = new req.getUrl();
+}
+
+void processCGI(Request& req, Response& res){
+		int pipefd[2];
+		if(pipe(pipefd) == -1)
+			perror("Pipe failed");
+		if (setNonBlocking(pipefd[0]) == -1)
+			perror("Pipe nonblocking failed");
+		pollfd cgiData { pipefd[0], POLLIN, 0 };
+		_pollfds.push_back(cgiData);
+		pid_t pid = fork();
+		if (pid == 0){
+			close(pipefd[0]);
+			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+				perror("Dup2 failed");
+				makeEnv(req);
+				exceve();
+		} else
+			close(pipefd[1]);
+}
+
 void Server::_addConnection(int fd) {
-	http::Connection connection(fd, 5000, [&](Request& req, Response& res) {
-		// access server through this
-		// access ServerConfig
-		// if (req.getUrl().path ends with "abc.py") {
-		//    this is CGI request then do something with it
-		// }
-	});
+	if 
+	// http::Connection Connection(fd, 5000, [&](Request& req, Response& res) -> void {
+	// 	int pipefd[2];
+	// 	if(pipe(pipefd) == -1)
+	// 		perror("Pipe failed");
+	// 	if (setNonBlocking(pipefd[0]) == -1)
+	// 		perror("Pipe nonblocking failed");
+	// 	pollfd cgiData { pipefd[0], POLLIN, 0 };
+	// 	_pollfds.push_back(cgiData);
+	// 	pid_t pid = fork();
+	// 	if (pid == 0){
+	// 		close(pipefd[0]);
+	// 		if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+	// 			perror("Dup2 failed");
+	// 			makeEnv(req);
+	// 			exceve();
+	// 	} else
+		// 	close(pipefd[1]);
+			// send reponse of internal error if execve fails?
+			// access server through this
+			// access ServerConfig
+			// if (req.getUrl().path ends with "abc.py") {
+			//    this is CGI request then do something with it
+			// }
+	// });
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 	int clientFd = ::accept(fd, (struct sockaddr*)&clientAddr, &addrLen);
