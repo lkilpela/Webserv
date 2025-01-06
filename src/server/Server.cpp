@@ -111,40 +111,45 @@ void deleteEnv(char **env){
 	}
 	delete[] env;
 }
-
+// send reponse of internal error if execve fails?
+// if (req.getUrl().path ends with "abc.py") {
+// this is CGI request then do something with it
 void Server::_addConnection(int fd) {
-	char **env;
-	auto CgiHandle = [&](http::Request& req, http::Response& res) -> void {
-		int pipefd[2];
-		if(pipe(pipefd) == -1)
-			perror("Pipe failed");
-		if (setNonBlocking(pipefd[0]) == -1)
-			perror("Pipe nonblocking failed");
-		pollfd cgiData { pipefd[0], POLLIN, 0 };
-		_pollfds.push_back(cgiData);
-		pid_t pid = fork();
-		if (pid == 0){
-			close(pipefd[0]);
-			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
-				perror("Dup2 failed");
-			env = makeEnv(env, req);
-			// exceve();
-		} else{
-			deleteEnv(env);
-			close(pipefd[1]);
-		}
-	};
-	http::Connection connection(fd, 5000, std::function<void(http::Request&, http::Response&)>(CgiHandle));
-			// send reponse of internal error if execve fails?
-			// access server through this
-			// access ServerConfig
-			// if (req.getUrl().path ends with "abc.py") {
-			//    this is CGI request then do something with it
+	//if (CGI){
+		char* interpreter = "/usr/bin/python3";
+		char* script = "cgi_bin/hello.py";
+		char*scriptArray[2] = {script, nullptr};
+		if (access(interpreter, X_OK) == -1 || access(script, X_OK) == -1){}
+			//return 403 forbidding
+		char **env;
+		auto CgiHandle = [&](http::Request& req, http::Response& res) -> void {
+			int pipefd[2];
+			if(pipe(pipefd) == -1)
+				perror("Pipe failed");
+			if (setNonBlocking(pipefd[0]) == -1)
+				perror("Pipe nonblocking failed");
+			pollfd cgiData { pipefd[0], POLLIN, 0 };
+			_pollfds.push_back(cgiData);
+			pid_t pid = fork();
+			if (pid == 0){
+				close(pipefd[0]);
+				if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+					perror("Dup2 failed");
+				env = makeEnv(env, req);
+				execve(interpreter, scriptArray, env);
+			} else{
+				deleteEnv(env);
+				close(pipefd[1]);
+			}
+			//waitpid
+		};
+		http::Connection connection(fd, 5000, std::function<void(http::Request&, http::Response&)>(CgiHandle));
+	//}
+			
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 	int clientFd = ::accept(fd, (struct sockaddr*)&clientAddr, &addrLen);
 	if (clientFd < 0) {
-		// May use std::cerr for logging error
 		perror("Failed to accept connection");
 		return;
 	}
