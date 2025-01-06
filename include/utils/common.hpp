@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <iterator>
 
-namespace config {
+namespace utils {
 	std::string trim(const std::string &str);
 	std::string trimSpace(const std::string& str);
 	std::string removeComments(const std::string &str);
