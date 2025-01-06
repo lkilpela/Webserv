@@ -3,6 +3,7 @@
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
 #include "../../include/http/Connection.hpp"
+#include "../../include/http/Request.hpp"
 #include <unistd.h>
 
 int setNonBlocking(int fd) {
@@ -11,6 +12,7 @@ int setNonBlocking(int fd) {
 		return -1;
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		return -1;
+	return 0;
 }
 
 Server::Server(const Config& config) {
@@ -85,14 +87,16 @@ void Server::listen() {
     }
 }
 
-char **makeEnv(Request& req){
+char **makeEnv(http::Request& req){
 
+	Url url = req.getUrl();
 	char **res = new char*[10];
 
-	res[0] = new req._url.path;
+	res[0] = new char[url.path.size() + 1];
 }
 
 void Server::_addConnection(int fd) {
+	char **env;
 	auto CgiHandle = [&](http::Request& req, http::Response& res) -> void {
 		int pipefd[2];
 		if(pipe(pipefd) == -1)
@@ -106,7 +110,7 @@ void Server::_addConnection(int fd) {
 			close(pipefd[0]);
 			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
 				perror("Dup2 failed");
-			makeEnv(req);
+			env = makeEnv(req);
 			// exceve();
 		} else{
 			close(pipefd[1]);
