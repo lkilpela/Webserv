@@ -25,18 +25,21 @@ using ParserFunction = std::function<void(const string&)>;
 using ParserMap = std::unordered_map<string, ParserFunction>;
 
 void parseKeyValue(const string &line, const ParserMap &parsers) {
-    istringstream iss(line);
-    string key, value;
-    if (iss >> key) {
-        getline(iss, value);
-        value = utils::trim(utils::removeComments(value));
-        auto it = parsers.find(key);
-        if (it != parsers.end()) {
-            it->second(value);
-        } else {
-            throw ConfigError(EINVAL, "Invalid directive in configuration block");
-        }
-    }
+	istringstream iss(line);
+	string key, value;
+	if (iss >> key) {
+		getline(iss, value);
+		value = config::trim(config::removeComments(value));
+		if (value.empty()) {
+			throw ConfigError(EINVAL, "Value for directive '" + key + "' cannot be empty");
+		}
+		auto it = parsers.find(key);
+		if (it != parsers.end()) {
+			it->second(value);
+		} else {
+			throw ConfigError(EINVAL, "Invalid directive in configuration block");
+		}
+	}
 }
 
 void parseKeyValue(const string &line, const ParserMap &parsers) {
@@ -78,40 +81,40 @@ void parseKeyValue(const string &line, const ParserMap &parsers) {
 <<<<<<< HEAD
 // Function to parse global configuration lines
 void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
-	static const ParserMap globalParsers = {
-		{"host", [&](const string &value) {
-			if (value.empty() || !config.host.empty() || !utils::isValidIP(value)) {
-				throw ConfigError(EINVAL, "Invalid host");
-			}
-			config.host = value;
-		}},
-		{"port", [&](const string &value) {
-			if (config.port != 0) {
-				throw ConfigError(EINVAL, "Invalid port");
-			}
-			config.port = utils::parsePort(value);
-		}},
-		{"server_name", [&](const string &value) {
-			if (!config.serverName.empty()) {
-				throw ConfigError(EINVAL, "Invalid server_name");
-			}
-			config.serverName = value;
-		}},
-		{"error_page", [&](const string &value) {
-			istringstream iss(value);
-			std::string code, path;
-			iss >> code >> path;
-			fullPath = getConfigPath(path);
-			utils::validateErrorPage(code, fullPath);
-			config.errorPages[std::stoi(code)] = fullPath; // Store in map
-		}},
-		{"client_max_body_size", [&](const string &value) {
-			if (!config.clientMaxBodySizeStr.empty() || !utils::isValidSize(value)) {
-				throw ConfigError(EINVAL, "Invalid client_max_body_size");
-			}
-			config.clientMaxBodySize = utils::convertSizeToBytes(value);
-		}}
-	};
+    static const ParserMap globalParsers = {
+        {"host", [&](const string &value) {
+            if (!config.host.empty() || !utils::isValidIP(value)) {
+                throw ConfigError(EINVAL, "Invalid host");
+            }
+            config.host = value;
+        }},
+        {"port", [&](const string &value) {
+            if (config.port != 0) {
+                throw ConfigError(EINVAL, "Invalid port");
+            }
+            config.port = utils::parsePort(value);
+        }},
+        {"server_name", [&](const string &value) {
+            if (!config.serverName.empty()) {
+                throw ConfigError(EINVAL, "Invalid server_name");
+            }
+            config.serverName = value;
+        }},
+        {"error_page", [&](const string &value) {
+            istringstream iss(value);
+            std::string code, path;
+            iss >> code >> path;
+            std::string fullPath = getConfigPath(path);
+            utils::validateErrorPage(code, fullPath);
+            config.errorPages[std::stoi(code)] = fullPath; // Store in map
+        }},
+        {"client_max_body_size", [&](const string &value) {
+            if (!config.clientMaxBodySize.empty() || !utils::isValidSize(value)) {
+                throw ConfigError(EINVAL, "Invalid client_max_body_size");
+            }
+            config.clientMaxBodySize = value;
+        }}
+    };
 
 	parseKeyValue(line, globalParsers);
 }
@@ -439,7 +442,6 @@ Config ConfigParser::load() {
         return config;
     } catch (const ConfigError& e) {
         cout << "Error: " << e.code() << " " << e.what() << endl;
-
     }
     return Config();
 }
