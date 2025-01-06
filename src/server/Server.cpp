@@ -87,12 +87,29 @@ void Server::listen() {
     }
 }
 
-char **makeEnv(http::Request& req){
+char **makeEnv(char** &env, http::Request& req){
 
-	Url url = req.getUrl();
-	char **res = new char*[10];
+	http::Url url = req.getUrl();
+	char **res = new char*[9];
 
-	res[0] = new char[url.path.size() + 1];
+	res[0] = new char[url.scheme.size() + 1];
+	res[1] = new char[url.user.size() + 1];
+	res[2] = new char[url.password.size() + 1];
+	res[3] = new char[url.host.size() + 1];
+	res[4] = new char[url.port.size() + 1];
+	res[5] = new char[url.path.size() + 1];
+	res[6] = new char[url.query.size() + 1];
+	res[7] = new char[url.fragment.size() + 1];
+	res[8] = nullptr;
+
+	return res;
+}
+
+void deleteEnv(char **env){
+	for (int i = 0; env[i]; i++){
+		delete[] env[i];
+	}
+	delete[] env;
 }
 
 void Server::_addConnection(int fd) {
@@ -110,9 +127,10 @@ void Server::_addConnection(int fd) {
 			close(pipefd[0]);
 			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
 				perror("Dup2 failed");
-			env = makeEnv(req);
+			env = makeEnv(env, req);
 			// exceve();
 		} else{
+			deleteEnv(env);
 			close(pipefd[1]);
 		}
 	};
