@@ -1,7 +1,7 @@
 #include <iostream>
 #include "Config.hpp"
 #include "Error.hpp"
-#include "http/Router.hpp"
+#include "Router.hpp"
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 //#include "Server.hpp"
@@ -58,7 +58,7 @@ void handleGetRequest(Location loc, http::Request& req, http::Response& res) {
 void simulateRequest(http::Router& router, const std::string& url) {
     http::Request request;
     request.setMethod("GET");
-    request.setUrl(http::parseUri(url.begin(), url.end())); // Make sure this matches the location path
+    request.setUrl(url);
     request.setStatus(http::Request::Status::COMPLETE);
 
     http::Response response(0);

@@ -2,8 +2,8 @@
 
 #include <string>
 #include <functional>
-#include "Request.hpp"
-#include "Response.hpp"
+#include "http/Request.hpp"
+#include "http/Response.hpp"
 #include "Config.hpp"
 
 namespace http {
