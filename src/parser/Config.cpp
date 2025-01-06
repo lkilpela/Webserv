@@ -43,43 +43,6 @@ void parseKeyValue(const string &line, const ParserMap &parsers) {
 	}
 }
 
-void parseKeyValue(const string &line, const ParserMap &parsers) {
-	istringstream iss(line);
-	string key, value;
-	if (iss >> key) {
-		getline(iss, value);
-		value = utils::trim(utils::removeComments(value));
-		if (value.empty()) {
-			throw ConfigError(EINVAL, "Value for directive '" + key + "' cannot be empty");
-		}
-		auto it = parsers.find(key);
-		if (it != parsers.end()) {
-			it->second(value);
-		} else {
-			throw ConfigError(EINVAL, "Invalid directive in configuration block");
-		}
-	}
-}
-
-void parseKeyValue(const string &line, const ParserMap &parsers) {
-	istringstream iss(line);
-	string key, value;
-	if (iss >> key) {
-		getline(iss, value);
-		value = utils::trim(utils::removeComments(value));
-		if (value.empty()) {
-			throw ConfigError(EINVAL, "Value for directive '" + key + "' cannot be empty");
-		}
-		auto it = parsers.find(key);
-		if (it != parsers.end()) {
-			it->second(value);
-		} else {
-			throw ConfigError(EINVAL, "Invalid directive in configuration block");
-		}
-	}
-}
-
-<<<<<<< HEAD
 // Function to parse global configuration lines
 void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
 	static const ParserMap globalParsers = {
@@ -129,34 +92,20 @@ std::filesystem::path ConfigParser::getConfigPath(const string &value) const {
 		throw ConfigError(EINVAL, "Invalid path");
 	}
 	return std::filesystem::canonical(filePath).parent_path()/value;
-=======
-//filePath = config/webserv.conf
-std::string ConfigParser::getConfigPath(const string &value) const {
-    return std::filesystem::canonical(filePath).parent_path() / value;
->>>>>>> ff4aac1 (Add getabsolutepath method and improve error handling in Router and Server)
 
 }
 
 void ConfigParser::parseLocation(const string &line, Location &currentLocation) {
-<<<<<<< HEAD
 	static const ParserMap locationParsers = {
 		{"root", [&](const string &value) {
-			if (value.empty())
-				throw ConfigError(EINVAL, "Value for directive 'root' cannot be empty");
 			fullPath = getConfigPath(value);
-			if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
 			if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
 				throw ConfigError(EINVAL, "Invalid root");
 			}
 			currentLocation.root = fullPath;
 		}},
 		{"index", [&](const string &value) {
-			if (!currentLocation.index.empty()) {
-				throw ConfigError(EINVAL, "Root must be set before specifying index");
-			}
 			fullPath = currentLocation.root + "/" + value;
-			cout << "index_fullPath: " << fullPath << endl;
-			if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
 			if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
 				throw ConfigError(EINVAL, "Invalid index");
 			}
@@ -167,7 +116,6 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 				throw ConfigError(EINVAL, "Invalid autoindex");
 			}
 			currentLocation.autoIndex = value;
-			currentLocation.isAutoIndex = utils::parseBool(value);
 			currentLocation.isAutoIndex = utils::parseBool(value);
 		}},
 		{"methods", [&](const string &value) {
@@ -186,11 +134,9 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 		}},
 		{"cgi_extension", [&](const string &value) {
 			currentLocation.cgiExtension.push_back(value);
-			
 		}},
 		{"upload_dir", [&](const string &value) {
 			fullPath = getConfigPath(value);
-			if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(fullPath)) {
 			if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(fullPath)) {
 				throw ConfigError(EINVAL, "Invalid upload_dir");
 			}
@@ -212,79 +158,6 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			currentLocation.returnUrl = returnParts;
 		}}
 	};
-			if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
-				throw ConfigError(EINVAL, "Invalid return");
-			}
-			currentLocation.returnUrl = returnParts;
-		}}
-	};
-=======
-    static const ParserMap locationParsers = {
-        {"root", [&](const string &value) {
-            // value = default
-            // fullPath = getConfigPath(default)
-            std::string fullPath = getConfigPath(value);
-            if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
-                throw ConfigError(EINVAL, "Invalid root");
-            }
-            currentLocation.root = fullPath;
-        }},
-        {"index", [&](const string &value) {
-            string fullPath = currentLocation.root + "/" + value;
-            if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
-                throw ConfigError(EINVAL, "Invalid index");
-            }
-            currentLocation.index = value;
-        }},
-        {"autoindex", [&](const string &value) {
-            if (!currentLocation.autoIndex.empty()) {
-                throw ConfigError(EINVAL, "Invalid autoindex");
-            }
-            currentLocation.autoIndex = value;
-            currentLocation.isAutoIndex = utils::parseBool(value);
-        }},
-        {"methods", [&](const string &value) {
-            if (!currentLocation.methods.empty()) {
-                throw ConfigError(EINVAL, "Invalid methods");
-            }
-            istringstream iss(value);
-            vector<string> methods;
-            string method;
-            while (iss >> method) {
-                methods.push_back(method);
-            }
-            utils::validateMethods(methods);
-            currentLocation.methods = methods;
-        }},
-        {"cgi_extension", [&](const string &value) {
-            if (!currentLocation.cgiExtension.empty()) {
-                throw ConfigError(EINVAL, "Invalid cgi_extension");
-            }
-            currentLocation.cgiExtension = value;
-        }},
-        {"upload_dir", [&](const string &value) {
-            std::string fullPath = getConfigPath(value);
-            if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(fullPath)) {
-                throw ConfigError(EINVAL, "Invalid upload_dir");
-            }
-            currentLocation.uploadDir = fullPath;
-        }},
-        {"return", [&](const string &value) {
-            if (!currentLocation.returnUrl.empty()) {
-                throw ConfigError(EINVAL, "Invalid return");
-            }
-            istringstream iss(value);
-            vector<string> returnParts;
-            string part;
-            while (iss >> part) {
-                returnParts.push_back(part);
-            }
-            if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
-                throw ConfigError(EINVAL, "Invalid return");
-            }
-            currentLocation.returnUrl = returnParts;
-        }}
-    };
 
 	parseKeyValue(line, locationParsers);
 }
@@ -302,7 +175,6 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 	bool inLocationBlock = false;
 
 	while (std::getline(file, line)) {
-		line = utils::trim(utils::removeComments(line));
 		line = utils::trim(utils::removeComments(line));
 		if (line.empty()) continue;
 
@@ -434,27 +306,17 @@ void printServerConfig(const ServerConfig& server) {
 
 // Function to print the configuration
 void ConfigParser::printConfig(const Config& config) {
-<<<<<<< HEAD
 	for (const auto& server : config.servers) {
 		printServerConfig(server);
 	}
-=======
-    for (const auto& server : config.servers) {
-        printServerConfig(server);
-    }
 }
 
 // Function to load the configuration
 Config ConfigParser::load() {
-    try {
-        Config config;
-        parseConfig(filePath, config);
-        //printConfig(config);
-        //Server server(config);
-        //server.start();
-        return config;
-    } catch (const ConfigError& e) {
-        cout << "Error: " << e.code() << " " << e.what() << endl;
-    }
-    return Config();
+    Config config;
+    parseConfig(filePath, config);
+    //printConfig(config);
+    //Server server(config);
+    //server.start();
+    return config;
 }
