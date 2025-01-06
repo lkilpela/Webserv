@@ -1,5 +1,5 @@
 #include "Config.hpp"
-#include "http/Router.hpp"
+#include "Router.hpp"
 #include "Error.hpp"
 
 namespace http {

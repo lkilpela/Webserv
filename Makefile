@@ -16,7 +16,7 @@ INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/utils/common.hpp \
 					$(INCLUDES)/Error.hpp \
-					$(INCLUDES)/http/Router.hpp \
+					$(INCLUDES)/Router.hpp \
 					$(INCLUDES)/http/utils.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \

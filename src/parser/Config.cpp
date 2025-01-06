@@ -1,5 +1,5 @@
 #include "Config.hpp"
-#include "common.hpp"
+#include "utils/common.hpp"
 #include "Error.hpp"
 //#include "Server.hpp"
 #include <functional> // std::function
@@ -29,7 +29,7 @@ void parseKeyValue(const string &line, const ParserMap &parsers) {
 	string key, value;
 	if (iss >> key) {
 		getline(iss, value);
-		value = config::trim(config::removeComments(value));
+		value = utils::trim(utils::removeComments(value));
 		if (value.empty()) {
 			throw ConfigError(EINVAL, "Value for directive '" + key + "' cannot be empty");
 		}
@@ -46,7 +46,7 @@ void parseKeyValue(const string &line, const ParserMap &parsers) {
 void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
 	static const ParserMap globalParsers = {
 		{"host", [&](const string &value) {
-			if (value.empty() || !config.host.empty() || !config::isValidIP(value)) {
+			if (value.empty() || !config.host.empty() || !utils::isValidIP(value)) {
 				throw ConfigError(EINVAL, "Invalid host");
 			}
 			config.host = value;
@@ -55,7 +55,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
 			if (config.port != 0) {
 				throw ConfigError(EINVAL, "Invalid port");
 			}
-			config.port = config::parsePort(value);
+			config.port = utils::parsePort(value);
 		}},
 		{"server_name", [&](const string &value) {
 			if (!config.serverName.empty()) {
@@ -68,14 +68,14 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
 			std::string code, path;
 			iss >> code >> path;
 			fullPath = getConfigPath(path);
-			config::validateErrorPage(code, fullPath);
+			utils::validateErrorPage(code, fullPath);
 			config.errorPages[std::stoi(code)] = fullPath; // Store in map
 		}},
 		{"client_max_body_size", [&](const string &value) {
-			if (!config.clientMaxBodySizeStr.empty() || !config::isValidSize(value)) {
+			if (!config.clientMaxBodySizeStr.empty() || !utils::isValidSize(value)) {
 				throw ConfigError(EINVAL, "Invalid client_max_body_size");
 			}
-			config.clientMaxBodySize = config::convertSizeToBytes(value);
+			config.clientMaxBodySize = utils::convertSizeToBytes(value);
 		}}
 	};
 
@@ -100,7 +100,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			if (value.empty())
 				throw ConfigError(EINVAL, "Value for directive 'root' cannot be empty");
 			fullPath = getConfigPath(value);
-			if (!currentLocation.root.empty() || !config::isValidFilePath(fullPath)) {
+			if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
 				throw ConfigError(EINVAL, "Invalid root");
 			}
 			currentLocation.root = fullPath;
@@ -111,7 +111,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			}
 			fullPath = currentLocation.root + "/" + value;
 			cout << "index_fullPath: " << fullPath << endl;
-			if (!currentLocation.index.empty() || !config::isValidFilePath(fullPath)) {
+			if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
 				throw ConfigError(EINVAL, "Invalid index");
 			}
 			currentLocation.index = value;
@@ -121,7 +121,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 				throw ConfigError(EINVAL, "Invalid autoindex");
 			}
 			currentLocation.autoIndex = value;
-			currentLocation.isAutoIndex = config::parseBool(value);
+			currentLocation.isAutoIndex = utils::parseBool(value);
 		}},
 		{"methods", [&](const string &value) {
 			if (!currentLocation.methods.empty()) {
@@ -133,7 +133,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			while (iss >> method) {
 				methods.push_back(method);
 			}
-			config::validateMethods(methods);
+			utils::validateMethods(methods);
 			currentLocation.methods = methods;
 		}},
 		{"cgi_extension", [&](const string &value) {
@@ -142,7 +142,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 		}},
 		{"upload_dir", [&](const string &value) {
 			fullPath = getConfigPath(value);
-			if (!currentLocation.uploadDir.empty() || !config::isValidFilePath(fullPath)) {
+			if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(fullPath)) {
 				throw ConfigError(EINVAL, "Invalid upload_dir");
 			}
 			currentLocation.uploadDir = fullPath;
@@ -157,7 +157,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			while (iss >> part) {
 				returnParts.push_back(part);
 			}
-			if (returnParts.size() != 2 || !config::isValidURL(returnParts[1])) {
+			if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
 				throw ConfigError(EINVAL, "Invalid return");
 			}
 			currentLocation.returnUrl = returnParts;
@@ -180,7 +180,7 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 	bool inLocationBlock = false;
 
 	while (std::getline(file, line)) {
-		line = config::trim(config::removeComments(line));
+		line = utils::trim(utils::removeComments(line));
 		if (line.empty()) continue;
 
 		// Start of the http block
