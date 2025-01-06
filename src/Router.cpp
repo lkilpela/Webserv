@@ -1,5 +1,5 @@
 #include "Config.hpp"
-#include "Router.hpp"
+#include "http/Router.hpp"
 #include "Error.hpp"
 
 namespace http {
@@ -66,6 +66,20 @@ namespace http {
 		return true;
 	}
 
+	/**
+	 * Handle client request based on the registed `Handler` (callback).
+	 * This method call will modify response object in a way defined in callback
+	 * 
+	 * @param request The request object must be COMPLETE or BAD_REQUEST
+	 * @param response
+	 */
+	void Router::handle(Request& request, Response& response) {
+		std::string route = request.getUrl().path;
+
+		if (!isValidPath(route)) {
+			response.setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
+			return;
+		}
 	/**
 	 * Handle client request based on the registed `Handler` (callback).
 	 * This method call will modify response object in a way defined in callback
