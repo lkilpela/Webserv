@@ -2,22 +2,28 @@
 
 #include <string>
 #include <functional>
+#include "Request.hpp"
+#include "Response.hpp"
 #include "Config.hpp"
-#include "http/Request.hpp"
-#include "http/Response.hpp"
 
-class Router {
-	public:
-		using Handler = std::function<void (http::Request &, http::Response &)>;
+namespace http {
+	class Router {
+		public:
+			using Handler = std::function<void(const Location&, Request&, Response&)>;
 
-		explicit Router(ServerConfig config);
+			void get(Handler handler);
+			void post(Handler handler);
+			void del(Handler handler);
+			void handle(Request& req, Response& res);
 
-		void get(const std::string &route, Handler handler);
-		void post(const std::string &route, Handler handler);
-		void del(const std::string &route, Handler handler);
-		void handle(http::Request &request, http::Response &response);
+			void addLocations(const ServerConfig& serverConfig);
+			//void handleGetRequest(Location loc, Request& request, Response& response);
 
-	private:
-		ServerConfig _config;
-		std::unordered_map<std::string, std::unordered_map<std::string, Handler>> _routes;
-};
+		private:
+			ServerConfig _serverConfig;
+			std::unordered_map<std::string, Handler> _routes; //route -> method -> handler
+			std::unordered_map<std::string, Location> _locationConfigs; // route -> location config
+
+			const Location* findBestMatchingLocation(const std::string& url) const;
+	};
+}

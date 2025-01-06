@@ -14,7 +14,7 @@ CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 NAME			=	webserv
 INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
-					$(INCLUDES)/common.hpp \
+					$(INCLUDES)/utils/common.hpp \
 					$(INCLUDES)/Error.hpp \
 					$(INCLUDES)/http/Router.hpp \
 					$(INCLUDES)/http/utils.hpp \
