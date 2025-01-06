@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <filesystem>
+#include <iostream>
 
 # define YELLOW "\033[0;33m"
 # define RESET "\033[0m"
@@ -15,7 +17,7 @@ struct Location {
     std::string autoIndex;
     bool isAutoIndex;
     std::vector<std::string> methods;
-    std::string cgiExtension; // need to change to vector to handle multiple extensions
+    std::vector<std::string> cgiExtension;
     std::string uploadDir;
     bool allowUpload;
     std::vector<std::string> returnUrl;
@@ -23,10 +25,11 @@ struct Location {
 
 struct ServerConfig {
     std::string host;
-    int port;
+    int port = 0;
     std::string serverName;
     std::map<int, std::string> errorPages;
-    std::string clientMaxBodySize;
+    std::string clientMaxBodySizeStr;
+    size_t clientMaxBodySize = 0;
     std::vector<Location> locations;
 };
 
@@ -38,14 +41,15 @@ struct Config {
 
 class ConfigParser {
 private:
-    std::string filePath;
+    std::filesystem::path filePath;
+    std::filesystem::path fullPath;
 public:
-    ConfigParser(const std::string &path): filePath(path) {};    
+    ConfigParser(const std::string &path): filePath(path) {};
     // Function to parse the configuration text
     void parseConfig(const std::string &filename, Config &config);
     void parseGlobal(const std::string &line, ServerConfig &config);
     void parseLocation(const std::string &line, Location &currentLocation);
 	Config load();
 	void printConfig(const Config& config);
-    std::string getConfigPath(const std::string &value) const;
+    std::filesystem::path getConfigPath(const std::string &value) const;
 };
