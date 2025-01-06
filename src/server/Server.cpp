@@ -2,7 +2,7 @@
 #include "http/Connection.hpp"
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
-#include "Connection.hpp"
+#include "../../include/http/Connection.hpp"
 #include <unistd.h>
 
 int setNonBlocking(int fd) {
@@ -86,12 +86,14 @@ void Server::listen() {
 }
 
 char **makeEnv(Request& req){
+
 	char **res = new char*[10];
 
-	res[0] = new req.getUrl();
+	res[0] = new req._url.path;
 }
 
-void processCGI(Request& req, Response& res){
+void Server::_addConnection(int fd) {
+	auto CgiHandle = [&](http::Request& req, http::Response& res) -> void {
 		int pipefd[2];
 		if(pipe(pipefd) == -1)
 			perror("Pipe failed");
@@ -104,38 +106,18 @@ void processCGI(Request& req, Response& res){
 			close(pipefd[0]);
 			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
 				perror("Dup2 failed");
-				makeEnv(req);
-				exceve();
-		} else
+			makeEnv(req);
+			// exceve();
+		} else{
 			close(pipefd[1]);
-}
-
-void Server::_addConnection(int fd) {
-	if 
-	// http::Connection Connection(fd, 5000, [&](Request& req, Response& res) -> void {
-	// 	int pipefd[2];
-	// 	if(pipe(pipefd) == -1)
-	// 		perror("Pipe failed");
-	// 	if (setNonBlocking(pipefd[0]) == -1)
-	// 		perror("Pipe nonblocking failed");
-	// 	pollfd cgiData { pipefd[0], POLLIN, 0 };
-	// 	_pollfds.push_back(cgiData);
-	// 	pid_t pid = fork();
-	// 	if (pid == 0){
-	// 		close(pipefd[0]);
-	// 		if (dup2(pipefd[1], STDOUT_FILENO) == -1)
-	// 			perror("Dup2 failed");
-	// 			makeEnv(req);
-	// 			exceve();
-	// 	} else
-		// 	close(pipefd[1]);
+		}
+	};
+	http::Connection connection(fd, 5000, std::function<void(http::Request&, http::Response&)>(CgiHandle));
 			// send reponse of internal error if execve fails?
 			// access server through this
 			// access ServerConfig
 			// if (req.getUrl().path ends with "abc.py") {
 			//    this is CGI request then do something with it
-			// }
-	// });
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 	int clientFd = ::accept(fd, (struct sockaddr*)&clientAddr, &addrLen);
