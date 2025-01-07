@@ -17,7 +17,7 @@ volatile sig_atomic_t sigintReceived = 0;
 
 
 // Function to simulate a request
-/* void simulateRequest(http::Router& router, const http::Url& url) {
+void simulateRequest(Router& router, const http::Url& url) {
     http::Request request;
     request.setMethod("GET");
     request.setUrl(url);
@@ -30,7 +30,7 @@ volatile sig_atomic_t sigintReceived = 0;
     std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
     //std::cout << "Response body: \n" << response.getBody() << std::endl;
 }
- */
+
 int main(int argc, char **argv) {
 	if (argc != 2) {
 		std::cerr << "Error: Invalid number of arguments!" << std::endl;
@@ -43,15 +43,14 @@ int main(int argc, char **argv) {
 		Config config = parser.load();
 
 		// Create a router for each server
-		for (const auto& serverConfig : config.servers) {
-			http::Router router;
-			router.initRouter(serverConfig, router);
-		}
+		ServerConfig serverConfig = config.servers[0];
+		Router router(serverConfig);
+		router.get(handleGetRequest);
 
-		//http::Url url = http::Url::parse("http://localhost:8080/uploads");
-		//simulateRequest(router, url);
+		http::Url url = http::Url::parse("http://localhost:8080/uploads");
+		simulateRequest(router, url);
 
-		Server server(config);
+		//Server server(config);
 		//server.listen();
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.what() << std::endl;

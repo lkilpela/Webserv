@@ -6,59 +6,50 @@
 #include "http/Response.hpp"
 #include "Config.hpp"
 
-namespace http {
-	// Forward declaration
-	void handleGetRequest(const Location& loc, Request& request, Response& response);
-	void handlePostRequest(const Location& loc, Request& request, Response& response);
-	void handleDeleteRequest(const Location& loc, Request& request, Response& response);
+void handleGetRequest(const Location& loc, http::Request& request, http::Response& response);
+void handlePostRequest(const Location& loc, http::Request& request, http::Response& response);
+void handleDeleteRequest(const Location& loc, http::Request& request, http::Response& response);
 
-	class Router {
-		public:
-			using Handler = std::function<void(const Location&, Request&, Response&)>;
+class Router {
+	public:
+		using Handler = std::function<void(const Location&, http::Request&, http::Response&)>;
 
-			void get(Handler handler);
-			void post(Handler handler);
-			void del(Handler handler);
-			void handle(Request& req, Response& res);
-
-			void addLocations(const ServerConfig& serverConfig);
-
-
-			void initRouter(const ServerConfig& serverConfig, Router& router) {
-				// each server need one router
-				router.addLocations(serverConfig);
-				router.get(handleGetRequest);
-				router.post(handlePostRequest);
-				router.del(handleDeleteRequest);
-			}
-
-/* 		// Function to get the body of the response
-		std::string getBody() const {
-			if (_body) {
-				return _body->toString();
-			}
-			return "";
+		Router(const ServerConfig& serverConfig) : _serverConfig(serverConfig) {
+			addLocations(serverConfig);
 		}
 
-		// Function to set the response for string payloads
-		void setStringResponse(Response& res, StatusCode statusCode, const std::string& body) {
-			res.setStatusCode(statusCode);
-			res.setBody(std::make_unique<utils::StringPayload>(0, body));
-			res.build();
-		}
+		void get(Handler handler);
+		void post(Handler handler);
+		void del(Handler handler);
+		void handle(http::Request& req, http::Response& res);
 
-		// Function to set the response for file payloads
-		void setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath) {
-			res.setStatusCode(statusCode);
-			res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
-			res.build();
+		void addLocations(const ServerConfig& serverConfig);
+
+
+/* 		void initRouter(const ServerConfig& serverConfig, Router& router) {
+			// each server need one router
+			//router.addLocations(serverConfig);
+			// how to know which method to call? 
+			// Answer: use the method name as the key in the map
+			// and the value is the function to call
+			// 
+			router.get(handleGetRequest);
+			router.post(handlePostRequest);
+			router.del(handleDeleteRequest);
 		} */
 
-		private:
-			ServerConfig _serverConfig;
-			std::unordered_map<std::string, Handler> _routes; //route -> method -> handler
-			std::unordered_map<std::string, Location> _locationConfigs; // route -> location config
+/* 	// Function to get the body of the response
+	std::string getBody() const {
+		if (_body) {
+			return _body->toString();
+		}
+		return "";
+	} */
 
-			const Location* findBestMatchingLocation(const std::string& url) const;
-	};
-}
+	private:
+		ServerConfig _serverConfig;
+		std::unordered_map<std::string, Handler> _routes; // method -> handler
+		std::unordered_map<std::string, Location> _locationConfigs; // route -> location config
+
+		const Location* findBestMatchingLocation(const std::string& url) const;
+};
