@@ -44,20 +44,6 @@ class Router {
 			router.del(handleDeleteRequest);
 		} */
 
-	//toString function
-	std::string toString() const {
-        std::ostringstream ss;
-        ss << file.rdbuf();
-        return ss.str();
-    }
-	// Function to get the body of the response
-	std::string getBody() const {
-		if (_body) {
-			return _body->toString();
-		}
-		return "";
-	}
-
 	private:
 		ServerConfig _serverConfig;
 		std::unordered_map<std::string, Handler> _routes; // method -> handler

@@ -23,7 +23,7 @@ void simulateRequest(Router& router, http::Request& request) {
 
     // Print the response status and body
     std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
-    //std::cout << "Response body: \n" << response.getBody() << std::endl;
+    std::cout << "Response body: \n" << response.getBodyAsString() << std::endl;
 }
 
 int main(int argc, char **argv) {

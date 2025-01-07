@@ -3,6 +3,7 @@
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include "utils/common.hpp"
+#include "utils/Payload.hpp"
 
 using http::StatusCode;
 using http::Request;
