@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sstream>
 #include <cstdint>
 #include <sys/socket.h>
@@ -18,7 +19,7 @@
 namespace http {
 	Response::Response(int clientSocket)
 		//: _clientSocket(clientSocket)
-		: _header(utils::StringPayload(clientSocket, "")) 
+		: _header(utils::StringPayload(clientSocket, ""))
 		{}
 
 	bool Response::send() {
@@ -59,9 +60,9 @@ namespace http {
 		return _clientSocket;
 	}
 
-	StatusCode Response::getStatusCode() const {
-		return _statusCode;
-	}
+	// StatusCode Response::getStatusCode() const {
+	// 	return _statusCode;
+	// }
 
 	Response& Response::clear() {
 		_statusCode = StatusCode::NONE_0;
@@ -80,7 +81,7 @@ namespace http {
 		_headerByName[stringOf(header)] = value;
 		return *this;
 	}
- 
+
 	Response& Response::setBody(std::unique_ptr<utils::Payload> body) {
 		_body = std::move(body);
 		return *this;
@@ -92,7 +93,7 @@ namespace http {
 			return _body->toString();
 		}
 		return "";
-	} 
+	}
 
 	// Function to set the response for string payloads
 	void Response::setStringResponse(Response& res, StatusCode statusCode, const std::string& body) {
@@ -101,10 +102,23 @@ namespace http {
 		res.build();
 	}
 
-	// Function to set the response for file payloads
-	void Response::setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath) {
-		res.setStatusCode(statusCode);
-		res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
-		res.build();
+	void Response::setFile(StatusCode statusCode, const std::filesystem::path& filePath) {
+		std::string extension = filePath.extension().string().erase(0, 1);
+
+		setStatusCode(statusCode);
+		setBody(std::make_unique<utils::FilePayload>(0, filePath));
+		setHeader(Header::CONTENT_TYPE, getMimeType(extension));
+		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->getSizeInBytes()));
+		// setHeader(Header::CACHE_CONTROL, "public, max-age=86400"); // In production mode only
+		build();
 	}
+}
+
+int main() {
+	http::Response res(42);
+
+	res.setFile(http::StatusCode::OK_200, "Makefile");
+	std::cout << res._header.toString() << std::endl;
+
+	return 0;
 }

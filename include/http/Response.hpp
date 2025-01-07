@@ -21,7 +21,7 @@ namespace http {
 			void build();
 
 			int getClientSocket() const;
-			const StatusCode getStatusCode() const;
+			// const StatusCode getStatusCode() const;
 
 			Response& clear();
 			Response& setStatusCode(const StatusCode statusCode);
@@ -33,11 +33,12 @@ namespace http {
 			// Function to set the response for string payloads
 			void setStringResponse(Response& res, StatusCode statusCode, const std::string& body);
 
-			// Function to set the response for file payloads
-			void setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath);
+			// hoatran modified
+			// utility function to setup file response
+			void setFile(StatusCode statusCode, const std::filesystem::path& filePath);
 
-		private:
-			//int _clientSocket;
+		public:
+			int _clientSocket;
 			StatusCode _statusCode { StatusCode::NONE_0 };
 			std::unordered_map<std::string, std::string> _headerByName;
 			utils::StringPayload _header;

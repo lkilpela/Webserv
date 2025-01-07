@@ -39,20 +39,20 @@ namespace http {
 
 		auto& [req, res] = _processedQueue.front();
 
-		if (res.send()) {
-			const auto responseStatusCode = res.getStatusCode();
-			auto connectionHeader = req.getHeader(Header::CONNECTION);
-			_processedQueue.pop();
+		// if (res.send()) {
+		// 	const auto responseStatusCode = res.getStatusCode();
+		// 	auto connectionHeader = req.getHeader(Header::CONNECTION);
+		// 	_processedQueue.pop();
 
-			if (
-				(connectionHeader.has_value() && *connectionHeader == "close")
-				|| responseStatusCode == StatusCode::BAD_REQUEST_400
-				|| responseStatusCode == StatusCode::INTERNAL_SERVER_ERROR_500
-			) {
-				this->close();
-				return;
-			}
-		}
+		// 	if (
+		// 		(connectionHeader.has_value() && *connectionHeader == "close")
+		// 		|| responseStatusCode == StatusCode::BAD_REQUEST_400
+		// 		|| responseStatusCode == StatusCode::INTERNAL_SERVER_ERROR_500
+		// 	) {
+		// 		this->close();
+		// 		return;
+		// 	}
+		// }
 	}
 
 	void Connection::close() {
