@@ -19,6 +19,8 @@ namespace utils {
 	bool isValidURL(const std::string &url);
 	bool isValidSize(const std::string &size);
 	void validateErrorPage(const std::string &code, const std::string &path);
+	int setNonBlocking(int fd);
+	void closeFDs(const std::vector<int> &fds);
 
 	template <typename Iterator>
 	Iterator findDelimiter(
