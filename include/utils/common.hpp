@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <algorithm>
 #include <iterator>
+#include "http/Request.hpp"
 
 namespace utils {
     std::string trim(const std::string &str);
@@ -21,6 +22,7 @@ namespace utils {
     void validateErrorPage(const std::string &code, const std::string &path);
 	void closeFDs(const std::vector<int>& serverFds);
 	std::size_t convertSizeToBytes(const std::string& sizeStr);
+	std::string sanitizePath(const std::string& root, const std::string& path);
 
 	template <typename Iterator>
 	Iterator findDelimiter(
@@ -35,4 +37,9 @@ namespace utils {
 	bool isInVector(const T& element, const std::vector<T>& vec) {
     	return std::find(vec.begin(), vec.end(), element) != vec.end();
 	}
+
+
+	// PRINT FUNCTIONS
+	void printRequest(const http::Request& request);
+
 }

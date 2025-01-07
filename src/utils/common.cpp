@@ -8,6 +8,8 @@
 #include <cctype> // std::tolower
 #include <fcntl.h> // fcntl
 #include <unistd.h> // close
+#include "http/Request.hpp"
+#include "http/Response.hpp"
 
 using std::string;
 using std::vector;
@@ -145,5 +147,42 @@ namespace utils {
 				break;
 		}
 		return size;
+	}
+
+	// Test valid case: root = /Users/username/Webserv/config, path = /static/index.html
+	// Expected: /Users/username/Webserv/config/static/index.html
+	// Test invalid case: root = /Users/username/Webserv/config, path = /../index.html -> fullPath = /Users/username/Webserv/index.html
+	// Test invalid case: root = /Users/username/Webserv/config, path = /static/../index.html -> fullPath = /Users/username/Webserv/index.html
+	// Test invalid case: root = /Users/username/Webserv/config, path = /static/../../index.html -> fullPath = /Users/username/index.html
+	// Test invalid case: root = /Users/username/Webserv/config, path = /static/../../../index.html -> fullPath = /Users/index.html
+	// Expected: ConfigError exception
+	std::string sanitizePath(const std::string& root, const std::string& path) {
+		std::cout << "Sanitizing path. Root: " << root << ", URL Path: " << path << std::endl;
+		std::filesystem::path fullPath;
+		if (path.front() == '/') {
+			fullPath = std::filesystem::canonical(root + path);
+		} else {
+			fullPath = std::filesystem::canonical(root + "/" + path);
+		}
+		std::filesystem::path rootPath = std::filesystem::canonical(root);
+		std::cout << "Full path after canonical: " << fullPath << std::endl;
+		if (fullPath.string().find(rootPath.string()) != 0) {
+			throw ConfigError(EINVAL, "Path traversal attempt detected");
+		}
+		return fullPath.string();
+	}
+
+	void printRequest(const http::Request& request) {
+		std::cout << "Request method: " << request.getMethod() << std::endl;
+		std::cout << "Request URL_scheme: " << request.getUrl().scheme << std::endl;
+		std::cout << "Request URL_user: " << request.getUrl().user << std::endl;
+		std::cout << "Request URL_password: " << request.getUrl().password<< std::endl;
+		std::cout << "Request URL_host: " << request.getUrl().host << std::endl;
+		std::cout << "Request URL_port: " << request.getUrl().port << std::endl;
+		std::cout << "Request URL_path: " << request.getUrl().path << std::endl;
+		std::cout << "Request URL_query: " << request.getUrl().query << std::endl;
+		std::cout << "Request URL_fragment: " << request.getUrl().fragment << std::endl;
+		std::cout << "Request version: " << request.getVersion() << std::endl;
+		std::cout << "Request body size: " << request.getBodySize() << std::endl;
 	}
 } // namespace utils
