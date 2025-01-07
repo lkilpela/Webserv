@@ -85,36 +85,4 @@ namespace http {
 		_body = std::move(body);
 		return *this;
 	}
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-	// Function to get the body of the response
-	std::string Response::getBody() const {
-=======
-	// Function to get the body of the response
-	std::string Response::getBody() const {
-		if (_body) {
-			return _body->toString();
-		}
-		return "";
-	} 
-
-<<<<<<< HEAD
-=======
->>>>>>> 10a2376 (Add methods to set string and file responses in the Response class)
-=======
->>>>>>> df5dd25 (Refactor Response class to separate getBody method implementation and clean up main function)
-	// Function to set the response for string payloads
-	void Response::setStringResponse(Response& res, StatusCode statusCode, const std::string& body) {
-		res.setStatusCode(statusCode);
-		res.setBody(std::make_unique<utils::StringPayload>(0, body));
-		res.build();
-	}
-
-	// Function to set the response for file payloads
-	void Response::setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath) {
-		res.setStatusCode(statusCode);
-		res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
-		res.build();
-	}
 }

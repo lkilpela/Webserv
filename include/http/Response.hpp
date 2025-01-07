@@ -28,16 +28,8 @@ namespace http {
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 
-			std::string getBody() const;
-
-			// Function to set the response for string payloads
-			void setStringResponse(Response& res, StatusCode statusCode, const std::string& body);
-
-			// Function to set the response for file payloads
-			void setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath);
-
 		private:
-			//int _clientSocket;
+			int _clientSocket;
 			StatusCode _statusCode { StatusCode::NONE_0 };
 			std::unordered_map<std::string, std::string> _headerByName;
 			utils::StringPayload _header;
