@@ -4,6 +4,7 @@
 #include "Router.hpp"
 #include "http/Request.hpp"
 #include "http/Response.hpp"
+#include "utils/common.hpp"
 #include "http/Url.hpp"
 #include "Server.hpp"
 #include <exception>
@@ -37,25 +38,17 @@ int main(int argc, char **argv) {
 		Config config = parser.load();
 
 		// Create a router for each server
-		ServerConfig serverConfig = config.servers[0];
+		ServerConfig serverConfig = config.servers[1];
 		Router router(serverConfig);
 		router.get(handleGetRequest);
+		//router.post(handlePostRequest);
+		//router.del(handleDeleteRequest);
 
 		std::string rawRequestHeader = "GET /static/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
 		std::cout << "Raw request header: " << rawRequestHeader << std::endl;
 		http::Request request = http::Request::parseHeader(rawRequestHeader);
 		// Print the request method and URL
-		std::cout << "Request method: " << request.getMethod() << std::endl;
-		std::cout << "Request URL_scheme: " << request.getUrl().scheme << std::endl;
-		std::cout << "Request URL_user: " << request.getUrl().user << std::endl;
-		std::cout << "Request URL_password: " << request.getUrl().password<< std::endl;
-		std::cout << "Request URL_host: " << request.getUrl().host << std::endl;
-		std::cout << "Request URL_port: " << request.getUrl().port << std::endl;
-		std::cout << "Request URL_path: " << request.getUrl().path << std::endl;
-		std::cout << "Request URL_query: " << request.getUrl().query << std::endl;
-		std::cout << "Request URL_fragment: " << request.getUrl().fragment << std::endl;
-		std::cout << "Request version: " << request.getVersion() << std::endl;
-		std::cout << "Request body size: " << request.getBodySize() << std::endl;
+		utils::printRequest(request);
 		simulateRequest(router, request);
 
 		//Server server(config);
@@ -68,3 +61,4 @@ int main(int argc, char **argv) {
 	}
 	return 0;
 }
+
