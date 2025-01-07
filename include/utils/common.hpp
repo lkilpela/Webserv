@@ -22,6 +22,12 @@ namespace utils {
 	int setNonBlocking(int fd);
 	void closeFDs(const std::vector<int> &fds);
 
+	//isInVector
+	template <typename T>
+	bool isInVector(const T &value, const std::vector<T> &vec) {
+		return std::find(vec.begin(), vec.end(), value) != vec.end();
+	}
+
 	template <typename Iterator>
 	Iterator findDelimiter(
 		const Iterator begin,
