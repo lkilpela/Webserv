@@ -4,7 +4,6 @@
 #include <string.h>
 #include <filesystem>
 #include <fstream>
-#include <sstream> // std::ostringstream
 
 namespace utils {
 	class Payload {
@@ -13,7 +12,6 @@ namespace utils {
 			Payload(Payload&&) noexcept = default;
 			virtual ~Payload() = default;
 			virtual void send() = 0;
-			virtual std::string toString() const = 0;
 			bool isSent() const;
 			std::size_t getSizeInBytes() const;
 
@@ -31,12 +29,6 @@ namespace utils {
 			void send() override;
 			void setMessage(const std::string& message);
 
-			std::string toString() const override {
-				std::ostringstream oss;
-				oss << _message;
-				return oss.str();
-        	}
-
 		private:
 			std::string _message;
 	};
@@ -46,17 +38,10 @@ namespace utils {
 			FilePayload(int socket, const std::filesystem::path& filePath);
 			FilePayload(FilePayload&&) noexcept = default;
 			~FilePayload() = default;
-
 			void send() override;
-
-			std::string toString() const override {
-				std::ostringstream oss;
-				oss << _ifstream.rdbuf();
-				return oss.str();
-        	}
 
 		private:
 			std::filesystem::path _filePath;
-			mutable std::ifstream _ifstream; // mutable means it can be modified even in a const method
+			std::ifstream _ifstream;
 	};
 }

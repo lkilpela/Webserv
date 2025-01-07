@@ -8,8 +8,6 @@ namespace utils {
 		: Payload(socket),
 		_filePath(filePath)
 	{
-		std::cout << "FilePath: " << filePath << std::endl;
-		(void) socket;
 		if (!std::filesystem::exists(filePath)) {
 			throw FileNotFoundException(_filePath.filename());
 		}
@@ -18,7 +16,7 @@ namespace utils {
 		_ifstream.open(filePath, std::ios::binary);
 
 		if (!_ifstream.is_open()) {
-			throw std::ios_base::failure("Failed to open " + _filePath.string());
+			throw std::ios_base::failure("Failed to open " + filePath.string());
 		}
 	}
 
