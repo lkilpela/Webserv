@@ -5,6 +5,11 @@
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include "Config.hpp"
+#include "http/Url.hpp"
+#include <unordered_map>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 
 // Forward declaration
 void handleGetRequest(const Location& loc, http::Request& request, http::Response& response);
@@ -39,13 +44,19 @@ class Router {
 			router.del(handleDeleteRequest);
 		} */
 
-/* 	// Function to get the body of the response
+	//toString function
+	std::string toString() const {
+        std::ostringstream ss;
+        ss << file.rdbuf();
+        return ss.str();
+    }
+	// Function to get the body of the response
 	std::string getBody() const {
 		if (_body) {
 			return _body->toString();
 		}
 		return "";
-	} */
+	}
 
 	private:
 		ServerConfig _serverConfig;
