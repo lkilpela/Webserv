@@ -146,24 +146,4 @@ namespace utils {
 		}
 		return size;
 	}
-
-	int setNonBlocking(int fd) {
-		int flags = fcntl(fd, F_GETFL, 0);
-		if (flags == -1) {
-			return -1;
-		}
-		return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-	}
-
-	//isInVector
-	template <typename T>
-	bool isInVector(const T &value, const std::vector<T> &vec) {
-		return std::find(vec.begin(), vec.end(), value) != vec.end();
-	}
-	
-	void closeFDs(const std::vector<int> &fds) {
-		for (const auto &fd : fds) {
-			close(fd);
-		}
-	}
 } // namespace utils
