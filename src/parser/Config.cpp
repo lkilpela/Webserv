@@ -316,7 +316,5 @@ Config ConfigParser::load() {
     Config config;
     parseConfig(filePath, config);
     //printConfig(config);
-    //Server server(config);
-    //server.start();
     return config;
 }

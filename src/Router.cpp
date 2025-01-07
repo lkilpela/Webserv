@@ -126,6 +126,7 @@ void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
 void Router::handle(Request& request, Response& response) {
 	// example: route = /static/
 	std::string requestPath = request.getUrl().path;
+	std::cout << "Handling request for path: " << requestPath << std::endl;
 
 	if (!isValidPath(requestPath)) {
 		setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);

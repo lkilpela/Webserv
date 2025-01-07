@@ -6,6 +6,7 @@
 #include "http/Response.hpp"
 #include "Config.hpp"
 
+// Forward declaration
 void handleGetRequest(const Location& loc, http::Request& request, http::Response& response);
 void handlePostRequest(const Location& loc, http::Request& request, http::Response& response);
 void handleDeleteRequest(const Location& loc, http::Request& request, http::Response& response);
