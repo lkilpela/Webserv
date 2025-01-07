@@ -18,6 +18,33 @@ namespace http {
 
 			void addLocations(const ServerConfig& serverConfig);
 			//void handleGetRequest(Location loc, Request& request, Response& response);
+			void initRoutes(const ServerConfig& serverConfig) {
+				// each server need one router
+				addLocations(serverConfig);
+
+			}
+
+/* 		// Function to get the body of the response
+		std::string getBody() const {
+			if (_body) {
+				return _body->toString();
+			}
+			return "";
+		}
+
+		// Function to set the response for string payloads
+		void setStringResponse(Response& res, StatusCode statusCode, const std::string& body) {
+			res.setStatusCode(statusCode);
+			res.setBody(std::make_unique<utils::StringPayload>(0, body));
+			res.build();
+		}
+
+		// Function to set the response for file payloads
+		void setFileResponse(Response& res, StatusCode statusCode, const std::string& filePath) {
+			res.setStatusCode(statusCode);
+			res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
+			res.build();
+		} */
 
 		private:
 			ServerConfig _serverConfig;

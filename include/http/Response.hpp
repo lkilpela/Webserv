@@ -21,7 +21,7 @@ namespace http {
 			void build();
 
 			int getClientSocket() const;
-			const StatusCode getStatusCode() const;
+			/* const  */StatusCode getStatusCode() const;
 
 			Response& clear();
 			Response& setStatusCode(const StatusCode statusCode);

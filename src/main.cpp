@@ -15,23 +15,23 @@
 //volatile sig_atomic_t sigintReceived = 0;
 
 // Function to handle GET requests
-void handleGetRequest(Location loc, http::Request& req, http::Response& res) {
+/* void handleGetRequest(Location loc, http::Request& req, http::Response& res) {
     (void)req; // Avoid unused parameter warning
     const std::string& filePath = loc.root + "/" + loc.index;
     std::cout << YELLOW "Serving file: " RESET << filePath << std::endl;
     try {
         // Set the response body to the file contents using FilePayload
-        res.setFileResponse(res, http::StatusCode::OK_200, filePath);
+        //res.setFileResponse(res, http::StatusCode::OK_200, filePath);
     } catch (const std::ios_base::failure& e) {        
-        res.setStringResponse(res, http::StatusCode::NOT_FOUND_404, "File not found");
+        //res.setStringResponse(res, http::StatusCode::NOT_FOUND_404, "File not found");
     } catch (const std::exception& e) {
         std::cerr << "Unexpected error: " << e.what() << std::endl;
-        res.setStringResponse(res, http::StatusCode::INTERNAL_SERVER_ERROR_500, "Internal Server Error");
+        //res.setStringResponse(res, http::StatusCode::INTERNAL_SERVER_ERROR_500, "Internal Server Error");
     }
-}
+} */
 
 // Function to simulate a request
-void simulateRequest(http::Router& router, const http::Url& url) {
+/* void simulateRequest(http::Router& router, const http::Url& url) {
     http::Request request;
     request.setMethod("GET");
     request.setUrl(url);
@@ -42,9 +42,9 @@ void simulateRequest(http::Router& router, const http::Url& url) {
 
     // Print the response status and body
     std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
-    std::cout << "Response body: \n" << response.getBody() << std::endl;
+    //std::cout << "Response body: \n" << response.getBody() << std::endl;
 }
-
+ */
 int main(int argc, char **argv) {
 	if (argc != 2) {
 		std::cerr << "Error: Invalid number of arguments!" << std::endl;
@@ -55,16 +55,16 @@ int main(int argc, char **argv) {
 		//handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
-		ServerConfig serverConfig = config.servers[1];
 
+		ServerConfig serverConfig = config.servers[1];
 		//Test the router 
 		http::Router router;
-        router.addLocations(serverConfig);
+		router.addLocations(serverConfig);
 
-        // Register the GET handler
-        router.get(handleGetRequest);
-        http::Url url = http::Url::parse("http://localhost:8080/uploads");
-		simulateRequest(router, url);
+		// Register the GET handler
+		//router.get(handleGetRequest);
+		//http::Url url = http::Url::parse("http://localhost:8080/uploads");
+		//simulateRequest(router, url);
 
 		//Server server(config);
 		//server.listen();
