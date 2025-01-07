@@ -35,6 +35,7 @@ SRCS			=	Config.cpp \
 					Router.cpp \
 					Request.cpp \
 					Response.cpp \
+					Url.cpp \
 					Payload.cpp \
 					StringPayload.cpp \
 					FilePayload.cpp

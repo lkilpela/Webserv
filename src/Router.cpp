@@ -77,21 +77,7 @@ namespace http {
 		std::string route = request.getUrl().path;
 
 		if (!isValidPath(route)) {
-			response.setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
-			return;
-		}
-	/**
-	 * Handle client request based on the registed `Handler` (callback).
-	 * This method call will modify response object in a way defined in callback
-	 * 
-	 * @param request The request object must be COMPLETE or BAD_REQUEST
-	 * @param response
-	 */
-	void Router::handle(Request& request, Response& response) {
-		std::string route = request.getUrl().path;
-
-		if (!isValidPath(route)) {
-			response.setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
+			//response.setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
 			return;
 		}
 
@@ -101,7 +87,7 @@ namespace http {
 		// No matching location found, return HTTP status 404 with the error page
 		if (!location) {
 			std::cerr << "[ERROR] Location not found: " << route << std::endl;
-			response.setFileResponse(response, StatusCode::NOT_FOUND_404, _serverConfig.errorPages[404]);
+			//response.setFileResponse(response, StatusCode::NOT_FOUND_404, _serverConfig.errorPages[404]);
 			return;
 		}
 
@@ -116,12 +102,12 @@ namespace http {
 				handler(*location, request, response);
 			} catch(const std::exception& e) {
 				response.clear();
-				response.setFileResponse(response, StatusCode::INTERNAL_SERVER_ERROR_500, _serverConfig.errorPages[500]);
+				//response.setFileResponse(response, StatusCode::INTERNAL_SERVER_ERROR_500, _serverConfig.errorPages[500]);
 			}
 			return;
 		} else {
 			// No handler found for the requested method, return http status 405
-			response.setFileResponse(response, StatusCode::METHOD_NOT_ALLOWED_405, _serverConfig.errorPages[405]);
+			//response.setFileResponse(response, StatusCode::METHOD_NOT_ALLOWED_405, _serverConfig.errorPages[405]);
 			return;
 		}
 	}
