@@ -11,6 +11,7 @@
 #include <functional>
 #include <poll.h>
 #include "http/Connection.hpp"
+#include "Router.hpp"
 
 class Server {
 	public:
@@ -20,6 +21,8 @@ class Server {
 		void listen();
 
 	private:
+		const Config &_config;
+		Router _router;
 		std::vector<int> _serverFds;
 		std::vector<pollfd> _pollfds;
 		std::unordered_map<int, http::Connection> _connectionByFd;

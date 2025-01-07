@@ -4,7 +4,7 @@
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
 
-Server::Server(const Config& config) {
+Server::Server(const Config& config) : _config(config), _router(config.servers[0]) {
     for (int port : config.ports) {
 		int serverFd = utils::createPassiveSocket(port, 128, true);
         _serverFds.push_back(serverFd);
@@ -92,18 +92,16 @@ void deleteEnv(char **env){
 	}
 	delete[] env;
 }
-// send reponse of internal error if execve fails?
-// if (req.getUrl().path ends with "abc.py") {
-// this is CGI request then do something with it
-void Server::_addConnection(int fd) {
-	//if (CGI){
+
+cgiHandler(http::Request &req, http::Response &res) {
+
 		char* interpreter = "/usr/bin/python3";
 		char* script = "cgi_bin/hello.py";
 		char*scriptArray[2] = {script, nullptr};
 		if (access(interpreter, X_OK) == -1 || access(script, X_OK) == -1){}
 			//return 403 forbidding
 		char **env;
-		auto CgiHandle = [&](http::Request& req, http::Response& res) -> void {
+		auto cgiHandler = [&](http::Request& req, http::Response& res) -> void {
 			int pipefd[2];
 			if(pipe(pipefd) == -1)
 				perror("Pipe failed");
@@ -120,13 +118,16 @@ void Server::_addConnection(int fd) {
 				execve(interpreter, scriptArray, env);
 			} else{
 				deleteEnv(env);
+				//read pipe and give to response
 				close(pipefd[1]);
 			}
 			//waitpid
 		};
-		http::Connection connection(fd, 5000, std::function<void(http::Request&, http::Response&)>(CgiHandle));
-	//}
-
+}
+// send reponse of internal error if execve fails?
+// if (req.getUrl().path ends with "abc.py") {
+// this is CGI request then do something with it
+void Server::_addConnection(int fd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 	int clientFd = ::accept(fd, (struct sockaddr*)&clientAddr, &addrLen);
@@ -136,9 +137,31 @@ void Server::_addConnection(int fd) {
 		return;
 	}
 
-	pollfd clientPollData { fd, POLLIN, 0 };
+	struct pollfd clientPollData { fd, POLLIN, 0 };
 	_pollfds.push_back(clientPollData);
-	_connectionByFd.emplace(connection);
+	_connectionByFd.emplace(
+		fd, 
+		5000, 
+		[&](http::Request &req, http::Response &res) {
+			if (req.isCgi()) {
+				// fork()
+				// if is in child we execute .py
+				// e
+				int pipefd[2];
+				pipe(pipefd);
+				_pollfds.
+				fork();
+
+				// if(pipe(pipefd) == -1)
+				// 	perror("Pipe failed");
+				// if (utils::setNonBlocking(pipefd[0]) == false)
+				// 	perror("Pipe nonblocking failed");
+				// pollfd cgiData { pipefd[0], POLLIN, 0 };
+				// _pollfds.push_back(cgiData);
+			}
+			_router.handle(req, res);
+		}
+	);
 }
 
 void Server::_cleanup() {
