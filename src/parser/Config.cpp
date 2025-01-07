@@ -91,7 +91,9 @@ std::filesystem::path ConfigParser::getConfigPath(const string &value) const {
 	if (filePath.empty() || value.empty()) {
 		throw ConfigError(EINVAL, "Invalid path");
 	}
-	return std::filesystem::canonical(filePath).parent_path()/value;
+	// Sanitize the path by removing any path traversal attempts
+	std::filesystem::path fullPath = utils::sanitizePath(filePath.parent_path(), value);
+	return fullPath;
 
 }
 
@@ -105,7 +107,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			currentLocation.root = fullPath;
 		}},
 		{"index", [&](const string &value) {
-			fullPath = currentLocation.root + "/" + value;
+			fullPath = currentLocation.root/value;
 			if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
 				throw ConfigError(EINVAL, "Invalid index");
 			}
@@ -128,7 +130,6 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			while (iss >> method) {
 				methods.push_back(method);
 			}
-			utils::validateMethods(methods);
 			utils::validateMethods(methods);
 			currentLocation.methods = methods;
 		}},
