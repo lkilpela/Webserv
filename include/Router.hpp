@@ -7,6 +7,11 @@
 #include "Config.hpp"
 
 namespace http {
+	// Forward declaration
+	void handleGetRequest(const Location& loc, Request& request, Response& response);
+	void handlePostRequest(const Location& loc, Request& request, Response& response);
+	void handleDeleteRequest(const Location& loc, Request& request, Response& response);
+
 	class Router {
 		public:
 			using Handler = std::function<void(const Location&, Request&, Response&)>;
@@ -17,11 +22,14 @@ namespace http {
 			void handle(Request& req, Response& res);
 
 			void addLocations(const ServerConfig& serverConfig);
-			//void handleGetRequest(Location loc, Request& request, Response& response);
-			void initRoutes(const ServerConfig& serverConfig) {
-				// each server need one router
-				addLocations(serverConfig);
 
+
+			void initRouter(const ServerConfig& serverConfig, Router& router) {
+				// each server need one router
+				router.addLocations(serverConfig);
+				router.get(handleGetRequest);
+				router.post(handlePostRequest);
+				router.del(handleDeleteRequest);
 			}
 
 /* 		// Function to get the body of the response

@@ -66,6 +66,39 @@ namespace http {
 		return true;
 	}
 
+
+	// Function to handle GET requests
+	void handleGetRequest(const Location& loc, http::Request& req, http::Response& res) {
+		// Create a response body with the file contents
+
+/* 		(void)req; // Avoid unused parameter warning
+		const std::string& filePath = loc.root + "/" + loc.index;
+		std::cout << YELLOW "Serving file: " RESET << filePath << std::endl;
+		try {
+			// Set the response body to the file contents using FilePayload
+			http::Router::setFileResponse(res, http::StatusCode::OK_200, filePath);
+		} catch (const std::ios_base::failure& e) {        
+			res.setStringResponse(res, http::StatusCode::NOT_FOUND_404, "File not found");
+		} catch (const std::exception& e) {
+			std::cerr << "Unexpected error: " << e.what() << std::endl;
+			res.setStringResponse(res, http::StatusCode::INTERNAL_SERVER_ERROR_500, "Internal Server Error");
+		} */
+	}
+
+	// Function to handle POST requests
+	void handlePostRequest(Location loc, http::Request& req, http::Response& res) {
+		(void)loc; // Avoid unused parameter warning
+		(void)req; // Avoid unused parameter warning
+		//res.setStringResponse(res, http::StatusCode::OK_200, "POST request received");
+	}
+
+	// Function to handle DELETE requests
+	void handleDeleteRequest(Location loc, http::Request& req, http::Response& res) {
+		(void)loc; // Avoid unused parameter warning
+		(void)req; // Avoid unused parameter warning
+		//res.setStringResponse(res, http::StatusCode::OK_200, "DELETE request received");
+	}
+
 	/**
 	 * Handle client request based on the registed `Handler` (callback).
 	 * This method call will modify response object in a way defined in callback

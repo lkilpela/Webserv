@@ -16,13 +16,13 @@ INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/utils/common.hpp \
 					$(INCLUDES)/Error.hpp \
-					$(INCLUDES)/Router.hpp \
 					$(INCLUDES)/http/utils.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \
 					$(INCLUDES)/http/Url.hpp \
 					$(INCLUDES)/utils/Payload.hpp \
-
+					$(INCLUDES)/Router.hpp
+#$(INCLUDES)/Server.hpp
 
  # Add more headers here
 
@@ -39,7 +39,7 @@ SRCS			=	Config.cpp \
 					Payload.cpp \
 					StringPayload.cpp \
 					FilePayload.cpp
-
+#Server.cpp
 # Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
