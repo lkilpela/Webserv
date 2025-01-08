@@ -38,13 +38,13 @@ int main(int argc, char **argv) {
 		Config config = parser.load();
 
 		// Create a router for each server
-		ServerConfig serverConfig = config.servers[1];
+		ServerConfig serverConfig = config.servers[2];
 		Router router(serverConfig);
 		router.get(handleGetRequest);
 		//router.post(handlePostRequest);
 		//router.del(handleDeleteRequest);
 
-		std::string rawRequestHeader = "GET /static/ HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
+		std::string rawRequestHeader = "GET /static/../about.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
 		std::cout << "Raw request header: " << rawRequestHeader << std::endl;
 		http::Request request = http::Request::parseHeader(rawRequestHeader);
 		// Print the request method and URL

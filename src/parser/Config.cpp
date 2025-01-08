@@ -262,7 +262,7 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 
 // Ultility function to print the server configuration
 void printServerConfig(const ServerConfig& server) {
-	cout << "Server Config: " << endl;
+	cout << YELLOW "Server Config: " RESET << server.serverName << endl;
 	cout << "Host: " << server.host << endl;
 	cout << "Port: " << server.port << endl;
 	cout << "Server Name: " << server.serverName << endl;

@@ -57,8 +57,8 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 }
 
 inline bool isValidPath(const string& path) {
-	// Check if the path starts and ends with a single slash
-	if (path.empty() || path.front() != '/' || path.back() != '/') {
+	// Check if the path is empty or does not start with a slash
+	if (path.empty() || path.front() != '/') {
 		return false;
 	}
 
@@ -112,7 +112,8 @@ void handleGetRequest(const Location& loc, Request& req, Response& res) {
 	try {
 		// Compute the full file path by appending the request subpath
 		std::filesystem::path filePath = loc.root / req.getUrl().path.substr(loc.path.size());
-		std::cout << YELLOW "Serving file: " RESET << filePath << std::endl;
+		std::cout << YELLOW "Location Root: " RESET << loc.root << std::endl;
+		std::cout << YELLOW "Request URL Path: " RESET << req.getUrl().path << std::endl;
 
 		if (std::filesystem::is_directory(filePath)) {
 			if (loc.isAutoIndex) {
@@ -162,9 +163,10 @@ void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
 void Router::handle(Request& request, Response& response) {
 	
 	std::string requestPath = request.getUrl().path;
-	std::cout << "Handling request for path: " << requestPath << std::endl;
+	std::cout << "\n[HANDLE()] Handling request for path: " << requestPath << std::endl;
 
 	if (!isValidPath(requestPath)) {
+		std::cerr << "[ERROR] Invalid path: " << requestPath << std::endl;
 		setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
 		return;
 	}
@@ -172,7 +174,7 @@ void Router::handle(Request& request, Response& response) {
 	// Find the best matching LocationConfig for the requested route
 	// example: location = /static/
 	const Location* location = findBestMatchingLocation(requestPath);
-
+	std::cout << "Location: " << location->path << std::endl;
 	// No matching location found, return HTTP status 404 with the error page
 	if (!location) {
 		std::cerr << "[ERROR] Location not found: " << requestPath << std::endl;
@@ -203,4 +205,3 @@ void Router::handle(Request& request, Response& response) {
 		return;
 	}
 }
-
