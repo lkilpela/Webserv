@@ -21,9 +21,6 @@ namespace utils {
 			bool isSent() const;
 			std::size_t getSizeInBytes() const;
 
-			// For testing
-			virtual std::string toString() const = 0;
-
 		protected:
 			int _socket;
 			std::size_t _totalBytes { 0 };
@@ -41,11 +38,6 @@ namespace utils {
 
 			void setMessage(const std::string &message);
 
-			// For testing
-			std::string toString() const override {
-				return _message;
-			}
-
 		private:
 			std::string _message;
 	};
@@ -58,13 +50,6 @@ namespace utils {
 
 			void send() override;
 			std::string toString() const override;
-
-			// For testing
-			std::string toString() const override {
-				std::ostringstream ss;
-				ss << _ifstream.rdbuf();
-				return ss.str();
-			}
 
 		private:
 			std::filesystem::path _filePath;
