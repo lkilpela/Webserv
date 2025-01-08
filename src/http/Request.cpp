@@ -18,6 +18,7 @@
 
 // If recv() returns -1 and the socket is non-blocking, assume it’s a temporary error and retry when POLLIN is triggered again.
 
+
 namespace http {
 	Request::Request(Status status) : _status(status) {}
 

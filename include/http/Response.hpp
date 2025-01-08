@@ -22,7 +22,8 @@ namespace http {
 			void build();
 
 			int getClientSocket() const;
-			const StatusCode getStatusCode() const;
+			/* const  */StatusCode getStatusCode() const;
+			//const StatusCode getStatusCode() const;
 			const utils::StringPayload& getHeader() const;
 			const std::unique_ptr<utils::Payload>& getBody() const;
 
@@ -32,6 +33,14 @@ namespace http {
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 
 			void setFile(StatusCode statusCode, const std::filesystem::path &filePath);
+
+			// For testing
+			std::string getBodyAsString() const {
+				if (_body) {
+					return _body->toString();
+				}
+				return ""; // Return empty string if no body is set
+			}
 
 		private:
 			int _clientSocket;

@@ -4,6 +4,9 @@
 #include <string.h>
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 namespace utils {
 	class Payload {
