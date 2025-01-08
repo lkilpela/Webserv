@@ -2,15 +2,7 @@
 #include "Config.hpp"
 #include "Error.hpp"
 //#include "Server.hpp"
-#include <functional> // std::function
-#include <fstream> // std::ifstream, std::getline
-#include <iostream> // std::cout, std::endl
 #include <sstream> // std::istringstream
-#include <string> // std::string
-#include <stdexcept> // std::invalid_argument, std::out_of_range
-#include <unordered_map> // std::unordered_map
-#include <algorithm> // std::find
-#include <filesystem> // std::filesystem::canonical, std::filesystem::path
 
 // Define namespaces
 using std::string;
