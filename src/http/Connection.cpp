@@ -12,12 +12,11 @@
 namespace http {
 	Connection::Connection(
 		int clientSocket,
-		const ServerConfig &serverConfig,
-		std::function<void (Request &, Response &)> processFn
+		const ServerConfig& serverConfig,
+		std::function<void (Request&, Response&)> processFn
 	)
 		: _clientSocket(clientSocket)
 		, _serverConfig(serverConfig)
-		, _msTimeout(msTimeout)
 		, _processFn(processFn)
 		, _lastReceived(std::chrono::steady_clock::now()) {
 	}
@@ -45,7 +44,7 @@ namespace http {
 	}
 
 	void Connection::sendResponse() {
-		if (_processedQueue.empty()) {
+		if (isClosed() || _processedQueue.empty()) {
 			return;
 		}
 
@@ -79,11 +78,11 @@ namespace http {
 		_clientSocket = -1;
 
 		if (_cleanupFn) {
-			_cleanupFn(*this);
+			_cleanupFn();
 		}
 	}
 
-	void Connection::onClose(std::function<void (Connection &)> cleanupFn) {
+	void Connection::onClose(std::function<void ()> cleanupFn) {
 		_cleanupFn = cleanupFn;
 	}
 
