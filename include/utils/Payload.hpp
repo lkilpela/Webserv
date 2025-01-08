@@ -9,9 +9,12 @@ namespace utils {
 	class Payload {
 		public:
 			explicit Payload(int socket);
-			Payload(Payload&&) noexcept = default;
+			Payload(Payload &&) noexcept = default;
 			virtual ~Payload() = default;
+
 			virtual void send() = 0;
+			virtual std::string toString() const = 0;
+
 			bool isSent() const;
 			std::size_t getSizeInBytes() const;
 
@@ -23,11 +26,14 @@ namespace utils {
 
 	class StringPayload : public Payload {
 		public:
-			StringPayload(int socket, const std::string& message);
-			StringPayload(StringPayload&&) noexcept = default;
+			StringPayload(int socket, const std::string &message);
+			StringPayload(StringPayload &&) noexcept = default;
 			~StringPayload() = default;
+
 			void send() override;
-			void setMessage(const std::string& message);
+			std::string toString() const override;
+
+			void setMessage(const std::string &message);
 
 		private:
 			std::string _message;
@@ -35,13 +41,15 @@ namespace utils {
 
 	class FilePayload : public Payload {
 		public:
-			FilePayload(int socket, const std::filesystem::path& filePath);
-			FilePayload(FilePayload&&) noexcept = default;
+			FilePayload(int socket, const std::filesystem::path &filePath);
+			FilePayload(FilePayload &&) noexcept = default;
 			~FilePayload() = default;
+
 			void send() override;
+			std::string toString() const override;
 
 		private:
 			std::filesystem::path _filePath;
-			std::ifstream _ifstream;
+			mutable std::ifstream _ifstream;
 	};
 }

@@ -25,6 +25,10 @@ namespace utils {
 		}
 	}
 
+	std::string StringPayload::toString() const {
+		return _message;
+	}
+
 	void StringPayload::setMessage(const std::string& message) {
 		_message = message;
 	}
