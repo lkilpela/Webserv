@@ -276,8 +276,8 @@ namespace utils {
 	}
 
 	void printConfig(const Config& config) {
-	for (const auto& server : config.servers) {
-		printServerConfig(server);
+		for (const auto& server : config.servers) {
+			printServerConfig(server);
+		}
 	}
-}
 } // namespace utils
