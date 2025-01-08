@@ -1,9 +1,10 @@
+#include "Config.hpp"
 #include "utils/common.hpp"
 #include "Error.hpp"
 #include <regex> // std::regex, std::regex_match
 #include <filesystem> // std::filesystem
 #include <stdexcept> // std::invalid_argument, std::out_of_range
-#include <iostream>
+#include <iostream> // std::cout, std::endl
 #include <algorithm> // std::find
 #include <cctype> // std::tolower
 #include <fcntl.h> // fcntl
@@ -13,39 +14,35 @@
 
 using std::string;
 using std::vector;
+using std::cout;
+using std::endl;
+namespace fs = std::filesystem;
 
 namespace utils {
 	bool parseBool(const string &value) {
 		if (value == "on") {
 			return true;
 		}
-
 		if (value == "off") {
 			return false;
 		}
-
 		throw ConfigError(EINVAL, "Invalid boolean value");
 	}
 
 	int parsePort(const string &value) {
 		std::regex port_regex("^[0-9]+$");
-
 		if (!std::regex_match(value, port_regex)) {
 			throw ConfigError(EINVAL, "Invalid port number");
 		}
-
 		int port = std::stoi(value);
-
 		if (port <= 0 || port > 65535) {
 			throw ConfigError(ERANGE, "Port number out of range");
 		}
-
 		return port;
 	}
 
 	void validateMethods(const vector<string> &methods) {
 		vector<string> validMethods = {"GET", "POST", "DELETE"};
-
 		for (const auto &method : methods) {
 			if (std::find(validMethods.begin(), validMethods.end(), method) == validMethods.end()) {
 				throw ConfigError(EINVAL, "Invalid method");
@@ -60,7 +57,7 @@ namespace utils {
 	}
 
 	bool isValidFilePath(const string &path) {
-		return std::filesystem::exists(path);
+		return fs::exists(path);
 	}
 
 	bool isValidURL(const string &url) {
@@ -77,11 +74,9 @@ namespace utils {
 
 	void validateErrorPage(const string &code, const string &path) {
 		std::regex code_regex("^[1-5][0-9][0-9]$");
-
 		if (!std::regex_match(code, code_regex)) {
 			throw ConfigError(EINVAL, "Invalid error code");
 		}
-
 		if (!isValidFilePath(path)) {
 			throw ConfigError(EINVAL, "Invalid error page path");
 		}
@@ -93,7 +88,7 @@ namespace utils {
 		return (first == string::npos) ? "" : str.substr(first, (last - first + 1));
 	}
 
-	std::string trimSpace(const std::string& str) {
+	string trimSpace(const string& str) {
 		// Find the first non-space character
 		auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char ch) {
 			return std::isspace(ch);
@@ -105,28 +100,25 @@ namespace utils {
 		}).base();
 
 		// Create a substring without leading and trailing spaces
-		return (start < end) ? std::string(start, end) : std::string();
+		return (start < end) ? string(start, end) : string();
 	}
 
-	string removeComments(const std::string& str) {
+	string removeComments(const string& str) {
 		size_t commentPos = str.find('#');
-
 		if (commentPos != string::npos) {
 			return str.substr(0, commentPos);
 		}
-
 		return str;
 	}
 
-	std::string lowerCase(std::string str) {
+	string lowerCase(string str) {
 		std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
 			return std::tolower(c);
 		});
-
 		return str;
 	}
 
-	std::size_t convertSizeToBytes(const std::string& sizeStr) {
+	std::size_t convertSizeToBytes(const string& sizeStr) {
 		std::size_t size = std::stoul(sizeStr);
 
 		// handle lowercase and uppercase K, M, G
@@ -156,33 +148,136 @@ namespace utils {
 	// Test invalid case: root = /Users/username/Webserv/config, path = /static/../../index.html -> fullPath = /Users/username/index.html
 	// Test invalid case: root = /Users/username/Webserv/config, path = /static/../../../index.html -> fullPath = /Users/index.html
 	// Expected: ConfigError exception
-	std::string sanitizePath(const std::string& root, const std::string& path) {
-		std::cout << "Sanitizing path. Root: " << root << ", URL Path: " << path << std::endl;
-		std::filesystem::path fullPath;
+	string sanitizePath(const string& root, const string& path) {
+		fs::path fullPath;
 		if (path.front() == '/') {
-			fullPath = std::filesystem::canonical(root + path);
+			fullPath = fs::canonical(root + path);
 		} else {
-			fullPath = std::filesystem::canonical(root + "/" + path);
+			fullPath = fs::canonical(root + "/" + path);
 		}
-		std::filesystem::path rootPath = std::filesystem::canonical(root);
-		std::cout << "Full path after canonical: " << fullPath << std::endl;
+		fs::path rootPath = fs::canonical(root);
 		if (fullPath.string().find(rootPath.string()) != 0) {
 			throw ConfigError(EINVAL, "Path traversal attempt detected");
 		}
 		return fullPath.string();
 	}
 
-	void printRequest(const http::Request& request) {
-		std::cout << "Request method: " << request.getMethod() << std::endl;
-		std::cout << "Request URL_scheme: " << request.getUrl().scheme << std::endl;
-		std::cout << "Request URL_user: " << request.getUrl().user << std::endl;
-		std::cout << "Request URL_password: " << request.getUrl().password<< std::endl;
-		std::cout << "Request URL_host: " << request.getUrl().host << std::endl;
-		std::cout << "Request URL_port: " << request.getUrl().port << std::endl;
-		std::cout << "Request URL_path: " << request.getUrl().path << std::endl;
-		std::cout << "Request URL_query: " << request.getUrl().query << std::endl;
-		std::cout << "Request URL_fragment: " << request.getUrl().fragment << std::endl;
-		std::cout << "Request version: " << request.getVersion() << std::endl;
-		std::cout << "Request body size: " << request.getBodySize() << std::endl;
+	std::pair<string, string> splitKeyValue(const string& line) {
+		std::istringstream iss(line);
+		string key, value;
+		if (iss >> key) {
+			std::getline(iss, value);
+			value = trim(removeComments(value));
+
+			// Special handling for `location` directives
+			if (key == "location") {
+				// Remove trailing '{' if present
+				size_t bracePos = value.find('{');
+				if (bracePos != string::npos) {
+					value = value.substr(0, bracePos);
+				}
+				value = trim(value); // Trim again after removing `{`
+			}
+		}
+		return {key, value};
 	}
+
+	void parseKeyValue(const string &line, const ParserMap &parsers) {
+		auto [key, value] = utils::splitKeyValue(line);
+		//cout << YELLOW "Key: " RESET << key << YELLOW " Value: " RESET << value << endl;
+
+		if (key.empty() || value.empty()) {
+			throw ConfigError(EINVAL, "Invalid directive in configuration block");
+		}
+
+		auto it = parsers.find(key);
+		if (it != parsers.end()) {
+			it->second(value);
+		} else {
+			throw ConfigError(EINVAL, "Invalid directive in configuration block");
+		}
+	}
+	void parseBlock(std::ifstream &file, const string &blockType, const LineHandler &lineHandler) {
+		string line;
+		while (std::getline(file, line)) {
+			line = trim(removeComments(line));
+			if (line.empty()) continue;
+
+			if (line == "}") {
+				return; // End of block
+			}
+
+			lineHandler(line);
+		}
+		throw ConfigError(EINVAL, "Unclosed " + blockType + " block.");
+	}
+
+	// FOR TESTING
+	
+	void printRequest(const http::Request& request) {
+		cout 
+			<< "Request method: " << request.getMethod() << endl
+			<< "Request URL_scheme: " << request.getUrl().scheme << endl
+			<< "Request URL_user: " << request.getUrl().user << endl
+			<< "Request URL_password: " << request.getUrl().password << endl
+			<< "Request URL_host: " << request.getUrl().host << endl
+			<< "Request URL_port: " << request.getUrl().port << endl
+			<< "Request URL_path: " << request.getUrl().path << endl
+			<< "Request URL_query: " << request.getUrl().query << endl
+			<< "Request URL_fragment: " << request.getUrl().fragment << endl
+			<< "Request version: " << request.getVersion() << endl
+			<< "Request body size: " << request.getBodySize() << endl;
+	}
+
+	void printServerConfig(const ServerConfig& server) {
+		cout 
+			<< YELLOW "Server Config: " RESET << server.serverName << endl
+			<< "Host: " << server.host << endl
+			<< "Port: " << server.port << endl
+			<< "Server Name: " << server.serverName << endl
+			<< "Error Pages: " << endl;
+		for (const auto& [code, path] : server.errorPages) {
+			cout << code << ": " << path << " " << endl;
+		}
+		cout << endl;
+		cout << "Client Max Body Size: " << server.clientMaxBodySize << endl;
+
+		for (const auto& location : server.locations) {
+			cout 
+				<< "Location Path: " << location.path << endl
+				<< "Root: " << location.root << endl
+				<< "Index: " << location.index << endl
+				<< "Autoindex: " << (location.isAutoIndex ? "on" : "off") << endl
+				<< "Methods: ";
+			for (const auto& method : location.methods) {
+				cout << method << " ";
+			}
+			cout << endl;
+			if (!location.cgiExtension.empty()) {
+				cout << "CGI Extension: ";
+				for (const auto& ext : location.cgiExtension) {
+					cout << ext << " ";
+				}
+				cout << endl;
+			}
+			if (!location.uploadDir.empty()) {
+				cout << "Upload Dir: " << location.uploadDir << endl;
+			}
+			if (!location.returnUrl.empty()) {
+				cout << "Return URL: ";
+				for (const auto& part : location.returnUrl) {
+					cout << part << " ";
+				}
+				cout << endl;
+			}
+			cout << endl;
+		}
+		cout << "----------------------------------------" << endl;
+	}
+
+	void printConfig(const Config& config) {
+	for (const auto& server : config.servers) {
+		printServerConfig(server);
+	}
+}
 } // namespace utils
