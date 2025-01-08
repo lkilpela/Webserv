@@ -4,6 +4,9 @@
 #include <string.h>
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 namespace utils {
 	class Payload {
@@ -50,7 +53,9 @@ namespace utils {
 
 			// For testing
 			std::string toString() const override {
-				return _filePath.string();
+				std::ostringstream ss;
+				ss << _ifstream.rdbuf();
+				return ss.str();
 			}
 
 		private:
