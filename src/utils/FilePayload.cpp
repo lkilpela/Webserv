@@ -1,10 +1,11 @@
 #include <array>
+#include <iterator>
 #include <sys/socket.h>
 #include "utils/Payload.hpp"
 #include "Error.hpp"
 
 namespace utils {
-	FilePayload::FilePayload(int socket, const std::filesystem::path& filePath)
+	FilePayload::FilePayload(int socket, const std::filesystem::path &filePath)
 		: Payload(socket),
 		_filePath(filePath)
 	{
@@ -45,5 +46,13 @@ namespace utils {
 				_ifstream.close();
 			}
 		}
+	}
+
+	std::string FilePayload::toString() const {
+		_ifstream.seekg(0, std::ios::beg);
+		return std::string(
+			std::istreambuf_iterator<char>(_ifstream),
+			std::istreambuf_iterator<char>()
+		);
 	}
 }

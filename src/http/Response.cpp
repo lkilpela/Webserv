@@ -63,6 +63,14 @@ namespace http {
 		return _statusCode;
 	}
 
+	const utils::StringPayload& Response::getHeader() const {
+		return _header;
+	}
+
+	const std::unique_ptr<utils::Payload>& Response::getBody() const {
+		return _body;
+	}
+
 	Response& Response::clear() {
 		_statusCode = StatusCode::NONE_0;
 		_headerByName.clear();
@@ -84,5 +92,17 @@ namespace http {
 	Response& Response::setBody(std::unique_ptr<utils::Payload> body) {
 		_body = std::move(body);
 		return *this;
+	}
+
+	void Response::setFile(StatusCode statusCode, const std::filesystem::path &filePath) {
+		std::string ext = filePath.extension().string().erase(0, 1); // Get file extension without '.'
+
+		setStatusCode(statusCode);
+		setBody(std::make_unique<utils::FilePayload>(_clientSocket, filePath));
+		setHeader(Header::CONTENT_TYPE, getMimeType(ext));
+		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->getSizeInBytes()));
+		// setHeader(Header::CACHE_CONTROL, "public, max-age=86400");	// For production mode
+		setHeader(Header::CACHE_CONTROL, "no-store"); 				// For test mode
+		build();
 	}
 }

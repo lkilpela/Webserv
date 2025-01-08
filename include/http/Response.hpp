@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <filesystem>
 #include "constants.hpp"
 #include "utils/Payload.hpp"
 
@@ -22,11 +23,16 @@ namespace http {
 
 			int getClientSocket() const;
 			/* const  */StatusCode getStatusCode() const;
+			const StatusCode getStatusCode() const;
+			const utils::StringPayload& getHeader() const;
+			const std::unique_ptr<utils::Payload>& getBody() const;
 
 			Response& clear();
 			Response& setStatusCode(const StatusCode statusCode);
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(std::unique_ptr<utils::Payload> body);
+
+			void setFile(StatusCode statusCode, const std::filesystem::path &filePath);
 
 			// For testing
 			std::string getBodyAsString() const {

@@ -1,6 +1,5 @@
 #include "Config.hpp"
 #include "utils/common.hpp"
-#include "utils/common.hpp"
 #include "Error.hpp"
 //#include "Server.hpp"
 #include <functional> // std::function
@@ -45,40 +44,40 @@ void parseKeyValue(const string &line, const ParserMap &parsers) {
 
 // Function to parse global configuration lines
 void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
-	static const ParserMap globalParsers = {
-		{"host", [&](const string &value) {
-			if (value.empty() || !config.host.empty() || !utils::isValidIP(value)) {
-				throw ConfigError(EINVAL, "Invalid host");
-			}
-			config.host = value;
-		}},
-		{"port", [&](const string &value) {
-			if (config.port != 0) {
-				throw ConfigError(EINVAL, "Invalid port");
-			}
-			config.port = utils::parsePort(value);
-		}},
-		{"server_name", [&](const string &value) {
-			if (!config.serverName.empty()) {
-				throw ConfigError(EINVAL, "Invalid server_name");
-			}
-			config.serverName = value;
-		}},
-		{"error_page", [&](const string &value) {
-			istringstream iss(value);
-			std::string code, path;
-			iss >> code >> path;
+    static const ParserMap globalParsers = {
+        {"host", [&](const string &value) {
+            if (!config.host.empty() || !utils::isValidIP(value)) {
+                throw ConfigError(EINVAL, "Invalid host");
+            }
+            config.host = value;
+        }},
+        {"port", [&](const string &value) {
+            if (config.port != 0) {
+                throw ConfigError(EINVAL, "Invalid port");
+            }
+            config.port = utils::parsePort(value);
+        }},
+        {"server_name", [&](const string &value) {
+            if (!config.serverName.empty()) {
+                throw ConfigError(EINVAL, "Invalid server_name");
+            }
+            config.serverName = value;
+        }},
+        {"error_page", [&](const string &value) {
+            istringstream iss(value);
+            std::string code, path;
+            iss >> code >> path;
 			fullPath = getConfigPath(path);
-			utils::validateErrorPage(code, fullPath);
-			config.errorPages[std::stoi(code)] = fullPath; // Store in map
-		}},
-		{"client_max_body_size", [&](const string &value) {
+            utils::validateErrorPage(code, fullPath);
+            config.errorPages[std::stoi(code)] = fullPath; // Store in map
+        }},
+        {"client_max_body_size", [&](const string &value) {
 			if (!config.clientMaxBodySizeStr.empty() || !utils::isValidSize(value)) {
-				throw ConfigError(EINVAL, "Invalid client_max_body_size");
-			}
+                throw ConfigError(EINVAL, "Invalid client_max_body_size");
+            }
 			config.clientMaxBodySize = utils::convertSizeToBytes(value);
-		}}
-	};
+        }}
+    };
 
 	parseKeyValue(line, globalParsers);
 }
@@ -90,7 +89,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &config) {
 std::filesystem::path ConfigParser::getConfigPath(const string &value) const {
 	if (filePath.empty() || value.empty()) {
 		throw ConfigError(EINVAL, "Invalid path");
-	}
+        }
 	// Sanitize the path by removing any path traversal attempts
 	std::filesystem::path fullPath = utils::sanitizePath(filePath.parent_path(), value);
 	return fullPath;
@@ -98,67 +97,67 @@ std::filesystem::path ConfigParser::getConfigPath(const string &value) const {
 }
 
 void ConfigParser::parseLocation(const string &line, Location &currentLocation) {
-	static const ParserMap locationParsers = {
-		{"root", [&](const string &value) {
+    static const ParserMap locationParsers = {
+        {"root", [&](const string &value) {
 			fullPath = getConfigPath(value);
 			if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
-				throw ConfigError(EINVAL, "Invalid root");
-			}
-			currentLocation.root = fullPath;
-		}},
-		{"index", [&](const string &value) {
+                throw ConfigError(EINVAL, "Invalid root");
+            }
+            currentLocation.root = fullPath;
+        }},
+        {"index", [&](const string &value) {
 			fullPath = currentLocation.root/value;
-			if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
-				throw ConfigError(EINVAL, "Invalid index");
-			}
-			currentLocation.index = value;
-		}},
-		{"autoindex", [&](const string &value) {
-			if (!currentLocation.autoIndex.empty()) {
-				throw ConfigError(EINVAL, "Invalid autoindex");
-			}
-			currentLocation.autoIndex = value;
-			currentLocation.isAutoIndex = utils::parseBool(value);
-		}},
-		{"methods", [&](const string &value) {
-			if (!currentLocation.methods.empty()) {
-				throw ConfigError(EINVAL, "Invalid methods");
-			}
-			istringstream iss(value);
-			vector<string> methods;
-			string method;
-			while (iss >> method) {
-				methods.push_back(method);
-			}
-			utils::validateMethods(methods);
-			currentLocation.methods = methods;
-		}},
-		{"cgi_extension", [&](const string &value) {
+            if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
+                throw ConfigError(EINVAL, "Invalid index");
+            }
+            currentLocation.index = value;
+        }},
+        {"autoindex", [&](const string &value) {
+            if (!currentLocation.autoIndex.empty()) {
+                throw ConfigError(EINVAL, "Invalid autoindex");
+            }
+            currentLocation.autoIndex = value;
+            currentLocation.isAutoIndex = utils::parseBool(value);
+        }},
+        {"methods", [&](const string &value) {
+            if (!currentLocation.methods.empty()) {
+                throw ConfigError(EINVAL, "Invalid methods");
+            }
+            istringstream iss(value);
+            vector<string> methods;
+            string method;
+            while (iss >> method) {
+                methods.push_back(method);
+            }
+            utils::validateMethods(methods);
+            currentLocation.methods = methods;
+        }},
+        {"cgi_extension", [&](const string &value) {
 			currentLocation.cgiExtension.push_back(value);
-		}},
-		{"upload_dir", [&](const string &value) {
+        }},
+        {"upload_dir", [&](const string &value) {
 			fullPath = getConfigPath(value);
 			if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(fullPath)) {
-				throw ConfigError(EINVAL, "Invalid upload_dir");
-			}
-			currentLocation.uploadDir = fullPath;
-		}},
-		{"return", [&](const string &value) {
-			if (!currentLocation.returnUrl.empty()) {
-				throw ConfigError(EINVAL, "Invalid return");
-			}
-			istringstream iss(value);
-			vector<string> returnParts;
-			string part;
-			while (iss >> part) {
-				returnParts.push_back(part);
-			}
-			if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
-				throw ConfigError(EINVAL, "Invalid return");
-			}
-			currentLocation.returnUrl = returnParts;
-		}}
-	};
+                throw ConfigError(EINVAL, "Invalid upload_dir");
+            }
+            currentLocation.uploadDir = fullPath;
+        }},
+        {"return", [&](const string &value) {
+            if (!currentLocation.returnUrl.empty()) {
+                throw ConfigError(EINVAL, "Invalid return");
+            }
+            istringstream iss(value);
+            vector<string> returnParts;
+            string part;
+            while (iss >> part) {
+                returnParts.push_back(part);
+            }
+            if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
+                throw ConfigError(EINVAL, "Invalid return");
+            }
+            currentLocation.returnUrl = returnParts;
+        }}
+    };
 
 	parseKeyValue(line, locationParsers);
 }
@@ -263,15 +262,15 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 // Ultility function to print the server configuration
 void printServerConfig(const ServerConfig& server) {
 	cout << YELLOW "Server Config: " RESET << server.serverName << endl;
-	cout << "Host: " << server.host << endl;
-	cout << "Port: " << server.port << endl;
-	cout << "Server Name: " << server.serverName << endl;
-	cout << "Error Pages: " << endl;
-	for (const auto& [code, path] : server.errorPages) {
-		cout << code << ": " << path << " " << endl;
-	}
-	cout << endl;
-	cout << "Client Max Body Size: " << server.clientMaxBodySize << endl;
+    cout << "Host: " << server.host << endl;
+    cout << "Port: " << server.port << endl;
+    cout << "Server Name: " << server.serverName << endl;
+    cout << "Error Pages: " << endl;
+    for (const auto& [code, path] : server.errorPages) {
+        cout << code << ": " << path << " " << endl;
+    }
+    cout << endl;
+    cout << "Client Max Body Size: " << server.clientMaxBodySize << endl;
 
 	for (const auto& location : server.locations) {
 		cout << "Location Path: " << location.path << endl;
@@ -314,8 +313,16 @@ void ConfigParser::printConfig(const Config& config) {
 
 // Function to load the configuration
 Config ConfigParser::load() {
-    Config config;
-    parseConfig(filePath, config);
-    //printConfig(config);
-    return config;
+    try {
+        Config config;
+        parseConfig(filePath, config);
+        //printConfig(config);
+        //Server server(config);
+        //server.start();
+        return config;
+    } catch (const ConfigError& e) {
+        cout << "Error: " << e.code() << " " << e.what() << endl;
+
+    }
+    return Config();
 }
