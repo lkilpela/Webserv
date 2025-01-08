@@ -15,6 +15,9 @@ NAME			=	webserv
 INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/utils/common.hpp \
+					$(INCLUDES)/utils/index.hpp \
+					$(INCLUDES)/utils/Payload.hpp \
+					$(INCLUDES)/utils/socket.hpp \
 					$(INCLUDES)/Error.hpp \
 					$(INCLUDES)/http/utils.hpp \
 					$(INCLUDES)/http/Request.hpp \
