@@ -23,7 +23,7 @@ namespace http {
 
 			int getClientSocket() const;
 			/* const  */StatusCode getStatusCode() const;
-			const StatusCode getStatusCode() const;
+			//const StatusCode getStatusCode() const;
 			const utils::StringPayload& getHeader() const;
 			const std::unique_ptr<utils::Payload>& getBody() const;
 

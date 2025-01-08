@@ -9,6 +9,7 @@ using http::StatusCode;
 using http::Request;
 using http::Response;
 using std::string;
+namespace fs = std::filesystem;
 
 /* locations path:
 ** /
@@ -42,6 +43,12 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 	std::cout << "Finding best matching location for URL: " << url << std::endl;
 
 	for (const auto& [path, config] : _locationConfigs) {
+
+		std::cout << YELLOW "Registered locations: " RESET << std::endl;
+		std::cout << "Path: " << path << ", Root: " << config.root << std::endl;
+		std::cout << BLUE "Verify input URL vs. Configured paths" RESET << std::endl;
+		std::cout << "Comparing URL: " << url << " with Path: " << path << std::endl;
+
 		if (url.substr(0, path.size()) == path && path.length() > longestMatch) {
 			bestMatch = &config;
 			longestMatch = path.length();
@@ -98,7 +105,7 @@ std::string getFileExtension(const std::string& filePath) {
 std::string generateDirectoryListing(const std::string& path) {
 	std::string listing = "<html><head><title>Directory Listing</title></head><body><h1>Directory Listing</h1><ul>";
 
-	for (const auto& entry : std::filesystem::directory_iterator(path)) {
+	for (const auto& entry : fs::directory_iterator(path)) {
 		const std::string& name = entry.path().filename().string();
 		listing += "<li><a href=\"" + name + "\">" + name + "</a></li>";
 	}
@@ -111,19 +118,19 @@ std::string generateDirectoryListing(const std::string& path) {
 void handleGetRequest(const Location& loc, Request& req, Response& res) {
 	try {
 		// Compute the full file path by appending the request subpath
-		std::filesystem::path filePath = loc.root / req.getUrl().path.substr(loc.path.size());
+		fs::path filePath = loc.root / req.getUrl().path.substr(loc.path.size());
 		std::cout << YELLOW "Location Root: " RESET << loc.root << std::endl;
 		std::cout << YELLOW "Request URL Path: " RESET << req.getUrl().path << std::endl;
 
-		if (std::filesystem::is_directory(filePath)) {
-			if (loc.isAutoIndex) {
-				setStringResponse(res, StatusCode::OK_200, generateDirectoryListing(filePath));
-			} else if (!loc.index.empty()) {
+		if (fs::is_directory(filePath)) {
+			if (!loc.index.empty()) {
 				setFileResponse(res, StatusCode::OK_200, filePath / loc.index);
+			} else if (loc.isAutoIndex) {
+				setStringResponse(res, StatusCode::OK_200, generateDirectoryListing(filePath));
 			} else {
 				setFileResponse(res, StatusCode::FORBIDDEN_403, loc.root / "403.html");
 			}
-		} else if (std::filesystem::is_regular_file(filePath)) {
+		} else if (fs::is_regular_file(filePath)) {
 			setFileResponse(res, StatusCode::OK_200, filePath);
 		} else {
 			setFileResponse(res, StatusCode::NOT_FOUND_404, loc.root / "404.html");
@@ -174,7 +181,7 @@ void Router::handle(Request& request, Response& response) {
 	// Find the best matching LocationConfig for the requested route
 	// example: location = /static/
 	const Location* location = findBestMatchingLocation(requestPath);
-	std::cout << "Location: " << location->path << std::endl;
+
 	// No matching location found, return HTTP status 404 with the error page
 	if (!location) {
 		std::cerr << "[ERROR] Location not found: " << requestPath << std::endl;
