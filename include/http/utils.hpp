@@ -19,20 +19,20 @@ namespace http {
 		if (extension == "bz2") return "application/x-bzip2";
 		if (extension == "cda") return "application/x-cdf";
 		if (extension == "csh") return "application/x-csh";
-		if (extension == "css") return "text/css";
-		if (extension == "csv") return "text/csv";
+		if (extension == "css") return "text/css; charset=utf-8";
+		if (extension == "csv") return "text/csv; charset=utf-8";
 		if (extension == "doc") return "application/msword";
 		if (extension == "epub") return "application/epub+zip";
 		if (extension == "gz") return "application/gzip";
 		if (extension == "gif") return "image/gif";
-		if (extension == "htm" || extension == "html") return "text/html";
+		if (extension == "htm" || extension == "html") return "text/html; charset=utf-8";
 		if (extension == "jar") return "application/java-archive";
 		if (extension == "jpeg" || extension == "jpg") return "image/jpeg";
-		if (extension == "js") return "text/javascript";
-		if (extension == "json") return "application/json";
-		if (extension == "jsonld") return "application/ld+json";
+		if (extension == "js") return "text/javascript; charset=utf-8";
+		if (extension == "json") return "application/json; charset=utf-8";
+		if (extension == "jsonld") return "application/ld+json; charset=utf-8";
 		if (extension == "mid" || extension == "midi") return "audio/midi";
-		if (extension == "mjs") return "text/javascript";
+		if (extension == "mjs") return "text/javascript; charset=utf-8";
 		if (extension == "mp3") return "audio/mpeg";
 		if (extension == "mp4") return "video/mp4";
 		if (extension == "mpeg") return "video/mpeg";
@@ -52,7 +52,7 @@ namespace http {
 		if (extension == "tif" || extension == "tiff") return "image/tiff";
 		if (extension == "ts") return "video/mp2t";
 		if (extension == "ttf") return "font/ttf";
-		if (extension == "txt") return "text/plain";
+		if (extension == "txt") return "text/plain; charset=utf-8";
 		if (extension == "wav") return "audio/wav";
 		if (extension == "weba") return "audio/webm";
 		if (extension == "webm") return "video/webm";
@@ -60,10 +60,10 @@ namespace http {
 		if (extension == "woff") return "font/woff";
 		if (extension == "woff2") return "font/woff2";
 		if (extension == "xhtml") return "application/xhtml+xml";
-		if (extension == "xml") return "application/xml";
+		if (extension == "xml") return "application/xml; charset=utf-8";
 		if (extension == "zip") return "application/zip";
 		if (extension == "7z") return "application/x-7z-compressed";
-		return "application/unknown";
+		return "text/plain; charset=utf-8";
 	}
 
 	constexpr const char* stringOf(Header header) {
@@ -118,7 +118,7 @@ namespace http {
 			default: return "Unknown";
 		}
 	}
-	
+
 	constexpr const char* stringOf(StatusCode code) {
 		using enum http::StatusCode;
 
