@@ -40,14 +40,14 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 	const Location* bestMatch = nullptr;
 	size_t longestMatch = 0;
 
-	std::cout << "Finding best matching location for URL: " << url << std::endl;
+	std::cout << "[MATCHING] Finding best matching location for URL: " << url << std::endl;
 
 	for (const auto& [path, config] : _locationConfigs) {
 
-		std::cout << YELLOW "Registered locations: " RESET << std::endl;
+/* 		std::cout << YELLOW "Registered locations: " RESET << std::endl;
 		std::cout << "Path: " << path << ", Root: " << config.root << std::endl;
 		std::cout << BLUE "Verify input URL vs. Configured paths" RESET << std::endl;
-		std::cout << "Comparing URL: " << url << " with Path: " << path << std::endl;
+		std::cout << "Comparing URL: " << url << " with Path: " << path << std::endl; */
 
 		if (url.substr(0, path.size()) == path && path.length() > longestMatch) {
 			bestMatch = &config;
@@ -56,27 +56,11 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 	}
 
 	if (bestMatch) {
-		std::cout << "Best match found: " << bestMatch->root << std::endl;
+		std::cout << "[MATCHING] Best match found: " << bestMatch->root << std::endl;
 	} else {
-		std::cout << "No matching location found for URL: " << url << std::endl;
+		std::cout << "[MATCHING] No matching location found for URL: " << url << std::endl;
 	}
 	return bestMatch;
-}
-
-inline bool isValidPath(const string& path) {
-	// Check if the path is empty or does not start with a slash
-	if (path.empty() || path.front() != '/') {
-		return false;
-	}
-
-	// Check for multiple consecutive slashes
-	for (size_t i = 1; i < path.size(); ++i) {
-		if (path[i] == '/' && path[i - 1] == '/') {
-			return false;
-		}
-	}
-
-	return true;
 }
 
 // Function to set the response for string payloads
@@ -103,10 +87,10 @@ std::string getFileExtension(const std::string& filePath) {
 
 // Example: /static/ -> /Users/username/Webserv/config/static/ -> /Users/username/Webserv/config/static/index.html 
 std::string generateDirectoryListing(const std::string& path) {
-	std::string listing = "<html><head><title>Directory Listing</title></head><body><h1>Directory Listing</h1><ul>";
+	string listing = "<html><head><title>Directory Listing</title></head><body><h1>Directory Listing</h1><ul>";
 
 	for (const auto& entry : fs::directory_iterator(path)) {
-		const std::string& name = entry.path().filename().string();
+		const string& name = entry.path().filename().string();
 		listing += "<li><a href=\"" + name + "\">" + name + "</a></li>";
 	}
 
@@ -114,30 +98,43 @@ std::string generateDirectoryListing(const std::string& path) {
 	return listing;
 }
 
+fs::path computeFilePath(const Location& loc, const Request& req) {
+	return loc.root / req.getUrl().path.substr(loc.path.size());
+}
+
+void handleDirectoryRequest(const Location& loc, const fs::path& filePath, Response& res) {
+	fs::path indexPath = filePath / loc.index;
+	if (!fs::exists(indexPath)) {
+		indexPath = loc.root / loc.index;
+	}
+
+	if (fs::exists(indexPath)) {
+		res.setFile(StatusCode::OK_200, indexPath);
+	} else if (loc.isAutoIndex) {
+		res.setFile(StatusCode::OK_200, generateDirectoryListing(filePath));
+	} else {
+		res.setFile(StatusCode::FORBIDDEN_403, loc.root / "403.html");
+	}
+}
+
 // Function to handle GET requests
 void handleGetRequest(const Location& loc, Request& req, Response& res) {
 	try {
 		// Compute the full file path by appending the request subpath
-		fs::path filePath = loc.root / req.getUrl().path.substr(loc.path.size());
+		fs::path filePath = computeFilePath(loc, req);
 		std::cout << YELLOW "Location Root: " RESET << loc.root << std::endl;
 		std::cout << YELLOW "Request URL Path: " RESET << req.getUrl().path << std::endl;
+		std::cout << YELLOW "File Path: " RESET << filePath << std::endl;
 
 		if (fs::is_directory(filePath)) {
-			if (!loc.index.empty()) {
-				setFileResponse(res, StatusCode::OK_200, filePath / loc.index);
-			} else if (loc.isAutoIndex) {
-				setStringResponse(res, StatusCode::OK_200, generateDirectoryListing(filePath));
-			} else {
-				setFileResponse(res, StatusCode::FORBIDDEN_403, loc.root / "403.html");
-			}
+			handleDirectoryRequest(loc, filePath, res);
 		} else if (fs::is_regular_file(filePath)) {
-			setFileResponse(res, StatusCode::OK_200, filePath);
+			res.setFile(StatusCode::OK_200, filePath);
 		} else {
-			setFileResponse(res, StatusCode::NOT_FOUND_404, loc.root / "404.html");
+			res.setFile(StatusCode::NOT_FOUND_404, loc.root / "404.html");
 		}
 	} catch (const std::exception& e) {
-		std::cerr << "Exception in handleGetRequest: " << e.what() << std::endl;
-		setStringResponse(res, StatusCode::INTERNAL_SERVER_ERROR_500, "Internal Server Error");
+		res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 	}
 }
 
@@ -168,11 +165,10 @@ void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
 // Connection calls router.handle(request, response)
 // Router calls handler(*location, request, response)
 void Router::handle(Request& request, Response& response) {
-	
 	std::string requestPath = request.getUrl().path;
 	std::cout << "\n[HANDLE()] Handling request for path: " << requestPath << std::endl;
 
-	if (!isValidPath(requestPath)) {
+	if (!utils::isValidPath(requestPath)) {
 		std::cerr << "[ERROR] Invalid path: " << requestPath << std::endl;
 		setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
 		return;
@@ -181,7 +177,6 @@ void Router::handle(Request& request, Response& response) {
 	// Find the best matching LocationConfig for the requested route
 	// example: location = /static/
 	const Location* location = findBestMatchingLocation(requestPath);
-
 	// No matching location found, return HTTP status 404 with the error page
 	if (!location) {
 		std::cerr << "[ERROR] Location not found: " << requestPath << std::endl;
