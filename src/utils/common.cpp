@@ -213,19 +213,24 @@ namespace utils {
 		throw ConfigError(EINVAL, "Unclosed " + blockType + " block.");
 	}
 
-	bool isValidPath(const string& path) {
+	bool isValidPath(const string& rawPath) {
+		fs::path path = fs::canonical(rawPath);
+		// Allow only absolute paths starting with a slash '/'
+		if (path.string() == "/") {
+			return true;
+		}
 		// Check if the path is empty or does not start with a slash '/'
-		if (path.empty() || path.front() != '/') {
+		if (path.string().empty() || path.string().front() != '/') {
 			return false;
 		}
 		// Check for multiple consecutive slashes like "//"
-		for (size_t i = 1; i < path.size(); ++i) {
-			if (path[i] == '/' && path[i - 1] == '/') {
+		for (size_t i = 1; i < path.string().size(); ++i) {
+			if (path.string()[i] == '/' && path.string()[i - 1] == '/') {
 				return false;
 			}
 		}
 		// Check for directory traversal sequences like "/../" or "/.."
-		if (path.find("/../") != std::string::npos || path.find("/..") == path.size() - 3) {
+		if (path == "/.." || path.string().find("/../") != std::string::npos || path.string().ends_with("/..")) {
 			return false;
 		}
 		return true;
