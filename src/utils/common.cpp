@@ -197,6 +197,7 @@ namespace utils {
 			throw ConfigError(EINVAL, "Invalid directive in configuration block");
 		}
 	}
+	
 	void parseBlock(std::ifstream &file, const string &blockType, const LineHandler &lineHandler) {
 		string line;
 		while (std::getline(file, line)) {
@@ -210,6 +211,24 @@ namespace utils {
 			lineHandler(line);
 		}
 		throw ConfigError(EINVAL, "Unclosed " + blockType + " block.");
+	}
+
+	bool isValidPath(const string& path) {
+		// Check if the path is empty or does not start with a slash '/'
+		if (path.empty() || path.front() != '/') {
+			return false;
+		}
+		// Check for multiple consecutive slashes like "//"
+		for (size_t i = 1; i < path.size(); ++i) {
+			if (path[i] == '/' && path[i - 1] == '/') {
+				return false;
+			}
+		}
+		// Check for directory traversal sequences like "/../" or "/.."
+		if (path.find("/../") != std::string::npos || path.find("/..") == path.size() - 3) {
+			return false;
+		}
+		return true;
 	}
 
 	// FOR TESTING

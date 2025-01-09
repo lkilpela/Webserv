@@ -29,6 +29,7 @@ namespace utils {
 	std::pair<std::string, std::string> splitKeyValue(const std::string& line);
 	void parseKeyValue(const std::string &line, const ParserMap &parsers);
 	void parseBlock(std::ifstream &file, const std::string &blockType, const LineHandler &lineHandler);
+	bool isValidPath(const std::string& path);
 
 	template <typename Iterator>
 	Iterator findDelimiter(
