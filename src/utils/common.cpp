@@ -214,7 +214,7 @@ namespace utils {
 	}
 
 	bool isValidPath(const string& rawPath) {
-		fs::path path = fs::canonical(rawPath);
+		fs::path path = rawPath;
 		// Allow only absolute paths starting with a slash '/'
 		if (path.string() == "/") {
 			return true;

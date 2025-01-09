@@ -34,14 +34,6 @@ namespace http {
 
 			void setFile(StatusCode statusCode, const std::filesystem::path &filePath);
 
-			// For testing
-			std::string getBodyAsString() const {
-				if (_body) {
-					return _body->toString();
-				}
-				return ""; // Return empty string if no body is set
-			}
-
 		private:
 			int _clientSocket;
 			StatusCode _statusCode { StatusCode::NONE_0 };

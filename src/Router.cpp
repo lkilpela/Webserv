@@ -123,8 +123,26 @@ void handleGetRequest(const Location& loc, Request& req, Response& res) {
 
 // Function to handle POST requests
 void handlePostRequest(const Location& loc, Request& req, Response& res) {
-	(void)loc; // Avoid unused parameter warning
-	(void)req; // Avoid unused parameter warning
+	// Extract data from the request body
+	// Check if uploads are allowed
+	// Save the file to the upload directory
+	// Return 200 OK if the file is saved successfully
+	// Return 403 Forbidden if uploads are not allowed
+	// Return 500 Internal Server Error if an exception occurs
+	// Return 400 Bad Request if the file cannot be saved
+	// Example: /uploads/ -> /Users/username/Webserv/config/uploads/ -> /Users/username/Webserv/config/uploads/index.html
+	
+	// Check if uploads are allowed
+	if (loc.uploadDir.empty()) {
+		res.setFile(http::StatusCode::FORBIDDEN_403, "Uploads are not allowed");
+		return;
+	}
+	std::ofstream file(loc.uploadDir + "/upload_file.txt", std::ios::binary);
+	if (!file) {
+		res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
+		return;
+	}
+	file.write(req.getBody().data(), req.getBody().size());
 	res.setFile(http::StatusCode::OK_200, "POST request received");
 }
 

@@ -25,7 +25,7 @@ struct Location {
 	std::vector<std::string> methods; 		// Allowed methods
 	std::vector<std::string> cgiExtension; 	// CGI extensions
 	std::string uploadDir; 					// Directory to upload files
-	bool allowUpload = false; 				// Enable or disable file uploads
+	bool allowUpload = false; 				// Not in use
 	std::vector<std::string> returnUrl; 	// Redirect URLs (if any)
 };
 

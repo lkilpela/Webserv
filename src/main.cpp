@@ -16,20 +16,6 @@
 
 volatile sig_atomic_t sigintReceived = 0;
 
-// Function to simulate a request
-void simulateRequest(Router& router, http::Request& request) {
-	(void)request;
-    http::Response response(0);
-    router.handle(request, response);
-
-    // Print the response status and body
-    std::cout
-		<< YELLOW "[RESPONSE]" RESET << std::endl
-		<< GREEN "Response status code: " RESET << static_cast<int>(response.getStatusCode()) << std::endl
-		<< GREEN "Header: " RESET << response.getHeader().toString() << std::endl
-		<< GREEN "Response body: \n" RESET << response.getBodyAsString() << std::endl;
-}
-
 int main(int argc, char **argv) {
 	if (argc != 2) {
 		std::cerr << "Error: Invalid number of arguments!" << std::endl;
@@ -55,12 +41,13 @@ int main(int argc, char **argv) {
         });
 
         // Simulate reading request
-        std::string buffer = "GET /static/about.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
+        std::string buffer = "GET /static/images/image1.jpg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
         std::cout << "Raw request header: " << buffer << std::endl;
 		connection.readRequest((uint8_t*)buffer.data(), buffer.size());
 
         // Send response
         connection.sendResponse();
+
 
 		//Server server(config);
 		//server.listen();

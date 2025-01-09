@@ -22,9 +22,11 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/http/utils.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \
+					$(INCLUDES)/http/Connection.hpp \
 					$(INCLUDES)/http/Url.hpp \
 					$(INCLUDES)/utils/Payload.hpp \
 					$(INCLUDES)/Router.hpp
+
 #$(INCLUDES)/Server.hpp
 
  # Add more headers here
@@ -41,7 +43,8 @@ SRCS			=	Config.cpp \
 					Url.cpp \
 					Payload.cpp \
 					StringPayload.cpp \
-					FilePayload.cpp
+					FilePayload.cpp \
+					Connection.cpp
 #Server.cpp
 # Add more sources here
 
