@@ -43,12 +43,6 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 	std::cout << "[MATCHING] Finding best matching location for URL: " << url << std::endl;
 
 	for (const auto& [path, config] : _locationConfigs) {
-
-/* 		std::cout << YELLOW "Registered locations: " RESET << std::endl;
-		std::cout << "Path: " << path << ", Root: " << config.root << std::endl;
-		std::cout << BLUE "Verify input URL vs. Configured paths" RESET << std::endl;
-		std::cout << "Comparing URL: " << url << " with Path: " << path << std::endl; */
-
 		if (url.substr(0, path.size()) == path && path.length() > longestMatch) {
 			bestMatch = &config;
 			longestMatch = path.length();
@@ -61,20 +55,6 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 		std::cout << "[MATCHING] No matching location found for URL: " << url << std::endl;
 	}
 	return bestMatch;
-}
-
-// Function to set the response for string payloads
-void setStringResponse(Response& res, StatusCode statusCode, const string& body) {
-	res.setStatusCode(statusCode);
-	res.setBody(std::make_unique<utils::StringPayload>(0, body));
-	res.build();
-}
-
-// Function to set the response for file payloads
-void setFileResponse(Response& res, StatusCode statusCode, const string& filePath) {
-	res.setStatusCode(statusCode);
-	res.setBody(std::make_unique<utils::FilePayload>(0, filePath));
-	res.build();
 }
 
 std::string getFileExtension(const std::string& filePath) {
@@ -127,10 +107,13 @@ void handleGetRequest(const Location& loc, Request& req, Response& res) {
 		std::cout << YELLOW "File Path: " RESET << filePath << std::endl;
 
 		if (fs::is_directory(filePath)) {
+			std::cout << YELLOW "Directory request detected" RESET << std::endl;
 			handleDirectoryRequest(loc, filePath, res);
 		} else if (fs::is_regular_file(filePath)) {
+			std::cout << YELLOW "File request detected" RESET << std::endl;
 			res.setFile(StatusCode::OK_200, filePath);
 		} else {
+			std::cout << YELLOW "File not found" RESET << std::endl;
 			res.setFile(StatusCode::NOT_FOUND_404, loc.root / "404.html");
 		}
 	} catch (const std::exception& e) {
@@ -142,18 +125,28 @@ void handleGetRequest(const Location& loc, Request& req, Response& res) {
 void handlePostRequest(const Location& loc, Request& req, Response& res) {
 	(void)loc; // Avoid unused parameter warning
 	(void)req; // Avoid unused parameter warning
-	setStringResponse(res, http::StatusCode::OK_200, "POST request received");
+	res.setFile(http::StatusCode::OK_200, "POST request received");
 }
 
 // Function to handle DELETE requests
 void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
 	(void)loc; // Avoid unused parameter warning
 	(void)req; // Avoid unused parameter warning
-	setStringResponse(res, http::StatusCode::OK_200, "DELETE request received");
+	res.setFile(http::StatusCode::OK_200, "DELETE request received");
 }
 
-
-
+void logRequestStatus(const Request& request) {
+	std::cout << YELLOW "Request status after calling handler " RESET << std::endl;
+	if (request.getStatus() == Request::Status::INCOMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "INCOMPLETE" << std::endl;
+	} else if (request.getStatus() == Request::Status::HEADER_COMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "HEADER_COMPLETE" << std::endl;
+	} else if (request.getStatus() == Request::Status::BAD) {
+		std::cout << GREEN "Request status: " RESET << "BAD" << std::endl;
+	} else if (request.getStatus() == Request::Status::COMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "COMPLETE" << std::endl;
+	}
+}
 /**
  * Handle client request based on the registed `Handler` (callback).
  * This method call will modify response object in a way defined in callback
@@ -165,14 +158,19 @@ void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
 // Connection calls router.handle(request, response)
 // Router calls handler(*location, request, response)
 void Router::handle(Request& request, Response& response) {
+	if (request.getStatus() == Request::Status::BAD) {
+		response.setFile(StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
+		return;
+	}
+
 	std::string requestPath = request.getUrl().path;
 	std::cout << "\n[HANDLE()] Handling request for path: " << requestPath << std::endl;
 
-	if (!utils::isValidPath(requestPath)) {
+/* 	if (!utils::isValidPath(requestPath)) {
 		std::cerr << "[ERROR] Invalid path: " << requestPath << std::endl;
 		setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
 		return;
-	}
+	} */
 
 	// Find the best matching LocationConfig for the requested route
 	// example: location = /static/
@@ -180,7 +178,7 @@ void Router::handle(Request& request, Response& response) {
 	// No matching location found, return HTTP status 404 with the error page
 	if (!location) {
 		std::cerr << "[ERROR] Location not found: " << requestPath << std::endl;
-		setFileResponse(response, StatusCode::NOT_FOUND_404, _serverConfig.errorPages[404]);
+		response.setFile(StatusCode::NOT_FOUND_404, _serverConfig.errorPages[404]);
 		return;
 	}
 
@@ -191,19 +189,23 @@ void Router::handle(Request& request, Response& response) {
 	if (it != _routes.end()) {
 		// Execute the handler, return http status 500 if an exception occurs
 		try {
+			std::cout << YELLOW "Calling handler for method: " RESET << request.getMethod() << std::endl;
 			// example: handler = handleGetRequest
 			// it->second = handleGetRequest
 			// it->first = GET
 			const auto handler = it->second;
 			handler(*location, request, response);
+			// Set request status to COMPLETE if handler succeeds
+			request.setStatus(Request::Status::COMPLETE);
+			logRequestStatus(request);
 		} catch(const std::exception& e) {
 			response.clear();
-			setFileResponse(response, StatusCode::INTERNAL_SERVER_ERROR_500, _serverConfig.errorPages[500]);
+			response.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, _serverConfig.errorPages[500]);
 		}
 		return;
 	} else {
 		// No handler found for the requested method, return http status 405
-		setFileResponse(response, StatusCode::METHOD_NOT_ALLOWED_405, _serverConfig.errorPages[405]);
+		response.setFile(StatusCode::METHOD_NOT_ALLOWED_405, _serverConfig.errorPages[405]);
 		return;
 	}
 }

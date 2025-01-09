@@ -11,6 +11,7 @@
 #include <thread>
 #include "SignalHandle.hpp"
 #include "http/index.hpp"
+#include "http/Connection.hpp"
 
 
 volatile sig_atomic_t sigintReceived = 0;
@@ -22,8 +23,11 @@ void simulateRequest(Router& router, http::Request& request) {
     router.handle(request, response);
 
     // Print the response status and body
-    std::cout << "Response status: " << static_cast<int>(response.getStatusCode()) << std::endl;
-    std::cout << "Response body: \n" << response.getBodyAsString() << std::endl;
+    std::cout
+		<< YELLOW "[RESPONSE]" RESET << std::endl
+		<< GREEN "Response status code: " RESET << static_cast<int>(response.getStatusCode()) << std::endl
+		<< GREEN "Header: " RESET << response.getHeader().toString() << std::endl
+		<< GREEN "Response body: \n" RESET << response.getBodyAsString() << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -44,12 +48,19 @@ int main(int argc, char **argv) {
 		//router.post(handlePostRequest);
 		//router.del(handleDeleteRequest);
 
-		std::string rawRequestHeader = "GET /static/../about.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
-		std::cout << "Raw request header: " << rawRequestHeader << std::endl;
-		http::Request request = http::Request::parseHeader(rawRequestHeader);
-		// Print the request method and URL
-		utils::printRequest(request);
-		simulateRequest(router, request);
+		// Simulate Connection
+        int clientSocket = 0; // Dummy socket for testing
+        http::Connection connection(clientSocket, [&](http::Request& req, http::Response& res) {
+            router.handle(req, res);
+        });
+
+        // Simulate reading request
+        std::string buffer = "GET /static/about.html HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
+        std::cout << "Raw request header: " << buffer << std::endl;
+		connection.readRequest((uint8_t*)buffer.data(), buffer.size());
+
+        // Send response
+        connection.sendResponse();
 
 		//Server server(config);
 		//server.listen();
