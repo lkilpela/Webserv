@@ -3,17 +3,19 @@
 
 int main() {
 	std::string rawRequest(
-		"GET /static/image.jpg HTTP/1.1\r\nHost: example.com\r\n\r\n"
+		"GET http://example.com/old-docs HTTP/1.1\r\nHost: localhost:8080\r\n\r\n"
 	);
 
-	auto req = http::Request::parseHeader(rawRequest);
-	std::cout
-		<< "Status = HEADER_COMPLETE ? " << (req.getStatus() == http::Request::Status::HEADER_COMPLETE) << "\n"
-		<< "Method: " << req.getMethod() << "\n"
-		<< "Url: " << req.getUrl() << "\n"
-		<< "Version: " << req.getVersion() << std::endl;
-
-	// int fd = open("example.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	try {
+		auto req = http::Request::parseHeader(rawRequest);
+		std::cout
+			<< "Status = HEADER_COMPLETE ? " << (req.getStatus() == http::Request::Status::HEADER_COMPLETE) << "\n"
+			<< "Method: " << req.getMethod() << "\n"
+			<< "Url: " << req.getUrl() << "\n"
+			<< "Version: " << req.getVersion() << std::endl;
+	} catch (std::invalid_argument& e) {
+		std::cerr << "BAD REQUEST" << std::endl;
+	}
 
 	return 0;
 }
