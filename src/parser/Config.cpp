@@ -137,13 +137,6 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 		{"cgi_extension", [&](const string &value) {
 			currentLocation.cgiExtension.push_back(value);
 		}},
-		{"upload_dir", [&](const string &value) {
-			fullPath = getConfigPath(value);
-			if (!currentLocation.uploadDir.empty() || !utils::isValidFilePath(fullPath)) {
-				throw ConfigError(EINVAL, "Invalid upload_dir");
-			}
-			currentLocation.uploadDir = fullPath;
-		}},
 		{"return", [&](const string &value) {
 			if (!currentLocation.returnUrl.empty()) {
 				throw ConfigError(EINVAL, "Invalid return");
