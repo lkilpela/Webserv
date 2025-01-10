@@ -24,8 +24,6 @@ struct Location {
 	bool isAutoIndex = false;				// Enbale or disable directory listing 
 	std::vector<std::string> methods; 		// Allowed methods
 	std::vector<std::string> cgiExtension; 	// CGI extensions
-	std::string uploadDir; 					// Directory to upload files
-	bool allowUpload = false; 				// Not in use
 	std::vector<std::string> returnUrl; 	// Redirect URLs (if any)
 };
 
