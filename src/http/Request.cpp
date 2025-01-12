@@ -1,4 +1,3 @@
-#include <iostream>
 #include <sstream>
 #include <cstring>
 #include <array>
@@ -57,8 +56,8 @@ namespace http {
 		return it->second;
 	}
 
-	std::size_t Request::getBodySize() const {
-		return _bodySize;
+	std::size_t Request::getContentLength() const {
+		return _contentLength;
 	}
 
 	const std::span<const std::uint8_t> Request::getBody() const {
@@ -74,8 +73,8 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setBodySize(std::size_t size) {
-		_bodySize = size;
+	Request& Request::setContentLength(std::size_t bytes) {
+		_contentLength = bytes;
 		return *this;
 	}
 
@@ -99,12 +98,12 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setUrl(const Url &url) {
+	Request& Request::setUrl(const Url& url) {
 		_url = url;
 		return *this;
 	}
 
-	Request& Request::setUrl(Url &&url) {
+	Request& Request::setUrl(Url&& url) {
 		_url = std::move(url);
 		return *this;
 	}
@@ -123,21 +122,21 @@ namespace http {
 	 *
 	 * @throw std::invalid_argument
 	 */
-	Request Request::parseHeader(const std::string &rawRequestHeader) {
+	Request Request::parseHeader(const std::string& rawRequestHeader) {
 		Request request;
 
-		const auto &[method, uri, version] = parseRequestLine(rawRequestHeader);
-		const auto &headersByNames = parseRequestHeaders(rawRequestHeader);
+		const auto& [method, uri, version] = parseRequestLine(rawRequestHeader);
+		const auto& headersByNames = parseRequestHeaders(rawRequestHeader);
 		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
 
-		for (const auto &[name, value] : headersByNames) {
+		for (const auto& [name, value] : headersByNames) {
 			request.setHeader(name, value);
 		}
 
 		auto contentLength = request.getHeader(Header::CONTENT_LENGTH);
 
 		if (contentLength.has_value()) {
-			request.setBodySize(std::stoul(*contentLength));
+			request.setContentLength(std::stoul(*contentLength));
 		}
 
 		request
