@@ -284,9 +284,6 @@ namespace utils {
 				}
 				cout << endl;
 			}
-			if (!location.uploadDir.empty()) {
-				cout << "Upload Dir: " << location.uploadDir << endl;
-			}
 			if (!location.returnUrl.empty()) {
 				cout << "Return URL: ";
 				for (const auto& part : location.returnUrl) {
