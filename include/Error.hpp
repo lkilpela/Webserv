@@ -6,17 +6,27 @@
 
 class WSException {
 public:
-    WSException(int err, const std::string& msg = "")
+    WSException(int err, const std::string& msg = "", const std::string& file = "", const std::string& function = "", int line = 0)
     : errorCode(err, std::system_category())
-    , message(msg.empty() ? std::system_category().message(err) : msg) {}
+    , message(msg.empty() ? std::system_category().message(err) : msg)
+    , file(file)
+    , function(function)
+    , line(line) {}
 
     virtual ~WSException() = default;
 
     virtual std::error_code code() const noexcept { return errorCode; } // Return the error code from system
-    virtual const char* what() const noexcept { return message.c_str(); } // Return a custom message
+    virtual const char* what() const noexcept {
+        fullMessage = message + " at " + file + ":" + std::to_string(line) + " in " + function;
+        return fullMessage.c_str();
+    }
 private:
     std::error_code errorCode;
     std::string message;
+    std::string file;
+    std::string function;
+    int line;
+    mutable std::string fullMessage;
 };
 
 // Default ConfigError exception
@@ -59,6 +69,9 @@ class FileNotFoundException : public std::runtime_error {
 	public:
 		explicit FileNotFoundException(const std::string& fileName) : std::runtime_error(fileName) {};
 };
+
+// Macro to throw exceptions with detailed information
+#define THROW_CONFIG_ERROR(err, msg) throw ConfigError(err, msg, __FILE__, __FUNCTION__, __LINE__)
 
 /* PRIMARY EXCEPTION CLASSES
 1. ConfigException
