@@ -4,12 +4,26 @@
 #include "http/Response.hpp"
 #include "utils/common.hpp"
 #include "utils/Payload.hpp"
+#include "http/Url.hpp"
 
 using http::StatusCode;
 using http::Request;
 using http::Response;
 using std::string;
 namespace fs = std::filesystem;
+
+void logRequestStatus(const Request& request) {
+	std::cout << YELLOW "Request status after calling handler " RESET << std::endl;
+	if (request.getStatus() == Request::Status::INCOMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "INCOMPLETE" << std::endl;
+	} else if (request.getStatus() == Request::Status::HEADER_COMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "HEADER_COMPLETE" << std::endl;
+	} else if (request.getStatus() == Request::Status::BAD) {
+		std::cout << GREEN "Request status: " RESET << "BAD" << std::endl;
+	} else if (request.getStatus() == Request::Status::COMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "COMPLETE" << std::endl;
+	}
+}
 
 /* locations path:
 ** /
@@ -79,8 +93,8 @@ std::string generateDirectoryListing(const std::string& path) {
 	return listing;
 }
 
-fs::path computeFilePath(const Location& loc, const Request& req) {
-	return loc.root / req.getUrl().path.substr(loc.path.size());
+fs::path computeFilePath(const Location& loc, const string& requestPath) {
+	return loc.root / requestPath.substr(loc.path.size());
 }
 
 void handleDirectoryRequest(const Location& loc, const fs::path& filePath, Response& res) {
@@ -98,13 +112,23 @@ void handleDirectoryRequest(const Location& loc, const fs::path& filePath, Respo
 	}
 }
 
+void handleRedirectRequest(const Location& loc, Response& res, Request& req) {
+	std::string redirectUrl = loc.returnUrl[1]; // Extract redirect URL
+	res.setHeader(http::Header::LOCATION, redirectUrl);
+	res.setStatusCode(http::StatusCode::MOVED_PERMANENTLY_301);
+	res.build();
+	req.setStatus(Request::Status::COMPLETE);
+	logRequestStatus(req);
+}
+
 // Function to handle GET requests
-void handleGetRequest(const Location& loc, Request& req, Response& res) {
+void handleGetRequest(const Location& loc, const string& requestPath, Request& req, Response& res) {
+	(void) req;
 	try {
 		// Compute the full file path by appending the request subpath
-		fs::path filePath = computeFilePath(loc, req);
+		fs::path filePath = computeFilePath(loc, requestPath);
 		std::cout << YELLOW "Location Root: " RESET << loc.root << std::endl;
-		std::cout << YELLOW "Request URL Path: " RESET << req.getUrl().path << std::endl;
+		std::cout << YELLOW "Request URL Path: " RESET << requestPath << std::endl;
 		std::cout << YELLOW "File Path: " RESET << filePath << std::endl;
 
 		if (fs::is_directory(filePath)) {
@@ -118,12 +142,12 @@ void handleGetRequest(const Location& loc, Request& req, Response& res) {
 			res.setFile(StatusCode::NOT_FOUND_404, loc.root / "404.html");
 		}
 	} catch (const std::exception& e) {
-		res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
+		res.setString(StatusCode::INTERNAL_SERVER_ERROR_500, "Internal Server Error");
 	}
 }
 
 // Function to handle POST requests
-void handlePostRequest(const Location& loc, Request& req, Response& res) {
+void handlePostRequest(const Location& loc, const string& requestPath, Request& req, Response& res) {
 	// Extract data from the request body
 	// Check if uploads are allowed
 	// Save the file to the upload directory
@@ -134,7 +158,7 @@ void handlePostRequest(const Location& loc, Request& req, Response& res) {
 	// Example: /uploads/ -> /Users/username/Webserv/config/uploads/ -> /Users/username/Webserv/config/uploads/index.html
 	try {
 		std::cout << GREEN "In handlePostRequest()" RESET << std::endl;
-		fs::path uploadPath = computeFilePath(loc, req);
+		fs::path uploadPath = computeFilePath(loc, requestPath);
 		std::cout << YELLOW "Upload Path: " RESET << uploadPath << std::endl;
 
 		std::ofstream file(uploadPath.string(), std::ios::binary);
@@ -152,9 +176,10 @@ void handlePostRequest(const Location& loc, Request& req, Response& res) {
 }
 
 // Function to handle DELETE requests
-void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
+void handleDeleteRequest(const Location& loc, const string& requestPath, Request& req, Response& res) {
+	(void) req;
 	try {
-		fs::path filePath = computeFilePath(loc, req);
+		fs::path filePath = computeFilePath(loc, requestPath);
 		std::cout << YELLOW "Delete file path: " RESET << filePath << std::endl;
 		if (!fs::exists(filePath)) {
 			res.setFile(http::StatusCode::NOT_FOUND_404, loc.root / "404.html");
@@ -173,50 +198,39 @@ void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
 	}
 }
 
-void logRequestStatus(const Request& request) {
-	std::cout << YELLOW "Request status after calling handler " RESET << std::endl;
-	if (request.getStatus() == Request::Status::INCOMPLETE) {
-		std::cout << GREEN "Request status: " RESET << "INCOMPLETE" << std::endl;
-	} else if (request.getStatus() == Request::Status::HEADER_COMPLETE) {
-		std::cout << GREEN "Request status: " RESET << "HEADER_COMPLETE" << std::endl;
-	} else if (request.getStatus() == Request::Status::BAD) {
-		std::cout << GREEN "Request status: " RESET << "BAD" << std::endl;
-	} else if (request.getStatus() == Request::Status::COMPLETE) {
-		std::cout << GREEN "Request status: " RESET << "COMPLETE" << std::endl;
-	}
-}
-/**
- * Handle client request based on the registed `Handler` (callback).
- * This method call will modify response object in a way defined in callback
- * 
- * @param request The request object must be COMPLETE or BAD_REQUEST
- * @param response
- */
-
-// Connection calls router.handle(request, response)
-// Router calls handler(*location, request, response)
+// Hander function to handle requests based on the method and matching location
 void Router::handle(Request& request, Response& response) {
 	if (request.getStatus() == Request::Status::BAD) {
 		response.setFile(StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
 		return;
 	}
 
-	std::string requestPath = request.getUrl().path;
+	requestPath = request.getUrl().path;
 	std::cout << "\n[HANDLE()] Handling request for path: " << requestPath << std::endl;
 
-/* 	if (!utils::isValidPath(requestPath)) {
-		std::cerr << "[ERROR] Invalid path: " << requestPath << std::endl;
-		setFileResponse(response, StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
-		return;
-	} */
+	requestPath = utils::lowerCase(requestPath);
+	
+	if (!requestPath.empty() && !requestPath.ends_with('/')) {
+		requestPath = requestPath + "/";
+	}
 
-	// Find the best matching LocationConfig for the requested route
-	// example: location = /static/
+	if (!utils::isValidPath(requestPath)) {
+		std::cerr << "[ERROR] Invalid path: " << requestPath << std::endl;
+		response.setFile(StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
+		return;
+	}
+
 	const Location* location = findBestMatchingLocation(requestPath);
-	// No matching location found, return HTTP status 404 with the error page
 	if (!location) {
 		std::cerr << "[ERROR] Location not found: " << requestPath << std::endl;
 		response.setFile(StatusCode::NOT_FOUND_404, _serverConfig.errorPages[404]);
+		return;
+	}
+
+	// Check for redirect
+	if (!location->returnUrl.empty()) {
+		std::cout << YELLOW "Redirecting to: " RESET << location->returnUrl[1] << std::endl;
+		handleRedirectRequest(*location, response, request);
 		return;
 	}
 
@@ -225,15 +239,10 @@ void Router::handle(Request& request, Response& response) {
 
 	// Matched a route
 	if (it != _routes.end()) {
-		// Execute the handler, return http status 500 if an exception occurs
 		try {
 			std::cout << YELLOW "Calling handler for method: " RESET << request.getMethod() << std::endl;
-			// example: handler = handleGetRequest
-			// it->second = handleGetRequest
-			// it->first = GET
 			const auto handler = it->second;
-			handler(*location, request, response);
-			// Set request status to COMPLETE if handler succeeds
+			handler(*location, requestPath, request, response);
 			request.setStatus(Request::Status::COMPLETE);
 			logRequestStatus(request);
 		} catch(const std::exception& e) {
@@ -242,7 +251,6 @@ void Router::handle(Request& request, Response& response) {
 		}
 		return;
 	} else {
-		// No handler found for the requested method, return http status 405
 		response.setFile(StatusCode::METHOD_NOT_ALLOWED_405, _serverConfig.errorPages[405]);
 		return;
 	}

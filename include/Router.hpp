@@ -12,13 +12,13 @@
 #include <fstream>
 
 // Forward declaration
-void handleGetRequest(const Location& loc, http::Request& request, http::Response& response);
-void handlePostRequest(const Location& loc, http::Request& request, http::Response& response);
-void handleDeleteRequest(const Location& loc, http::Request& request, http::Response& response);
+void handleGetRequest(const Location& loc, const std::string& requestPath, http::Request& request, http::Response& response);
+void handlePostRequest(const Location& loc, const std::string& requestPath, http::Request& request, http::Response& response);
+void handleDeleteRequest(const Location& loc, const std::string& requestPath, http::Request& request, http::Response& response);
 
 class Router {
 	public:
-		using Handler = std::function<void(const Location&, http::Request&, http::Response&)>;
+		using Handler = std::function<void(const Location&, const std::string&, http::Request&, http::Response&)>;
 
 		Router(const ServerConfig& serverConfig) : _serverConfig(serverConfig) {
 			addLocations(serverConfig);
@@ -46,6 +46,9 @@ class Router {
 
 	private:
 		ServerConfig _serverConfig;
+
+		std::string requestPath;
+	
 		std::unordered_map<std::string, Handler> _routes; // method -> handler
 		std::unordered_map<std::string, Location> _locationConfigs; // route -> location config
 
