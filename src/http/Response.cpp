@@ -94,6 +94,14 @@ namespace http {
 		return *this;
 	}
 
+	void Response::setText(StatusCode statusCode, const std::string& text) {
+		setStatusCode(statusCode);
+		setBody(std::make_unique<utils::StringPayload>(_clientSocket, text));
+		setHeader(Header::CONTENT_TYPE, getMimeType("txt"));
+		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->getSizeInBytes()));
+		build();
+	}
+
 	void Response::setFile(StatusCode statusCode, const std::filesystem::path &filePath) {
 		std::string ext = filePath.extension().string().erase(0, 1); // Get file extension without '.'
 

@@ -31,6 +31,7 @@ namespace http {
 			Response& setHeader(Header header, const std::string& value);
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 
+			void setText(StatusCode statusCode, const std::string& text);
 			void setFile(StatusCode statusCode, const std::filesystem::path &filePath);
 
 		private:
