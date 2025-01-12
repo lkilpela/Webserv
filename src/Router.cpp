@@ -43,6 +43,7 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 	std::cout << "[MATCHING] Finding best matching location for URL: " << url << std::endl;
 
 	for (const auto& [path, config] : _locationConfigs) {
+		std::cout << "[MATCHING] Checking location: " << path << std::endl;
 		if (url.substr(0, path.size()) == path && path.length() > longestMatch) {
 			bestMatch = &config;
 			longestMatch = path.length();
@@ -131,26 +132,45 @@ void handlePostRequest(const Location& loc, Request& req, Response& res) {
 	// Return 500 Internal Server Error if an exception occurs
 	// Return 400 Bad Request if the file cannot be saved
 	// Example: /uploads/ -> /Users/username/Webserv/config/uploads/ -> /Users/username/Webserv/config/uploads/index.html
-	
-	// Check if uploads are allowed
-	if (loc.uploadDir.empty()) {
-		res.setFile(http::StatusCode::FORBIDDEN_403, "Uploads are not allowed");
-		return;
+	try {
+		std::cout << GREEN "In handlePostRequest()" RESET << std::endl;
+		fs::path uploadPath = computeFilePath(loc, req);
+		std::cout << YELLOW "Upload Path: " RESET << uploadPath << std::endl;
+
+		std::ofstream file(uploadPath.string(), std::ios::binary);
+		if (!file) {
+			std::cerr<< YELLOW "Failed to open file" RESET << std::endl;
+			res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
+			return;
+		}
+		file.write(reinterpret_cast<const char*>(req.getBody().data()), req.getBody().size());
+		res.setString(http::StatusCode::OK_200, "File uploaded successfully");
+	} catch (const std::exception& e) {
+		std::cerr << YELLOW "Exception: " RESET << e.what() << std::endl;
+		res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 	}
-	std::ofstream file(loc.uploadDir + "/upload_file.txt", std::ios::binary);
-	if (!file) {
-		res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
-		return;
-	}
-	file.write(req.getBody().data(), req.getBody().size());
-	res.setFile(http::StatusCode::OK_200, "POST request received");
 }
 
 // Function to handle DELETE requests
 void handleDeleteRequest(const Location& loc, Request& req, Response& res) {
-	(void)loc; // Avoid unused parameter warning
-	(void)req; // Avoid unused parameter warning
-	res.setFile(http::StatusCode::OK_200, "DELETE request received");
+	try {
+		fs::path filePath = computeFilePath(loc, req);
+		std::cout << YELLOW "Delete file path: " RESET << filePath << std::endl;
+		if (!fs::exists(filePath)) {
+			res.setFile(http::StatusCode::NOT_FOUND_404, loc.root / "404.html");
+			return;
+		}
+
+		if (fs::remove(filePath)) {
+			res.setString(http::StatusCode::OK_200, "File deleted successfully");
+			return;
+		} else {
+			res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
+			return;
+		}
+	} catch (const std::exception& e) {
+		res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
+	}
 }
 
 void logRequestStatus(const Request& request) {
