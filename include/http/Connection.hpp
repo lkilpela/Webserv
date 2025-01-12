@@ -14,13 +14,13 @@ namespace http {
 		public:
 			Connection(
 				int clientSocket,
-				const ServerConfig& serverConfig,
-				std::function<void (Request&, Response&)> processFn
+				// const ServerConfig& serverConfig,
+				const std::function<void (Request&, Response&)>& processFn
 			);
 			Connection(const Connection&) = delete;
 			Connection& operator=(const Connection&) = delete;
 
-			void readRequest(std::uint8_t *buffer, ssize_t size);
+			void readRequest(char *buffer, ssize_t size);
 			void sendResponse();
 			void close();
 			void onClose(std::function<void ()> cleanupFn);
@@ -29,8 +29,9 @@ namespace http {
 
 		private:
 			int _clientSocket;
+			// const ServerConfig& _serverConfig;
 			int _msTimeout { 5000 };
-			const ServerConfig& _serverConfig;
+			std::size_t _clientMaxBodySize { 10 * 1024 * 1024 };
 			Request _request { Request::Status::INCOMPLETE };
 			std::vector<std::uint8_t> _requestBuffer;
 			std::queue<std::pair<Request, Response>> _processedQueue;

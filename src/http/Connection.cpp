@@ -12,16 +12,17 @@
 namespace http {
 	Connection::Connection(
 		int clientSocket,
-		const ServerConfig& serverConfig,
-		std::function<void (Request&, Response&)> processFn
+		// const ServerConfig& serverConfig,
+		const std::function<void (Request&, Response&)>& processFn
 	)
 		: _clientSocket(clientSocket)
-		, _serverConfig(serverConfig)
+		// , _serverConfig(serverConfig)
 		, _processFn(processFn)
-		, _lastReceived(std::chrono::steady_clock::now()) {
+	{
+
 	}
 
-	void Connection::readRequest(std::uint8_t *buffer, ssize_t size) {
+	void Connection::readRequest(char *buffer, ssize_t size) {
 		if (size <= 0) {
 			if (size == 0 || _isTimedOut()) {
 				this->close();
@@ -149,21 +150,25 @@ namespace http {
 				return;
 			}
 
-			std::size_t chunkSize = parseChunkSize(std::string(start, firstIt));
+			try {
+				std::size_t chunkSize = parseChunkSize(std::string(start, firstIt));
 
-			if (chunkSize == 0) {
-				isChunkEnd = true;
+				if (chunkSize == 0) {
+					isChunkEnd = true;
+					currentPos += secondIt + 2 - start;
+					break;
+				}
+
+				if (std::distance(firstIt + 2, secondIt) != chunkSize) {
+					throw std::invalid_argument("Error: chunk size does not match the actual data size.");
+				}
+
+				buffer.insert(buffer.end(), firstIt + 2, secondIt);
 				currentPos += secondIt + 2 - start;
-				break;
-			}
-
-			if (std::distance(firstIt + 2, secondIt) != chunkSize) {
+			} catch (const std::invalid_argument& e) {
 				_request.setStatus(Request::Status::BAD);
 				return;
 			}
-
-			buffer.insert(buffer.end(), firstIt + 2, secondIt);
-			currentPos += secondIt + 2 - start;
 		}
 
 		_request.appendBody(buffer.begin(), buffer.end());
@@ -175,16 +180,17 @@ namespace http {
 	}
 
 	void Connection::_handleBody() {
-		std::size_t bodySize = _request.getBodySize();
+		std::size_t contentLength = _request.getContentLength();
 
-		if (bodySize == 0) {
+		if (contentLength == 0) {
 			_request.setStatus(Request::Status::COMPLETE);
 			return;
 		}
 
-		if (_requestBuffer.size() >= bodySize) {
-			_request.appendBody(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
-			_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
+		if (_requestBuffer.size() >= contentLength) {
+			_request.appendBody(_requestBuffer.begin(), _requestBuffer.begin() + contentLength);
+			_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + contentLength + 4);
+			std::cout << "_requestBuffer.size() = " << _requestBuffer.size();
 			_request.setStatus(Request::Status::COMPLETE);
 		}
 	}
