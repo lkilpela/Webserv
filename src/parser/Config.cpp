@@ -20,7 +20,7 @@ void ConfigParser::parseHttpBlock(ifstream &file, Config &config) {
 			parseServerBlock(file, server);
 			config.servers.push_back(server);
 		} else {
-			throw ConfigError(EINVAL, "Invalid directive in http block: " + line);
+			THROW_CONFIG_ERROR(EINVAL, "Invalid directive in http block: " + line);
 		}
 	});
 }
@@ -37,50 +37,50 @@ void ConfigParser::parseServerBlock(ifstream &file, ServerConfig &server) {
 			parseGlobal(line, server);
 		}
 	});
-}
+	}
 
-void ConfigParser::parseLocationBlock(ifstream &file, Location &location) {
+	void ConfigParser::parseLocationBlock(ifstream &file, Location &location) {
 	utils::parseBlock(file, "location", [&](const string &line) {
 		parseLocation(line, location);
 	});
-}
+	}
 
-// Function to parse global configuration lines
-void ConfigParser::parseGlobal(const string &line, ServerConfig &server) {
-    static const ParserMap globalParsers = {
-        {"host", [&](const string &value) {
-            if (!server.host.empty() || !utils::isValidIP(value)) {
-                throw ConfigError(EINVAL, "Invalid host");
-            }
-            server.host = value;
-        }},
-        {"port", [&](const string &value) {
-            if (server.port != 0) {
-                throw ConfigError(EINVAL, "Invalid port");
-            }
-            server.port = utils::parsePort(value);
-        }},
-        {"server_name", [&](const string &value) {
-            if (!server.serverName.empty()) {
-                throw ConfigError(EINVAL, "Invalid server_name");
-            }
-            server.serverName = value;
-        }},
-        {"error_page", [&](const string &value) {
-            istringstream iss(value);
-            std::string code, path;
-            iss >> code >> path;
+	// Function to parse global configuration lines
+	void ConfigParser::parseGlobal(const string &line, ServerConfig &server) {
+	static const ParserMap globalParsers = {
+		{"host", [&](const string &value) {
+			if (!server.host.empty() || !utils::isValidIP(value)) {
+				THROW_CONFIG_ERROR(EINVAL, "Invalid host");
+			}
+			server.host = value;
+		}},
+		{"port", [&](const string &value) {
+			if (server.port != 0) {
+				THROW_CONFIG_ERROR(EINVAL, "Invalid port");
+			}
+			server.port = utils::parsePort(value);
+		}},
+		{"server_name", [&](const string &value) {
+			if (!server.serverName.empty()) {
+				THROW_CONFIG_ERROR(EINVAL, "Invalid server_name");
+			}
+			server.serverName = value;
+		}},
+		{"error_page", [&](const string &value) {
+			istringstream iss(value);
+			std::string code, path;
+			iss >> code >> path;
 			fullPath = getConfigPath(path);
-            utils::validateErrorPage(code, fullPath);
-            server.errorPages[std::stoi(code)] = fullPath; // Store in map
-        }},
-        {"client_max_body_size", [&](const string &value) {
+			utils::validateErrorPage(code, fullPath);
+			server.errorPages[std::stoi(code)] = fullPath; // Store in map
+		}},
+		{"client_max_body_size", [&](const string &value) {
 			if (!server.clientMaxBodySizeStr.empty() || !utils::isValidSize(value)) {
-                throw ConfigError(EINVAL, "Invalid client_max_body_size");
-            }
+				THROW_CONFIG_ERROR(EINVAL, "Invalid client_max_body_size");
+			}
 			server.clientMaxBodySize = utils::convertSizeToBytes(value);
-        }}
-    };
+		}}
+	};
 
 	utils::parseKeyValue(line, globalParsers);
 }
@@ -91,7 +91,7 @@ void ConfigParser::parseGlobal(const string &line, ServerConfig &server) {
 // return: /Users/username/Webserv/config/static/
 fs::path ConfigParser::getConfigPath(const string &value) const {
 	if (filePath.empty() || value.empty()) {
-		throw ConfigError(EINVAL, "Invalid path");
+		THROW_CONFIG_ERROR(EINVAL, "Invalid path");
 	}
 	fs::path fullPath = utils::sanitizePath(filePath.parent_path(), value);
 	return fullPath;
@@ -103,27 +103,27 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 		{"root", [&](const string &value) {
 			fullPath = getConfigPath(value);
 			if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
-				throw ConfigError(EINVAL, "Invalid root");
+				THROW_CONFIG_ERROR(EINVAL, "Invalid root");
 			}
 			currentLocation.root = fullPath;
 		}},
 		{"index", [&](const string &value) {
 			fullPath = currentLocation.root/value;
 			if (!currentLocation.index.empty() || !utils::isValidFilePath(fullPath)) {
-				throw ConfigError(EINVAL, "Invalid index");
+				THROW_CONFIG_ERROR(EINVAL, "Invalid index");
 			}
 			currentLocation.index = value;
 		}},
 		{"autoindex", [&](const string &value) {
 			if (!currentLocation.autoIndex.empty()) {
-				throw ConfigError(EINVAL, "Invalid autoindex");
+				THROW_CONFIG_ERROR(EINVAL, "Invalid autoindex");
 			}
 			currentLocation.autoIndex = value;
 			currentLocation.isAutoIndex = utils::parseBool(value);
 		}},
 		{"methods", [&](const string &value) {
 			if (!currentLocation.methods.empty()) {
-				throw ConfigError(EINVAL, "Invalid methods");
+				THROW_CONFIG_ERROR(EINVAL, "Invalid methods");
 			}
 			istringstream iss(value);
 			vector<string> methods;
@@ -139,7 +139,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 		}},
 		{"return", [&](const string &value) {
 			if (!currentLocation.returnUrl.empty()) {
-				throw ConfigError(EINVAL, "Invalid return");
+				THROW_CONFIG_ERROR(EINVAL, "Invalid return");
 			}
 			istringstream iss(value);
 			vector<string> returnParts;
@@ -148,7 +148,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 				returnParts.push_back(part);
 			}
 			if (returnParts.size() != 2 || !utils::isValidURL(returnParts[1])) {
-				throw ConfigError(EINVAL, "Invalid return");
+				THROW_CONFIG_ERROR(EINVAL, "Invalid return");
 			}
 			currentLocation.returnUrl = returnParts;
 		}}
@@ -160,7 +160,7 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 void ConfigParser::parseConfig(const string &filename, Config& config) {
 	ifstream file(filename);
 	if (!file.is_open()) {
-		throw ConfigError(ENOENT, "Unable to open configuration file.");
+		THROW_CONFIG_ERROR(ENOENT, "Unable to open configuration file.");
 	}
 
 	string line;
@@ -171,7 +171,7 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 		if (line == "http {") {
 			parseHttpBlock(file, config);
 		} else {
-			throw ConfigError(EINVAL, "Invalid directive outside of blocks: " + line);
+			THROW_CONFIG_ERROR(EINVAL, "Invalid directive outside of blocks: " + line);
 		}
 	}
 }
