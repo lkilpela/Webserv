@@ -35,6 +35,12 @@ struct ServerConfig {
 	std::string clientMaxBodySizeStr;
 	size_t clientMaxBodySize = 0;
 	std::vector<Location> locations;
+
+	// Timeout settings (in milliseconds)
+	std::size_t timeoutRequest = 10000;  // Default: 10 seconds
+	std::size_t timeoutHandler = 5000;   // Default: 5 seconds
+	std::size_t timeoutResponse = 15000; // Default: 15 seconds
+	std::size_t timeoutIdle = 30000;     // Default: 30 seconds
 };
 
 // Multi servers struct
