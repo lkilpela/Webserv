@@ -33,6 +33,7 @@ namespace http {
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 
 			void setFile(StatusCode statusCode, const std::filesystem::path &filePath);
+			void setString(StatusCode statusCode, const std::string &message);
 
 		private:
 			int _clientSocket;

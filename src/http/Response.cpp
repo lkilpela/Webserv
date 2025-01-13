@@ -105,4 +105,12 @@ namespace http {
 		setHeader(Header::CACHE_CONTROL, "no-store"); 				// For test mode
 		build();
 	}
+
+	void Response::setString(StatusCode statusCode, const std::string &message) {
+		setStatusCode(statusCode);
+		setBody(std::make_unique<utils::StringPayload>(_clientSocket, message));
+		setHeader(Header::CONTENT_TYPE, "text/plain");
+		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->getSizeInBytes()));
+		build();
+	}
 }
