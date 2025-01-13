@@ -47,7 +47,7 @@ void ConfigParser::parseServerBlock(ifstream &file, ServerConfig &server) {
 
 	// Function to parse global configuration lines
 	void ConfigParser::parseGlobal(const string &line, ServerConfig &server) {
-	static const ParserMap globalParsers = {
+		const ParserMap globalParsers = {
 		{"host", [&](const string &value) {
 			if (!server.host.empty() || !utils::isValidIP(value)) {
 				THROW_CONFIG_ERROR(EINVAL, "Invalid host");
@@ -59,6 +59,7 @@ void ConfigParser::parseServerBlock(ifstream &file, ServerConfig &server) {
 				THROW_CONFIG_ERROR(EINVAL, "Invalid port");
 			}
 			server.port = utils::parsePort(value);
+			//std::cout << "Port: " << server.port << std::endl;
 		}},
 		{"server_name", [&](const string &value) {
 			if (!server.serverName.empty()) {
@@ -73,6 +74,7 @@ void ConfigParser::parseServerBlock(ifstream &file, ServerConfig &server) {
 			fullPath = getConfigPath(path);
 			utils::validateErrorPage(code, fullPath);
 			server.errorPages[std::stoi(code)] = fullPath; // Store in map
+			//std::cout << "Error Page: " << code << " " << fullPath << std::endl;
 		}},
 		{"client_max_body_size", [&](const string &value) {
 			if (!server.clientMaxBodySizeStr.empty() || !utils::isValidSize(value)) {
@@ -99,7 +101,7 @@ fs::path ConfigParser::getConfigPath(const string &value) const {
 }
 
 void ConfigParser::parseLocation(const string &line, Location &currentLocation) {
-	static const ParserMap locationParsers = {
+	const ParserMap locationParsers = {
 		{"root", [&](const string &value) {
 			fullPath = getConfigPath(value);
 			if (!currentLocation.root.empty() || !utils::isValidFilePath(fullPath)) {
@@ -181,6 +183,6 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 Config ConfigParser::load() {
 	Config config;
 	parseConfig(filePath, config);
-	//utils::printConfig(config); // For testing
+	utils::printConfig(config); // For testing
 	return config;
 }
