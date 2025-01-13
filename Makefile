@@ -3,7 +3,7 @@
 # COMPILATION
 ################################################################################
 CXX				=	g++
-CXX_STRICT		=	-Wall -Wextra -Werror -std=c++20 -Wno-pessimizing-move -Wno-sign-compare
+CXX_STRICT		=	-Wall -Wextra -Werror -std=c++20 -Wno-pessimizing-move -Wno-sign-compare -Wno-unused-private-field
 DB_FLAGS		=	-g
 HEADERS			=	-I $(INCLUDES)
 CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
@@ -83,9 +83,77 @@ re: fclean all
 	@echo "[$(NAME)] Everything rebuilt."
 
 ################################################################################
+# TEST
+################################################################################
+LIB_NAME        =   libwebserv.a
+TEST_NAME       =   test_runner
+TEST_DIR        =   ./test
+TEST_SRCS       =   $(wildcard $(TEST_DIR)/*.cpp)
+TEST_OBJECTS    =   $(TEST_SRCS:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+
+# Build the static library
+$(LIB_NAME): $(OBJECTS)
+	@echo "--------------------------------------------"
+	@ar rcs $(LIB_NAME) $(OBJECTS)
+	@echo "[$(LIB_NAME)] $(B)Built static library $(LIB_NAME)$(RC)"
+	@echo "--------------------------------------------"
+
+# Detect the operating system
+UNAME_S := $(shell uname -s)
+
+# Set Google Test paths based on the operating system
+ifeq ($(UNAME_S), Darwin)
+    GTEST_DIR := $(shell brew --prefix googletest 2>/dev/null || echo "/usr/local/opt/googletest")
+else
+    GTEST_DIR := /usr/local
+endif
+
+GTEST_HEADERS   =   -I$(GTEST_DIR)/include
+GTEST_LIBS      =   -L$(GTEST_DIR)/lib -lgtest -lgtest_main -pthread
+
+# If Google Test is not found, download and build it
+ifeq ($(wildcard $(GTEST_DIR)/include/gtest/gtest.h),)
+GTEST_DIR = ./googletest
+GTEST_HEADERS = -I$(GTEST_DIR)/googletest/include
+GTEST_LIBS = -L$(GTEST_DIR)/build/lib -lgtest -lgtest_main -pthread
+
+$(GTEST_DIR):
+	@echo "Google Test not found. Downloading and building Google Test..."
+	@git clone https://github.com/google/googletest.git $(GTEST_DIR)
+	@mkdir -p $(GTEST_DIR)/build
+	@cd $(GTEST_DIR)/build && cmake .. && make
+endif
+
+test: $(GTEST_DIR) $(TEST_NAME)
+
+$(TEST_NAME): $(TEST_OBJECTS) $(LIB_NAME)
+	@echo "--------------------------------------------"
+	@$(CXX) $(TEST_OBJECTS) -L. -lwebserv -o $(TEST_NAME) $(GTEST_LIBS)
+	@echo "[$(TEST_NAME)] $(B)Built test target $(TEST_NAME)$(RC)"
+	@echo "--------------------------------------------"
+
+$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
+	@mkdir -p $(OBJ_DIR)
+	@echo "Compiling $< to $@"
+	@$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS) $(GTEST_HEADERS) -c $< -o $@
+	@echo "$(G)Compiled: $< $(RC)"
+
+clean_test:
+	@rm -rf $(TEST_NAME).dSYM/ $(OBJ_DIR)/test/
+	@echo "[$(TEST_NAME)] Object files cleaned."
+
+fclean_test: clean_test
+	@rm -f $(TEST_NAME) $(LIB_NAME) $(TEST_NAME).dSYM/
+	@echo "[$(TEST_NAME)] Everything deleted."
+
+re_test: fclean_test test
+	@echo "[$(TEST_NAME)] Everything rebuilt."
+
+################################################################################
 # PHONY
 ################################################################################
 .PHONY: all re clean fclean
+.PHONY: test clean_test fclean_test re_test
 
 ################################################################################
 # Colors

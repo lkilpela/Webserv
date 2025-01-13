@@ -32,6 +32,7 @@
 *.app
 
 webserv
+test_runner
 
 .DS_Store
 .vscode/

@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
 
-		// Create a router for each server
+/* 		// Create a router for each server
 		ServerConfig serverConfig = config.servers[1];
 		Router router(serverConfig);
 		router.get(handleGetRequest);
@@ -48,15 +48,15 @@ int main(int argc, char **argv) {
         http::Connection connection(clientSocket, serverConfig, [&](http::Request& req, http::Response& res) {
             router.handle(req, res);
         });
-
+ */
 		// Read the image file
-        std::vector<uint8_t> imageData = readBinaryFile("config/http/uploads/image.jpg");
+        //std::vector<uint8_t> imageData = readBinaryFile("config/http/uploads/image.jpg");
 
         // Simulate reading request
         //std::string buffer = "GET /cgi-bin/script.cgi/some/extra/path HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
 		//std::string buffer = "GET /uploads/upload_file.txt HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
 		//std::string buffer = "GET /uploads/image.jpg HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
-		std::string buffer = "GET /redirect HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
+		//std::string buffer = "GET /redirect HTTP/1.1\r\nHost: localhost:8080\r\n\r\n";
 /*         std::string buffer = "POST /uploads/upload_file.txt HTTP/1.1\r\n"  // Request line
 							"Host: localhost:8080\r\n" // Host header
 							"Content-Length: 17\r\n" // Content-Length header
@@ -82,14 +82,14 @@ int main(int argc, char **argv) {
 							"Content-Length: 0\r\n" // Content-Length header
 							"Content-Type: image/jpeg\r\n\r\n"; // Content-Type header */
 
-		std::cout << YELLOW "Raw request header: \n" RESET << buffer << std::endl;
+/* 		std::cout << YELLOW "Raw request header: \n" RESET << buffer << std::endl;
 		connection.readRequest((uint8_t*)buffer.data(), buffer.size());
 
         // Send response
-        connection.sendResponse();
-		// For Testing - Log the response status code
+        connection.sendResponse(); */
+/* 		// For Testing - Log the response status code
 		std::cout << GREEN "Response status code: " RESET << static_cast<int>(res.getStatusCode()) << std::endl;
-		std::cout << GREEN "Header: " RESET << res.getHeader().toString() << std::endl;
+		std::cout << GREEN "Header: " RESET << res.getHeader().toString() << std::endl; */
 
 		//Server server(config);
 		//server.listen();

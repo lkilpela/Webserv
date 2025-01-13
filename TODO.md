@@ -109,15 +109,15 @@ line 177: if (std::distance(firstIt + 2, secondIt) != chunkSize)
 if no flag -> if (std::distance(firstIt + 2, secondIt) != static_cast<std::ptrdiff_t>(chunkSize))
 
 
-		std::cout << YELLOW "[READ REQUEST] Reading request" RESET << std::endl;
-		// For Testing - Log the request status enum
-		std::cout << YELLOW "[READ REQUEST] Request status in Connection: " RESET;
-		if (_request.getStatus() == Request::Status::INCOMPLETE) {
-			std::cout << "INCOMPLETE" << std::endl;
-		} else if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
-			std::cout << "HEADER_COMPLETE" << std::endl;
-		} else if (_request.getStatus() == Request::Status::BAD) {
-			std::cout << "BAD" << std::endl;
-		} else if (_request.getStatus() == Request::Status::COMPLETE) {
-			std::cout << "COMPLETE" << std::endl;
-		}
+void logRequestStatus(const Request& request) {
+	std::cout << YELLOW "Request status after calling handler " RESET << std::endl;
+	if (request.getStatus() == Request::Status::INCOMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "INCOMPLETE" << std::endl;
+	} else if (request.getStatus() == Request::Status::HEADER_COMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "HEADER_COMPLETE" << std::endl;
+	} else if (request.getStatus() == Request::Status::BAD) {
+		std::cout << GREEN "Request status: " RESET << "BAD" << std::endl;
+	} else if (request.getStatus() == Request::Status::COMPLETE) {
+		std::cout << GREEN "Request status: " RESET << "COMPLETE" << std::endl;
+	}
+}
