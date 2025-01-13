@@ -9,6 +9,7 @@
 #include <cctype> // std::tolower
 #include <fcntl.h> // fcntl
 #include <unistd.h> // close
+#include <sstream> // std::istringstream
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 
@@ -26,7 +27,7 @@ namespace utils {
 		if (value == "off") {
 			return false;
 		}
-		throw ConfigError(EINVAL, "Invalid boolean value");
+		THROW_CONFIG_ERROR(EINVAL, "Invalid boolean value");
 	}
 
 	int parsePort(const string &value) {
@@ -36,7 +37,7 @@ namespace utils {
 		}
 		int port = std::stoi(value);
 		if (port <= 0 || port > 65535) {
-			throw ConfigError(ERANGE, "Port number out of range");
+			THROW_CONFIG_ERROR(ERANGE, "Port number out of range");
 		}
 		return port;
 	}
@@ -45,7 +46,7 @@ namespace utils {
 		vector<string> validMethods = {"GET", "POST", "DELETE"};
 		for (const auto &method : methods) {
 			if (std::find(validMethods.begin(), validMethods.end(), method) == validMethods.end()) {
-				throw ConfigError(EINVAL, "Invalid method");
+				THROW_CONFIG_ERROR(EINVAL, "Invalid method");
 			}
 		}
 	}
@@ -60,10 +61,10 @@ namespace utils {
 		return fs::exists(path);
 	}
 
-	bool isValidURL(const string &url) {
-		std::regex urlPattern(
-			R"((http|https)://([^\s/$.?#].[^\s]*)$)");
-		return std::regex_match(url, urlPattern);
+	bool isValidURL(const string& url) {
+		const std::regex fullUrlRegex(R"(^https?://[^\s/$.?#].[^\s]*$)");
+		const std::regex relativePathRegex(R"(^/[^ ]*$)");
+		return std::regex_match(url, fullUrlRegex) || std::regex_match(url, relativePathRegex);
 	}
 
 	bool isValidSize(const string &size) {
@@ -75,10 +76,10 @@ namespace utils {
 	void validateErrorPage(const string &code, const string &path) {
 		std::regex code_regex("^[1-5][0-9][0-9]$");
 		if (!std::regex_match(code, code_regex)) {
-			throw ConfigError(EINVAL, "Invalid error code");
+			THROW_CONFIG_ERROR(EINVAL, "Invalid error code");
 		}
 		if (!isValidFilePath(path)) {
-			throw ConfigError(EINVAL, "Invalid error page path");
+			THROW_CONFIG_ERROR(EINVAL, "Invalid error page path");
 		}
 	}
 
@@ -157,7 +158,7 @@ namespace utils {
 		}
 		fs::path rootPath = fs::canonical(root);
 		if (fullPath.string().find(rootPath.string()) != 0) {
-			throw ConfigError(EINVAL, "Path traversal attempt detected");
+			THROW_CONFIG_ERROR(EINVAL, "Path traversal attempt detected");
 		}
 		return fullPath.string();
 	}
@@ -187,16 +188,17 @@ namespace utils {
 		//cout << YELLOW "Key: " RESET << key << YELLOW " Value: " RESET << value << endl;
 
 		if (key.empty() || value.empty()) {
-			throw ConfigError(EINVAL, "Invalid directive in configuration block");
+			THROW_CONFIG_ERROR(EINVAL, "Invalid directive in configuration block");
 		}
 
 		auto it = parsers.find(key);
 		if (it != parsers.end()) {
 			it->second(value);
 		} else {
-			throw ConfigError(EINVAL, "Invalid directive in configuration block");
+			THROW_CONFIG_ERROR(EINVAL, "Invalid directive in configuration block");
 		}
 	}
+	
 	void parseBlock(std::ifstream &file, const string &blockType, const LineHandler &lineHandler) {
 		string line;
 		while (std::getline(file, line)) {
@@ -209,7 +211,30 @@ namespace utils {
 
 			lineHandler(line);
 		}
-		throw ConfigError(EINVAL, "Unclosed " + blockType + " block.");
+		THROW_CONFIG_ERROR(EINVAL, "Unclosed " + blockType + " block.");
+	}
+
+	bool isValidPath(const string& rawPath) {
+		fs::path path = rawPath;
+		// Allow only absolute paths starting with a slash '/'
+		if (path.string() == "/") {
+			return true;
+		}
+		// Check if the path is empty or does not start with a slash '/'
+		if (path.string().empty() || path.string().front() != '/') {
+			return false;
+		}
+		// Check for multiple consecutive slashes like "//"
+		for (size_t i = 1; i < path.string().size(); ++i) {
+			if (path.string()[i] == '/' && path.string()[i - 1] == '/') {
+				return false;
+			}
+		}
+		// Check for directory traversal sequences like "/../" or "/.."
+		if (path == "/.." || path.string().find("/../") != std::string::npos || path.string().ends_with("/..")) {
+			return false;
+		}
+		return true;
 	}
 
 	// FOR TESTING
@@ -260,9 +285,6 @@ namespace utils {
 				}
 				cout << endl;
 			}
-			if (!location.uploadDir.empty()) {
-				cout << "Upload Dir: " << location.uploadDir << endl;
-			}
 			if (!location.returnUrl.empty()) {
 				cout << "Return URL: ";
 				for (const auto& part : location.returnUrl) {
@@ -276,8 +298,8 @@ namespace utils {
 	}
 
 	void printConfig(const Config& config) {
-	for (const auto& server : config.servers) {
-		printServerConfig(server);
+		for (const auto& server : config.servers) {
+			printServerConfig(server);
+		}
 	}
-}
 } // namespace utils

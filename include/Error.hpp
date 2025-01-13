@@ -6,60 +6,72 @@
 
 class WSException {
 public:
-    WSException(int err)
-    : errorCode(err, std::system_category()) {}
+    WSException(int err, const std::string& msg = "", const std::string& file = "", const std::string& function = "", int line = 0)
+    : errorCode(err, std::system_category())
+    , message(msg.empty() ? std::system_category().message(err) : msg)
+    , file(file)
+    , function(function)
+    , line(line) {}
+
     virtual ~WSException() = default;
 
-    std::error_code code() const noexcept { return errorCode; }
+    virtual std::error_code code() const noexcept { return errorCode; } // Return the error code from system
+    virtual const char* what() const noexcept {
+        fullMessage = message + " at " + file + ":" + std::to_string(line) + " in " + function;
+        return fullMessage.c_str();
+    }
 private:
     std::error_code errorCode;
+    std::string message;
+    std::string file;
+    std::string function;
+    int line;
+    mutable std::string fullMessage;
 };
 
 // Default ConfigError exception
 class ConfigError : public WSException {
 public:
-    ConfigError(int err, const std::string& msg)
-    : WSException(err), message(msg) {}
-
-    const char* what() const noexcept { return message.c_str(); }
-private:
-    std::string message;
+    using WSException::WSException; // Inherit constructors from WSException
 };
 
 class NetworkError : public WSException {
 public:
-    NetworkError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
+};
+
+class RouterError : public WSException {
+public:
+    using WSException::WSException;
 };
 
 class RequestError : public WSException {
 public:
-    RequestError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class ResponseError : public WSException {
 public:
-    ResponseError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class RuntimeError : public WSException {
 public:
-    RuntimeError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class FileSystemError : public WSException {
 public:
-    FileSystemError(int err)
-    : WSException(err) {}
+    using WSException::WSException;
 };
 
 class FileNotFoundException : public std::runtime_error {
 	public:
 		explicit FileNotFoundException(const std::string& fileName) : std::runtime_error(fileName) {};
 };
+
+// Macro to throw exceptions with detailed information
+#define THROW_CONFIG_ERROR(err, msg) throw ConfigError(err, msg, __FILE__, __FUNCTION__, __LINE__)
 
 /* PRIMARY EXCEPTION CLASSES
 1. ConfigException
