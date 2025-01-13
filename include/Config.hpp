@@ -11,6 +11,7 @@
 
 
 # define YELLOW "\033[0;33m"
+# define GREEN "\033[0;32m"
 # define BLUE "\033[0;34m"
 # define RESET "\033[0m"
 
@@ -23,8 +24,6 @@ struct Location {
 	bool isAutoIndex = false;				// Enbale or disable directory listing 
 	std::vector<std::string> methods; 		// Allowed methods
 	std::vector<std::string> cgiExtension; 	// CGI extensions
-	std::string uploadDir; 					// Directory to upload files
-	bool allowUpload = false; 				// Enable or disable file uploads
 	std::vector<std::string> returnUrl; 	// Redirect URLs (if any)
 };
 
@@ -36,6 +35,12 @@ struct ServerConfig {
 	std::string clientMaxBodySizeStr;
 	size_t clientMaxBodySize = 0;
 	std::vector<Location> locations;
+
+	// Timeout settings (in milliseconds)
+	std::size_t timeoutRequest = 10000;  // Default: 10 seconds
+	std::size_t timeoutHandler = 5000;   // Default: 5 seconds
+	std::size_t timeoutResponse = 15000; // Default: 15 seconds
+	std::size_t timeoutIdle = 30000;     // Default: 30 seconds
 };
 
 // Multi servers struct
@@ -52,11 +57,9 @@ class ConfigParser {
 private:
 	std::filesystem::path filePath;
 	std::filesystem::path fullPath;
-
 public:
-
 	using LineHandler = std::function<void(const std::string&)>;
-
+	ConfigParser() = default;
 	ConfigParser(const std::string &path): filePath(path) {};
 	
 	void parseHttpBlock(std::ifstream &file, Config &config);

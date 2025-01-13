@@ -2,7 +2,7 @@
 ################################################################################
 # COMPILATION
 ################################################################################
-CXX				=	c++
+CXX				=	g++
 CXX_STRICT		=	-Wall -Wextra -Werror -std=c++20
 DB_FLAGS		=	-g
 HEADERS			=	-I $(INCLUDES)
@@ -12,55 +12,63 @@ CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 # MANDATORY
 ################################################################################
 NAME			=	webserv
-LIB_NAME        =   libwebserv.a
 INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
-					$(INCLUDES)/Utils.hpp \
 					$(INCLUDES)/Error.hpp \
-					$(INCLUDES)/Server.hpp \
-					$(INCLUDES)/Request.hpp \
-					$(INCLUDES)/Response.hpp \
-					$(INCLUDES)/Constant.hpp \
-					$(INCLUDES)/CgiHandler.hpp # Add more headers here
+					$(INCLUDES)/Router.hpp \
+					$(INCLUDES)/utils/common.hpp \
+					$(INCLUDES)/utils/index.hpp \
+					$(INCLUDES)/utils/Payload.hpp \
+					$(INCLUDES)/http/utils.hpp \
+					$(INCLUDES)/http/Request.hpp \
+					$(INCLUDES)/http/Response.hpp \
+					$(INCLUDES)/http/Connection.hpp \
+					$(INCLUDES)/http/Url.hpp \
+					$(INCLUDES)/http/constants.hpp \
+					$(INCLUDES)/http/index.hpp
+
+#$(INCLUDES)/Server.hpp
+
+ # Add more headers here
 
 OBJ_DIR			=	./obj
 SRC_DIR			=	./src
 SRCS			=	Config.cpp \
-					Utils.cpp \
-					Server.cpp \
 					main.cpp \
+					utils.cpp \
+					Router.cpp \
 					Request.cpp \
 					Response.cpp \
-					CgiHandler.cpp # Add more sources here
+					Url.cpp \
+					Payload.cpp \
+					common.cpp \
+					StringPayload.cpp \
+					FilePayload.cpp \
+					Connection.cpp
+#Server.cpp
+# Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
 ################################################################################
 # RULES
 ################################################################################
-vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser  \ $(SRC_DIR)/utils \ $(SRC_DIR)/server \
-			$(SRC_DIR)/http 
+vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser  \ $(SRC_DIR)/utils \ $(SRC_DIR)/http 
 # Add more paths here
 
 all: $(NAME)
-
-$(NAME): $(OBJECTS)
-	@echo "--------------------------------------------"
-	@$(CXX_FULL) $(OBJECTS) -o $(NAME)
-	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
-	@echo "--------------------------------------------"
-
-$(LIB_NAME): $(OBJECTS)
-	@echo "--------------------------------------------"
-	@ar rcs $(LIB_NAME) $(OBJECTS)
-	@echo "[$(LIB_NAME)] $(B)Built static library $(LIB_NAME)$(RC)"
-	@echo "--------------------------------------------"
 
 $(OBJ_DIR)/%.o: %.cpp $(M_HEADERS)
 	@mkdir -p $(OBJ_DIR)
 	@echo "Compiling $< to $@"
 	@$(CXX_FULL) -c $< -o $@
 	@echo "$(G)Compiled: $< $(RC)"
+
+$(NAME): $(OBJECTS)
+	@echo "--------------------------------------------"
+	@$(CXX_FULL) $(OBJECTS) -o $(NAME)
+	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
+	@echo "--------------------------------------------"
 
 clean:
 	@rm -rf $(NAME).dSYM/ $(OBJ_DIR)/
@@ -74,12 +82,20 @@ re: fclean all
 	@echo "[$(NAME)] Everything rebuilt."
 
 ################################################################################
-# TESTS
+# TEST
 ################################################################################
+LIB_NAME        =   libwebserv.a
 TEST_NAME       =   test_runner
-TEST_DIR        =   ./tests
+TEST_DIR        =   ./test
 TEST_SRCS       =   $(wildcard $(TEST_DIR)/*.cpp)
 TEST_OBJECTS    =   $(TEST_SRCS:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+
+# Build the static library
+$(LIB_NAME): $(OBJECTS)
+	@echo "--------------------------------------------"
+	@ar rcs $(LIB_NAME) $(OBJECTS)
+	@echo "[$(LIB_NAME)] $(B)Built static library $(LIB_NAME)$(RC)"
+	@echo "--------------------------------------------"
 
 # Detect the operating system
 UNAME_S := $(shell uname -s)
@@ -107,7 +123,7 @@ $(GTEST_DIR):
 	@cd $(GTEST_DIR)/build && cmake .. && make
 endif
 
-tests: $(GTEST_DIR) $(TEST_NAME)
+test: $(GTEST_DIR) $(TEST_NAME)
 
 $(TEST_NAME): $(TEST_OBJECTS) $(LIB_NAME)
 	@echo "--------------------------------------------"
@@ -121,10 +137,22 @@ $(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
 	@$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS) $(GTEST_HEADERS) -c $< -o $@
 	@echo "$(G)Compiled: $< $(RC)"
 
+clean_test:
+	@rm -rf $(TEST_NAME).dSYM/ $(OBJ_DIR)/test/
+	@echo "[$(TEST_NAME)] Object files cleaned."
+
+fclean_test: clean_test
+	@rm -f $(TEST_NAME) $(LIB_NAME) $(TEST_NAME).dSYM/
+	@echo "[$(TEST_NAME)] Everything deleted."
+
+re_test: fclean_test test
+	@echo "[$(TEST_NAME)] Everything rebuilt."
+
 ################################################################################
 # PHONY
 ################################################################################
-.PHONY: all re clean fclean tests
+.PHONY: all re clean fclean
+.PHONY: test clean_test fclean_test re_test
 
 ################################################################################
 # Colors
