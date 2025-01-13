@@ -57,11 +57,9 @@ class ConfigParser {
 private:
 	std::filesystem::path filePath;
 	std::filesystem::path fullPath;
-
 public:
-
 	using LineHandler = std::function<void(const std::string&)>;
-
+	ConfigParser() = default;
 	ConfigParser(const std::string &path): filePath(path) {};
 	
 	void parseHttpBlock(std::ifstream &file, Config &config);
