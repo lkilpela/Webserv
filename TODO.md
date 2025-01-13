@@ -100,3 +100,24 @@ TBC
 Why? Ensure paths with query string (/static/file?name=value) are handled correctly. Query string shoul dnot interfere with path matching or file lookup.
 - Range Requests for large file downlaod like video streaming -> https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
 Why? This ensure efficient resource usage when clients request partial file content, reducing the amount of data transferred and improving download speed.
+
+Connectio.hpp
+Put flag to slient the warnings in Makefile for  -Wno-pessimizing-move -Wno-sign-compare
+line 144: _request = std::move(Request::parseHeader(rawRequestHeader));
+if no flag -> _request = Request::parseHeader(rawRequestHeader);
+line 177: if (std::distance(firstIt + 2, secondIt) != chunkSize)
+if no flag -> if (std::distance(firstIt + 2, secondIt) != static_cast<std::ptrdiff_t>(chunkSize))
+
+
+		std::cout << YELLOW "[READ REQUEST] Reading request" RESET << std::endl;
+		// For Testing - Log the request status enum
+		std::cout << YELLOW "[READ REQUEST] Request status in Connection: " RESET;
+		if (_request.getStatus() == Request::Status::INCOMPLETE) {
+			std::cout << "INCOMPLETE" << std::endl;
+		} else if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
+			std::cout << "HEADER_COMPLETE" << std::endl;
+		} else if (_request.getStatus() == Request::Status::BAD) {
+			std::cout << "BAD" << std::endl;
+		} else if (_request.getStatus() == Request::Status::COMPLETE) {
+			std::cout << "COMPLETE" << std::endl;
+		}
