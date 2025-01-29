@@ -13,7 +13,7 @@ namespace http {
 	Connection::Connection(
 		int clientSocket,
 		const ServerConfig& serverConfig,
-		std::function<void (Request&, Response&)> processFn
+		std::function<void (Connection &)> processFn
 	)
 		: _clientSocket(clientSocket)
 		, _serverConfig(serverConfig)
@@ -37,7 +37,7 @@ namespace http {
 		if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
 			Response response(_clientSocket);
 
-			_processFn(_request, response);
+			_processFn(*this);
 			_processedQueue.emplace(std::move(_request), std::move(response));
 			_request.clear();
 		}

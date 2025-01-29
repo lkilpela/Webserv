@@ -15,7 +15,7 @@ namespace http {
 			Connection(
 				int clientSocket,
 				const ServerConfig& serverConfig,
-				std::function<void (Request&, Response&)> processFn
+				std::function<void (Connection &)> processFn
 			);
 			Connection(const Connection&) = delete;
 			Connection& operator=(const Connection&) = delete;
@@ -34,7 +34,7 @@ namespace http {
 			Request _request { Request::Status::INCOMPLETE };
 			std::vector<std::uint8_t> _requestBuffer;
 			std::queue<std::pair<Request, Response>> _processedQueue;
-			std::function<void (Request&, Response&)> _processFn;
+			std::function<void (Connection &)> _processFn;
 			std::function<void ()> _cleanupFn;
 			std::chrono::steady_clock::time_point _lastReceived;
 

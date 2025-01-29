@@ -26,7 +26,9 @@ class Server {
 		std::vector<int> _serverFds;
 		std::vector<pollfd> _pollfds;
 		std::unordered_map<int, http::Connection> _connectionByFd;
+		std::unordered_map<int, http::Connection &> _connectionByPipeFd;
 
+		void _processConnection(http::Connection &connection);
 		void _addConnection(int fd);
 		void _cleanup();
 };

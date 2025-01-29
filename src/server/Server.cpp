@@ -25,7 +25,7 @@ void Server::listen() {
 			auto &[fd, events, revents] = *it;
 			auto &connection = _connectionByFd[fd];
 
-			if (connection.isTimedOut()) {
+			if (connection.isClosed()) {
 				_connectionByFd.erase(fd);
 				it = _pollfds.erase(it);
 				continue;
@@ -41,20 +41,24 @@ void Server::listen() {
 			if (revents == POLLIN) {
 				if (utils::isInVector<int>(fd, _serverFds)) {
 					_addConnection(fd);
-					_connectionByFd.emplace(fd, connection);
+					_connectionByFd.emplace(fd, connection);				
 				} else {
-					unsigned char buffer[2048];
+					if (connection.getRequest().isCgi()) {
+						processCgi();
+					} else {
+						processNormalRequest();
+						unsigned char buffer[2048];
 
-					ssize_t bytesRead = recv(fd, buffer, 2048, MSG_NOSIGNAL);
+						ssize_t bytesRead = recv(fd, buffer, 2048, MSG_NOSIGNAL);
 
-					// client closed connection successfully
-					if (bytesRead == 0) {
-						connection.close();
-						_connectionByFd.erase(fd);
-						it = _pollfds.erase(it);
-						continue;
+						// client closed connection successfully
+						if (bytesRead == 0) {
+							connection.close();
+							_connectionByFd.erase(fd);
+							it = _pollfds.erase(it);
+							continue;
+						}
 					}
-
 					connection.readRequest(buffer, bytesRead);
 				}
 			}
@@ -62,7 +66,6 @@ void Server::listen() {
 			if (revents == POLLOUT) {
 				connection.sendResponse();
 			}
-
 			it++;
 		}
     }
@@ -93,7 +96,27 @@ void deleteEnv(char **env){
 	delete[] env;
 }
 
-cgiHandler(http::Request &req, http::Response &res) {
+void Server::_processConnection(http::Connection &connection)
+{
+	// do something here
+	
+	_router.handle(connection.getRequest(), connection.getResponse());
+}
+
+// void Server::_process(http::Connection &connection) {
+// 	if (connection.getRequest().isCgi()) {
+// 		int pipefd[2];
+
+// 		if(pipe(pipefd) == -1)
+// 			perror("Pipe failed");
+
+// 		pollfd cgiData { pipefd[0], POLLIN, 0 };
+// 		_pollfds.push_back(cgiData);
+// 		_connectionByPipeFd.emplace(pipefd[0], connection)
+// 	}
+// }
+
+void Server::cgiHandler(http::Request &req, http::Response &res) {
 
 		char* interpreter = "/usr/bin/python3";
 		char* script = "cgi_bin/hello.py";
@@ -127,41 +150,19 @@ cgiHandler(http::Request &req, http::Response &res) {
 // send reponse of internal error if execve fails?
 // if (req.getUrl().path ends with "abc.py") {
 // this is CGI request then do something with it
-void Server::_addConnection(int fd) {
+void Server::_addConnection(int serverFd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
-	int clientFd = ::accept(fd, (struct sockaddr*)&clientAddr, &addrLen);
+	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
 	if (clientFd < 0) {
 		perror("Failed to accept connection");
 		return;
 	}
 
-	struct pollfd clientPollData { fd, POLLIN, 0 };
+	struct pollfd clientPollData { serverFd, POLLIN, 0 };
 	_pollfds.push_back(clientPollData);
-	_connectionByFd.emplace(
-		fd, 
-		5000, 
-		[&](http::Request &req, http::Response &res) {
-			if (req.isCgi()) {
-				// fork()
-				// if is in child we execute .py
-				// e
-				int pipefd[2];
-				pipe(pipefd);
-				_pollfds.
-				fork();
-
-				// if(pipe(pipefd) == -1)
-				// 	perror("Pipe failed");
-				// if (utils::setNonBlocking(pipefd[0]) == false)
-				// 	perror("Pipe nonblocking failed");
-				// pollfd cgiData { pipefd[0], POLLIN, 0 };
-				// _pollfds.push_back(cgiData);
-			}
-			_router.handle(req, res);
-		}
-	);
+	_connectionByFd.emplace(serverFd, 5000, _processConnection);
 }
 
 void Server::_cleanup() {
