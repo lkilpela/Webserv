@@ -10,14 +10,25 @@
 #include "http/utils.hpp"
 
 namespace http {
-	Connection::Connection(int clientSocket, int msTimeout, std::function<void (Request&, Response&)> process)
+	Connection::Connection(
+		int clientSocket,
+		const ServerConfig& serverConfig,
+		std::function<void (Request&, Response&)> processFn
+	)
 		: _clientSocket(clientSocket)
-		, _msTimeout(msTimeout)
-		, _process(process)
+		, _serverConfig(serverConfig)
+		, _processFn(processFn)
 		, _lastReceived(std::chrono::steady_clock::now()) {
 	}
 
-	void Connection::readRequest(std::uint8_t *buffer, size_t size) {
+	void Connection::readRequest(std::uint8_t *buffer, ssize_t size) {
+		if (size <= 0) {
+			if (size == 0 || _isTimedOut()) {
+				this->close();
+			}
+			return;
+		}
+
 		_requestBuffer.reserve(_requestBuffer.size() + size);
 		_requestBuffer.insert(_requestBuffer.end(), buffer, buffer + size);
 		_lastReceived = std::chrono::steady_clock::now();
@@ -26,14 +37,14 @@ namespace http {
 		if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
 			Response response(_clientSocket);
 
-			_process(_request, response);
+			_processFn(_request, response);
 			_processedQueue.emplace(std::move(_request), std::move(response));
 			_request.clear();
 		}
 	}
 
 	void Connection::sendResponse() {
-		if (_processedQueue.empty()) {
+		if (isClosed() || _processedQueue.empty()) {
 			return;
 		}
 
@@ -65,15 +76,23 @@ namespace http {
 		}
 
 		_clientSocket = -1;
+
+		if (_cleanupFn) {
+			_cleanupFn();
+		}
 	}
 
-	bool Connection::isTimedOut() const {
-		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
-		return (elapsedTime > std::chrono::milliseconds(_msTimeout));
+	void Connection::onClose(std::function<void ()> cleanupFn) {
+		_cleanupFn = cleanupFn;
 	}
 
 	bool Connection::isClosed() const {
 		return (_clientSocket == -1);
+	}
+
+	bool Connection::_isTimedOut() const {
+		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
+		return (elapsedTime > std::chrono::milliseconds(_msTimeout));
 	}
 
 	void Connection::_processBuffer() {
