@@ -6,7 +6,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <cstring>
-#include <vector>
+#include <unordered_set>
 #include <algorithm>
 #include <functional>
 #include <poll.h>
@@ -23,13 +23,19 @@ class Server {
 	private:
 		const Config &_config;
 		Router _router;
-		std::vector<int> _serverFds;
+		std::unordered_set<int>	_serverFds;
 		std::vector<pollfd> _pollfds;
 		std::unordered_map<int, http::Connection> _connectionByFd;
 		std::unordered_map<int, http::Connection &> _connectionByPipeFd;
 
-		void _read();
-		void _addConnection(int fd);
-		void _sendRespond(struct ::pollfd& pollFd, http::Connection& con);
+		bool _addConnection(int fd);
+		bool _read(struct ::pollfd& pollFd, http::Connection& con);
+		bool _process(struct ::pollfd& pollFd, http::Connection& con);
+		bool _sendRespond(struct ::pollfd& pollFd, http::Connection& con);
 		void _cleanup();
+
+		std::vector<pollfd>::iterator _removeConnection(
+			std::vector<pollfd>::const_iterator it, 
+			http::Connection& con
+		);
 };

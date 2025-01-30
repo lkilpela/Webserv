@@ -7,7 +7,7 @@
 Server::Server(const Config& config) : _config(config), _router(config.servers[0]) {
     for (int port : config.ports) {
 		int serverFd = utils::createPassiveSocket(port, 128, true);
-        _serverFds.push_back(serverFd);
+        _serverFds.emplace(serverFd);
 		_pollfds.push_back({ serverFd, POLLIN, 0 });
     }
 }
@@ -22,25 +22,48 @@ void Server::listen() {
         if (::poll(_pollfds.data(), _pollfds.size(), 50) == -1)
 			perror("Poll failed");
         for (auto it = _pollfds.begin(); it != _pollfds.end();) {
-			auto &[fd, events, revents] = *it;
-			auto &connection = _connectionByFd[fd];
+			auto &[fd, events, revents] = *it; // fd here can be server, client or pipe file descriptor
 
-			if (connection.isClosed()) {
-				_connectionByFd.erase(fd);
-				it = _pollfds.erase(it);
-				continue;
-			}
+			// if (revents == POLLIN) {
+			// 	for (const auto serverFd: _serverFds) {
+			// 		if (serverFd == fd) {
+			// 			_addConnection(serverFd);
+			// 			it++;
+			// 			continue;
+			// 		}
+			// 	}
+			// }
 
-			if (revents == POLLHUP) {
-				connection.close();
-				_connectionByFd.erase(fd);
-				it = _pollfds.erase(it);
-				continue;
+			// for (const auto serverFd: _serverFds) {
+			// 	if (serverFd == fd) {
+			// 		_addConnection(serverFd);
+			// 		it++;
+			// 		continue;
+			// 	}
+			// }
+
+			// if fd is not serverFD then we execute code below
+			if (_serverFds.find(fd) != _serverFds.end()) {
+				if (revents == POLLIN) {
+					_addConnection(fd);
+				}
+			} else {
+				auto &connection = _connectionByFd[fd];
+
+				if (
+					connection.isClosed() 
+					|| revents == POLLHUP
+					|| _read(*it, connection) == false
+					|| _process(*it, connection) == false
+					|| _sendRespond(*it, connection) == false
+				) {
+					it = _removeConnection(it, connection);
+					continue;
+				}
 			}
 			
-			// _read(*it, connection);
-			// _process(*it, connection);
-			_sendRespond(*it, connection);
+	
+
 			it++;
 		}
     }
@@ -84,55 +107,57 @@ void deleteEnv(char **env){
 // 	}
 // }
 
-void Server::cgiHandler(http::Request &req, http::Response &res) {
+// void Server::cgiHandler(http::Request &req, http::Response &res) {
 
-		char* interpreter = "/usr/bin/python3";
-		char* script = "cgi_bin/hello.py";
-		char* scriptArray[2] = {script, nullptr};
-		if (access(interpreter, X_OK) == -1 || access(script, X_OK) == -1){}
-			//return 403 forbidding
-		auto cgiHandler = [&](http::Request& req, http::Response& res) -> void {
-			int pipefd[2];
-			if(pipe(pipefd) == -1)
-				perror("Pipe failed");
-			if (utils::setNonBlocking(pipefd[0]) == false)
-				perror("Pipe nonblocking failed");
-			pollfd cgiData { pipefd[0], POLLIN, 0 };
-			_pollfds.push_back(cgiData);
-			pid_t pid = fork();
-			if (pid == 0){
-				close(pipefd[0]);
-				if (dup2(pipefd[1], STDOUT_FILENO) == -1)
-					perror("Dup2 failed");
-				char **env = makeEnv(env, req);
-				execve(interpreter, scriptArray, env);
-			} else{
-				deleteEnv(env);
-				//read pipe and give to response
-				close(pipefd[1]);
-			}
-			//waitpid
-		};
-}
+// 		char* interpreter = "/usr/bin/python3";
+// 		char* script = "cgi_bin/hello.py";
+// 		char* scriptArray[2] = {script, nullptr};
+// 		if (access(interpreter, X_OK) == -1 || access(script, X_OK) == -1){}
+// 			//return 403 forbidding
+// 		auto cgiHandler = [&](http::Request& req, http::Response& res) -> void {
+// 			int pipefd[2];
+// 			if(pipe(pipefd) == -1)
+// 				perror("Pipe failed");
+// 			if (utils::setNonBlocking(pipefd[0]) == false)
+// 				perror("Pipe nonblocking failed");
+// 			pollfd cgiData { pipefd[0], POLLIN, 0 };
+// 			_pollfds.push_back(cgiData);
+// 			pid_t pid = fork();
+// 			if (pid == 0){
+// 				close(pipefd[0]);
+// 				if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+// 					perror("Dup2 failed");
+// 				char **env = makeEnv(env, req);
+// 				execve(interpreter, scriptArray, env);
+// 			} else{
+// 				deleteEnv(env);
+// 				//read pipe and give to response
+// 				close(pipefd[1]);
+// 			}
+// 			//waitpid
+// 		};
+// }
 // send reponse of internal error if execve fails?
 // if (req.getUrl().path ends with "abc.py") {
 // this is CGI request then do something with it
-void Server::_addConnection(int serverFd) {
+
+bool Server::_addConnection(int serverFd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
 	if (clientFd < 0) {
 		perror("Failed to accept connection");
-		return;
+		return false;
 	}
 
 	struct ::pollfd clientPollData { serverFd, POLLIN, 0 };
 	_pollfds.push_back(clientPollData);
 	_connectionByFd.emplace(serverFd, 5000, _processConnection);
+	return true;
 }
 
-void Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
+bool Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
 	// if (revents == POLLIN) {
 			// 	if (utils::isInVector<int>(fd, _serverFds)) {
 			// 		_addConnection(fd);
@@ -156,15 +181,8 @@ void Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
 			// 	}
 			// }
 	if (pollFd.revents == POLLIN) {
-		for (const auto serverFd: _serverFds) {
-			if (serverFd == pollFd.fd) {
-				_addConnection(serverFd);
-				return;
-			}
-		}
-
 		if (_connectionByPipeFd.find(pollFd.fd) != _connectionByPipeFd.end()) {
-			asdasdasda
+			// asdasdasda
 			return;
 		}
 
@@ -175,11 +193,14 @@ void Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
 			con.close();
 			_connectionByFd.erase(fd);
 			it = _pollfds.erase(it);
-			continue;
+			return &it;
 		}
 		
 		con.readRequest(buffer, bytesRead);
+		return nullptr;
 	}
+
+	return true;
 }
 
 void Server::_sendResponse(struct ::pollfd& pollFd, http::Connection& con) {
@@ -189,6 +210,15 @@ void Server::_sendResponse(struct ::pollfd& pollFd, http::Connection& con) {
 			pollFd.events = POLLIN;
 		}
 	}
+}
+
+std::vector<pollfd>::iterator Server::_removeConnection(std::vector<pollfd>::const_iterator it, http::Connection& con)
+{
+	if (con.isClosed()) {
+		return;
+	}
+	_connectionByFd.erase(it->fd);
+	return _pollfds.erase(it);
 }
 
 void Server::_cleanup() {
