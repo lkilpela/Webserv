@@ -28,7 +28,8 @@ class Server {
 		std::unordered_map<int, http::Connection> _connectionByFd;
 		std::unordered_map<int, http::Connection &> _connectionByPipeFd;
 
-		void _processConnection(http::Connection &connection);
+		void _read();
 		void _addConnection(int fd);
+		void _sendRespond(struct ::pollfd& pollFd, http::Connection& con);
 		void _cleanup();
 };
