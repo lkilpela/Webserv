@@ -125,7 +125,7 @@ namespace http {
 		switch (code) {
 			case CONTINUE_100: return "Continue";
 			case SWITCHING_PROTOCOLS_101: return "Switching Protocols";
-			case OK_200: return "Ok";
+			case OK_200: return "OK";
 			case CREATED_201: return "Created";
 			case ACCEPTED_202: return "Accepted";
 			case NON_AUTHORITATIVE_INFORMATION_203: return "Non-Authoritative Information";

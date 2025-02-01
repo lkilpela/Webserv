@@ -202,7 +202,7 @@ namespace utils {
 			THROW_CONFIG_ERROR(EINVAL, "Invalid directive in configuration block");
 		}
 	}
-	
+
 	void parseBlock(std::ifstream &file, const string &blockType, const LineHandler &lineHandler) {
 		string line;
 		while (std::getline(file, line)) {
@@ -242,9 +242,9 @@ namespace utils {
 	}
 
 	// FOR TESTING
-	
+
 	void printRequest(const http::Request& request) {
-		cout 
+		cout
 			<< "Request method: " << request.getMethod() << endl
 			<< "Request URL_scheme: " << request.getUrl().scheme << endl
 			<< "Request URL_user: " << request.getUrl().user << endl
@@ -255,11 +255,11 @@ namespace utils {
 			<< "Request URL_query: " << request.getUrl().query << endl
 			<< "Request URL_fragment: " << request.getUrl().fragment << endl
 			<< "Request version: " << request.getVersion() << endl
-			<< "Request body size: " << request.getBodySize() << endl;
+			<< "Request body size: " << request.getBody().size() << endl;
 	}
 
 	void printServerConfig(const ServerConfig& server) {
-		cout 
+		cout
 			<< YELLOW "Server Config: " RESET << server.serverName << endl
 			<< "Host: " << server.host << endl
 			<< "Port: " << server.port << endl
@@ -272,7 +272,7 @@ namespace utils {
 		cout << "Client Max Body Size: " << server.clientMaxBodySize << endl;
 
 		for (const auto& location : server.locations) {
-			cout 
+			cout
 				<< "Location Path: " << location.path << endl
 				<< "Root: " << location.root << endl
 				<< "Index: " << location.index << endl

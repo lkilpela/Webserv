@@ -53,13 +53,18 @@ namespace http {
 
 		ostream << "\r\n";
 		_header.setMessage(ostream.str());
+		setStatus(Response::Status::READY);
 	}
 
 	int Response::getClientSocket() const {
 		return _clientSocket;
 	}
 
-	const StatusCode Response::getStatusCode() const {
+	Response::Status Response::getStatus() const {
+		return _status;
+	}
+
+	StatusCode Response::getStatusCode() const {
 		return _statusCode;
 	}
 
@@ -79,6 +84,11 @@ namespace http {
 		return *this;
 	}
 
+	Response& Response::setStatus(const Status status) {
+		_status = status;
+		return *this;
+	}
+
 	Response& Response::setStatusCode(const StatusCode statusCode) {
 		_statusCode = statusCode;
 		return *this;
@@ -92,6 +102,14 @@ namespace http {
 	Response& Response::setBody(std::unique_ptr<utils::Payload> body) {
 		_body = std::move(body);
 		return *this;
+	}
+
+	void Response::setText(StatusCode statusCode, const std::string& text) {
+		setStatusCode(statusCode);
+		setBody(std::make_unique<utils::StringPayload>(_clientSocket, text));
+		setHeader(Header::CONTENT_TYPE, getMimeType("txt"));
+		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->getSizeInBytes()));
+		build();
 	}
 
 	void Response::setFile(StatusCode statusCode, const std::filesystem::path &filePath) {
