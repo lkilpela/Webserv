@@ -31,11 +31,11 @@ class Server {
 		bool _addConnection(int fd);
 		bool _read(struct ::pollfd& pollFd, http::Connection& con);
 		bool _process(struct ::pollfd& pollFd, http::Connection& con);
-		bool _sendRespond(struct ::pollfd& pollFd, http::Connection& con);
+		void _sendResponse(struct ::pollfd& pollFd, http::Connection& con);
 		void _cleanup();
 
 		std::vector<pollfd>::iterator _removeConnection(
-			std::vector<pollfd>::const_iterator it, 
+			std::vector<pollfd>::const_iterator it,
 			http::Connection& con
 		);
 };

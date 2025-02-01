@@ -51,18 +51,19 @@ void Server::listen() {
 				auto &connection = _connectionByFd[fd];
 
 				if (
-					connection.isClosed() 
+					connection.isClosed()
 					|| revents == POLLHUP
 					|| _read(*it, connection) == false
 					|| _process(*it, connection) == false
-					|| _sendRespond(*it, connection) == false
 				) {
 					it = _removeConnection(it, connection);
 					continue;
 				}
+				
+				_sendResponse(*it, connection);
 			}
-			
-	
+
+
 
 			it++;
 		}
@@ -153,15 +154,15 @@ bool Server::_addConnection(int serverFd) {
 
 	struct ::pollfd clientPollData { serverFd, POLLIN, 0 };
 	_pollfds.push_back(clientPollData);
-	_connectionByFd.emplace(serverFd, 5000, _processConnection);
+	_connectionByFd.emplace();
 	return true;
 }
 
-bool Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
+// bool Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
 	// if (revents == POLLIN) {
 			// 	if (utils::isInVector<int>(fd, _serverFds)) {
 			// 		_addConnection(fd);
-			// 		_connectionByFd.emplace(fd, connection);				
+			// 		_connectionByFd.emplace(fd, connection);
 			// 	} else {
 			// 		if (connection.getRequest().isCgi()) {
 			// 			processCgi();
@@ -180,35 +181,35 @@ bool Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
 			// 		connection.readRequest(buffer, bytesRead);
 			// 	}
 			// }
-	if (pollFd.revents == POLLIN) {
-		if (_connectionByPipeFd.find(pollFd.fd) != _connectionByPipeFd.end()) {
-			// asdasdasda
-			return;
-		}
+// 	if (pollFd.revents == POLLIN) {
+// 		if (_connectionByPipeFd.find(pollFd.fd) != _connectionByPipeFd.end()) {
+// 			return;
+// 		}
 
-		unsigned char buffer[2048];
-		ssize_t bytesRead = recv(fd, buffer, 2048, MSG_NOSIGNAL);
-		// client closed connection successfully
-		if (bytesRead == 0) {
-			con.close();
-			_connectionByFd.erase(fd);
-			it = _pollfds.erase(it);
-			return &it;
-		}
-		
-		con.readRequest(buffer, bytesRead);
-		return nullptr;
-	}
+// 		unsigned char buffer[2048];
+// 		ssize_t bytesRead = recv(fd, buffer, 2048, MSG_NOSIGNAL);
+// 		// client closed connection successfully
+// 		if (bytesRead == 0) {
+// 			con.close();
+// 			_connectionByFd.erase(fd);
+// 			it = _pollfds.erase(it);
+// 			return &it;
+// 		}
 
-	return true;
-}
+// 		con.readRequest(buffer, bytesRead);
+// 		return nullptr;
+// 	}
+
+// 	return true;
+// }
 
 void Server::_sendResponse(struct ::pollfd& pollFd, http::Connection& con) {
-	if (pollFd.revents == POLLOUT) {
-		auto res = con.getResponse();
-		if (res.send()) {
-			pollFd.events = POLLIN;
-		}
+	if (pollFd.revents & POLLOUT) {
+		// con.sendResponse()
+		// http::Response* res = con.getResponse();
+		// if (res != nullptr && res->send()) {
+		// 	pollFd.events &= ~POLLOUT;
+		// }
 	}
 }
 
