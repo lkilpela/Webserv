@@ -105,7 +105,7 @@ void deleteEnv(char **env){
 // 				//read pipe and give to response
 // 				close(pipefd[1]);
 // 			}
-// 			//waitpid
+// 			//waitpid(pid, &status, WNOHANG);
 // 		};
 // }
 // send reponse of internal error if execve fails?
