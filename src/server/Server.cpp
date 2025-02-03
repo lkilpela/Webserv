@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/wait.h>
 #include "Server.hpp"
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
@@ -78,39 +79,33 @@ void deleteEnv(char **env){
 	delete[] env;
 }
 
-// void Server::cgiHandler(http::Request &req, http::Response &res) {
+void Server::_cgiHandler(http::Request &req, http::Response &res) {
 
-// 		char* interpreter = "/usr/bin/python3";
-// 		char* script = "cgi_bin/hello.py";
-// 		char* scriptArray[2] = {script, nullptr};
-// 		if (access(interpreter, X_OK) == -1 || access(script, X_OK) == -1){}
-// 			//return 403 forbidding
-// 		auto cgiHandler = [&](http::Request& req, http::Response& res) -> void {
-// 			int pipefd[2];
-// 			if(pipe(pipefd) == -1)
-// 				perror("Pipe failed");
-// 			if (utils::setNonBlocking(pipefd[0]) == false)
-// 				perror("Pipe nonblocking failed");
-// 			pollfd cgiData { pipefd[0], POLLIN, 0 };
-// 			_pollfds.push_back(cgiData);
-// 			pid_t pid = fork();
-// 			if (pid == 0){
-// 				close(pipefd[0]);
-// 				if (dup2(pipefd[1], STDOUT_FILENO) == -1)
-// 					perror("Dup2 failed");
-// 				char **env = makeEnv(env, req);
-// 				execve(interpreter, scriptArray, env);
-// 			} else{
-// 				deleteEnv(env);
-// 				//read pipe and give to response
-// 				close(pipefd[1]);
-// 			}
-// 			//waitpid(pid, &status, WNOHANG);
-// 		};
-// }
-// send reponse of internal error if execve fails?
-// if (req.getUrl().path ends with "abc.py") {
-// this is CGI request then do something with it
+	char* interpreter = "/usr/bin/python3";
+	// if (access(interpreter, X_OK) == -1 || access(script, X_OK) == -1){}
+		//return 403 forbidding
+	const char* script = req.getUrl().path.c_str();
+	char* scriptArray[2] = {const_cast<char*>(script), nullptr};
+	int pipefd[2];
+	if(pipe(pipefd) == -1)
+		perror("Pipe failed");
+	if (utils::setNonBlocking(pipefd[0]) == false)
+		perror("Pipe nonblocking failed");
+	pollfd cgiData { pipefd[0], POLLIN, 0 };
+	_pollfds.push_back(cgiData);
+	pid_t pid = fork();
+	if (pid == 0){
+		close(pipefd[0]);
+		if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+			perror("Dup2 failed");
+		char **env = makeEnv(env, req);
+		execve(interpreter, scriptArray, env);
+		deleteEnv(env);
+	}
+	pid_t result = waitpid(pid, NULL, WNOHANG);
+	if (result = pid)
+		close(pipefd[0]);
+}
 
 void Server::_addConnection(int serverFd) {
 	sockaddr_in clientAddr {};

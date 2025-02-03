@@ -33,5 +33,6 @@ class Server {
 		void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
 		void _process(struct ::pollfd& pollFd, http::Connection& con);
 		void _sendResponse(struct ::pollfd& pollFd, http::Connection& con);
+		void _cgiHandler(http::Request &req, http::Response &res);
 		void _cleanup();
 };
