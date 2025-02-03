@@ -20,8 +20,8 @@ struct Location {
 	std::string path;						// Location path (/, /static/, /static/index.html, /cgi-bin)
 	std::filesystem::path root;				// Full path resolved during parsing
 	std::string index;						// Default index.html file
-	std::string autoIndex;	
-	bool isAutoIndex = false;				// Enbale or disable directory listing 
+	std::string autoIndex;
+	bool isAutoIndex = false;				// Enbale or disable directory listing
 	std::vector<std::string> methods; 		// Allowed methods
 	std::vector<std::string> cgiExtension; 	// CGI extensions
 	std::vector<std::string> returnUrl; 	// Redirect URLs (if any)
@@ -33,7 +33,7 @@ struct ServerConfig {
 	std::string serverName;
 	std::map<int, std::string> errorPages;
 	std::string clientMaxBodySizeStr;
-	size_t clientMaxBodySize = 0;
+	size_t clientMaxBodySize = 10 * 1024 * 1024;	// 10MB
 	std::vector<Location> locations;
 
 	// Timeout settings (in milliseconds)
@@ -61,7 +61,7 @@ public:
 	using LineHandler = std::function<void(const std::string&)>;
 	ConfigParser() = default;
 	ConfigParser(const std::string &path): filePath(path) {};
-	
+
 	void parseHttpBlock(std::ifstream &file, Config &config);
 	void parseServerBlock(std::ifstream &file, ServerConfig &server);
 	void parseLocationBlock(std::ifstream &file, Location &location);

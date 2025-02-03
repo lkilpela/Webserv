@@ -25,6 +25,10 @@ namespace utils {
 		}
 	}
 
+	void StringPayload::append(const std::uint8_t* data, size_t size) {
+		_message.append(reinterpret_cast<const char*>(data), size);
+	}
+
 	std::string StringPayload::toString() const {
 		return _message;
 	}

@@ -6,64 +6,67 @@
 #include <algorithm>
 #include <array>
 #include "http/Connection.hpp"
-#include "utils/common.hpp"
 #include "http/utils.hpp"
+#include "utils/common.hpp"
 
 namespace http {
-	Connection::Connection(
-		int clientSocket,
-		const ServerConfig& serverConfig,
-		std::function<void (Request&, Response&)> processFn
-	)
+	Connection::Connection(int clientSocket, const ServerConfig& serverConfig)
 		: _clientSocket(clientSocket)
-		, _serverConfig(serverConfig)
-		, _processFn(processFn)
-		, _lastReceived(std::chrono::steady_clock::now()) {
+		, _serverConfig(serverConfig) {
 	}
 
-	void Connection::readRequest(std::uint8_t *buffer, ssize_t size) {
-		if (size <= 0) {
-			if (size == 0 || _isTimedOut()) {
-				this->close();
-			}
+	void Connection::append(char *data, ssize_t size) {
+		if (isClosed()) {
 			return;
 		}
 
-		_requestBuffer.reserve(_requestBuffer.size() + size);
-		_requestBuffer.insert(_requestBuffer.end(), buffer, buffer + size);
+		if (_isTimedOut()) {
+			this->close();
+			return;
+		}
+
+		_buffer.reserve(_buffer.size() + size);
+		_buffer.insert(_buffer.end(), data, data + size);
 		_lastReceived = std::chrono::steady_clock::now();
 		_processBuffer();
 
 		if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
-			Response response(_clientSocket);
-
-			_processFn(_request, response);
-			_processedQueue.emplace(std::move(_request), std::move(response));
+			_queue.emplace(std::move(_request), Response(_clientSocket));
 			_request.clear();
 		}
 	}
 
-	void Connection::sendResponse() {
-		if (isClosed() || _processedQueue.empty()) {
-			return;
+	bool Connection::sendResponse() {
+		if (isClosed() || _queue.empty()) {
+			return false;
 		}
 
-		auto& [req, res] = _processedQueue.front();
+		auto& [req, res] = _queue.front();
+
+		if (res.getStatus() != Response::Status::READY) {
+			return false;
+		}
 
 		if (res.send()) {
-			const auto responseStatusCode = res.getStatusCode();
+			const StatusCode code = res.getStatusCode();
 			auto connectionHeader = req.getHeader(Header::CONNECTION);
-			_processedQueue.pop();
+			_queue.pop();
 
 			if (
-				(connectionHeader.has_value() && *connectionHeader == "close")
-				|| responseStatusCode == StatusCode::BAD_REQUEST_400
-				|| responseStatusCode == StatusCode::INTERNAL_SERVER_ERROR_500
+				connectionHeader.value_or("") == "close"
+				|| code == StatusCode::BAD_REQUEST_400
+				|| code == StatusCode::REQUEST_TIMEOUT_408
+				|| code == StatusCode::INTERNAL_SERVER_ERROR_500
+				|| code == StatusCode::SERVICE_UNAVAILABLE_503
+				|| code == StatusCode::GATEWAY_TIMEOUT_504
 			) {
 				this->close();
-				return;
 			}
+
+			return true;
 		}
+
+		return false;
 	}
 
 	void Connection::close() {
@@ -76,69 +79,97 @@ namespace http {
 		}
 
 		_clientSocket = -1;
-
-		if (_cleanupFn) {
-			_cleanupFn();
-		}
-	}
-
-	void Connection::onClose(std::function<void ()> cleanupFn) {
-		_cleanupFn = cleanupFn;
 	}
 
 	bool Connection::isClosed() const {
 		return (_clientSocket == -1);
 	}
 
+	Request* Connection::getRequest() {
+		if (_queue.size() == 0) {
+			return nullptr;
+		}
+
+		auto& pair = _queue.front();
+		return &pair.first;
+	}
+
+	Response* Connection::getResponse() {
+		if (_queue.size() == 0) {
+			return nullptr;
+		}
+
+		auto& pair = _queue.front();
+		return &pair.second;
+	}
+
 	bool Connection::_isTimedOut() const {
 		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
-		return (elapsedTime > std::chrono::milliseconds(_msTimeout));
+
+		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	void Connection::_processBuffer() {
 		if (_request.getStatus() == Request::Status::INCOMPLETE) {
-			_handleHeader();
+			_parseHeader();
 		}
 
 		if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
 			if (_request.isChunked()) {
-				_handleChunkedBody();
+				_parseChunkedBody();
 			} else {
-				_handleBody();
+				_parseBody();
 			}
 		}
 	}
 
-	void Connection::_handleHeader() {
-		auto begin = _requestBuffer.begin();
-		auto end = _requestBuffer.end();
+	void Connection::_parseHeader() {
+		auto begin = _buffer.begin();
+		auto end = _buffer.end();
 		auto it = utils::findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
 
-		if (it == end && _requestBuffer.size() > MAX_REQUEST_HEADER_SIZE) {
+		if (it == end && _buffer.size() > MAX_REQUEST_HEADER_SIZE) {
 			_request.setStatus(Request::Status::BAD);
 			return;
 		}
 
 		if (it != end) {
-			std::string rawRequestHeader(begin, it + 4);
-			_requestBuffer.erase(begin, it + 4);
-
 			try {
-				_request = std::move(Request::parseHeader(rawRequestHeader));
+				_request = std::move(Request::parseHeader(std::string(begin, it + 4)));
+				_buffer.erase(begin, it + 4);
 			} catch (const std::invalid_argument &e) {
 				_request.setStatus(Request::Status::BAD);
 			}
 		}
 	}
 
-	void Connection::_handleChunkedBody() {
+	void Connection::_parseBody() {
+		std::size_t contentLength = _request.getContentLength();
+
+		if (contentLength == 0) {
+			_request.setStatus(Request::Status::COMPLETE);
+			return;
+		}
+
+		if (_buffer.size() >= contentLength) {
+			_request.appendBody(_buffer.begin(), _buffer.begin() + contentLength);
+			_buffer.erase(_buffer.begin(), _buffer.begin() + contentLength + 4);
+			_request.setStatus(Request::Status::COMPLETE);
+		}
+	}
+
+	void Connection::_parseChunkedBody() {
 		std::vector<uint8_t> buffer;
 		bool isChunkEnd = false;
 		std::size_t currentPos = 0;
-		auto begin = _requestBuffer.begin();
-		auto end = _requestBuffer.end();
+		auto begin = _buffer.begin();
+		auto end = _buffer.end();
 
-		buffer.reserve(_requestBuffer.size());
+		buffer.reserve(_buffer.size());
 
 		while (true) {
 			auto start = begin + currentPos;
@@ -149,42 +180,31 @@ namespace http {
 				return;
 			}
 
-			std::size_t chunkSize = parseChunkSize(std::string(start, firstIt));
+			try {
+				std::size_t chunkSize = parseChunkSize(std::string(start, firstIt));
 
-			if (chunkSize == 0) {
-				isChunkEnd = true;
+				if (chunkSize == 0) {
+					isChunkEnd = true;
+					currentPos += secondIt + 2 - start;
+					break;
+				}
+
+				if (static_cast<std::size_t>(std::distance(firstIt + 2, secondIt)) != chunkSize) {
+					throw std::invalid_argument("Error: chunk size does not match the actual data size.");
+				}
+
+				buffer.insert(buffer.end(), firstIt + 2, secondIt);
 				currentPos += secondIt + 2 - start;
-				break;
-			}
-
-			if (std::distance(firstIt + 2, secondIt) != chunkSize) {
+			} catch (const std::invalid_argument& e) {
 				_request.setStatus(Request::Status::BAD);
 				return;
 			}
-
-			buffer.insert(buffer.end(), firstIt + 2, secondIt);
-			currentPos += secondIt + 2 - start;
 		}
 
 		_request.appendBody(buffer.begin(), buffer.end());
-		_requestBuffer.erase(begin, begin + currentPos);
+		_buffer.erase(begin, begin + currentPos);
 
 		if (isChunkEnd) {
-			_request.setStatus(Request::Status::COMPLETE);
-		}
-	}
-
-	void Connection::_handleBody() {
-		std::size_t bodySize = _request.getBodySize();
-
-		if (bodySize == 0) {
-			_request.setStatus(Request::Status::COMPLETE);
-			return;
-		}
-
-		if (_requestBuffer.size() >= bodySize) {
-			_request.appendBody(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
-			_requestBuffer.erase(_requestBuffer.begin(), _requestBuffer.begin() + bodySize);
 			_request.setStatus(Request::Status::COMPLETE);
 		}
 	}

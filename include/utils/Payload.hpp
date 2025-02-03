@@ -13,6 +13,7 @@ namespace utils {
 			virtual ~Payload() = default;
 
 			virtual void send() = 0;
+			virtual void append(const std::uint8_t* data, size_t size) = 0;
 			virtual std::string toString() const = 0;
 
 			bool isSent() const;
@@ -31,6 +32,7 @@ namespace utils {
 			~StringPayload() = default;
 
 			void send() override;
+			void append(const std::uint8_t* data, size_t size) override;
 			std::string toString() const override;
 
 			void setMessage(const std::string &message);
@@ -46,6 +48,7 @@ namespace utils {
 			~FilePayload() = default;
 
 			void send() override;
+			void append(const std::uint8_t* data, size_t size) override;
 			std::string toString() const override;
 
 		private:
