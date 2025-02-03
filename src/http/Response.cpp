@@ -104,10 +104,9 @@ namespace http {
 		return *this;
 	}
 
-	void Response::appendBody(const std::uint8_t* data, size_t size) {
-		if (_status != Response::Status::READY) {
-			_body->append(data, size);
-		}
+	Response& Response::appendBody(const std::uint8_t* data, size_t size) {
+		_body->append(data, size);
+		return *this;
 	}
 
 	void Response::setText(StatusCode statusCode, const std::string& text) {

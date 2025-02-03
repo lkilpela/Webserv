@@ -128,7 +128,7 @@ void handlePostRequest(const Location& loc, const string& requestPath, Request& 
 			return;
 		}
 		file.write(reinterpret_cast<const char*>(req.getBody().data()), req.getBody().size());
-		res.setString(http::StatusCode::OK_200, "File uploaded successfully");
+		res.setText(http::StatusCode::OK_200, "File uploaded successfully");
 	} catch (const std::exception& e) {
 		res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 	}
@@ -144,7 +144,7 @@ void handleDeleteRequest(const Location& loc, const string& requestPath, Request
 			return;
 		}
 		if (fs::remove(filePath)) {
-			res.setString(http::StatusCode::OK_200, "File deleted successfully");
+			res.setText(http::StatusCode::OK_200, "File deleted successfully");
 			return;
 		} else {
 			res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
