@@ -5,54 +5,52 @@
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
 
-Server::Server(const Config& config) : _config(config), _router(config.servers[0]) {
-    for (int port : config.ports) {
-		int serverFd = utils::createPassiveSocket(port, 128, true);
-        _serverFds.emplace(serverFd);
-		_pollfds.push_back({ serverFd, POLLIN, 0 });
-    }
+Server::Server(int fd, const ServerConfig& serverConfig)
+	: _fd(fd)
+	, _serverConfig(serverConfig)
+	, _router(serverConfig) {
 }
 
-void Server::listen() {
-	while (_pollfds.size()) {
-		if (sigintReceived){
-			_cleanup();
-			break;
-		}
+// void Server::listen() {
+// 	while (_pollfds.size()) {
+// 		if (sigintReceived){
+// 			_cleanup();
+// 			break;
+// 		}
 
-        if (::poll(_pollfds.data(), _pollfds.size(), 50) == -1)
-			perror("Poll failed");
+//         if (::poll(_pollfds.data(), _pollfds.size(), 50) == -1)
+// 			perror("Poll failed");
 
-        for (auto it = _pollfds.begin(); it != _pollfds.end();) {
-			const auto [fd, events, revents] = *it; // fd here can be server, client or pipe file descriptor
+//         for (auto it = _pollfds.begin(); it != _pollfds.end();) {
+// 			const auto [fd, events, revents] = *it; // fd here can be server, client or pipe file descriptor
 
-			// if fd is not serverFD then we execute code below
-			if (_serverFds.find(fd) != _serverFds.end()) {
-				if (revents & POLLIN) {
-					_addConnection(fd);
-				}
-			} else {
-				auto& connection = _connectionByFd[fd];
+// 			// if fd is not serverFD then we execute code below
+// 			if (_serverFds.find(fd) != _serverFds.end()) {
+// 				if (revents & POLLIN) {
+// 					_addConnection(fd);
+// 				}
+// 			} else {
+// 				auto& connection = _connectionByFd[fd];
 
-				if (revents & POLLHUP) {
-					connection.close();
-				} else {
-					_read(*it, connection);
-					_process(*it, connection);
-					_sendResponse(*it, connection);
-				}
+// 				if (revents & POLLHUP) {
+// 					connection.close();
+// 				} else {
+// 					_read(*it, connection);
+// 					_process(*it, connection);
+// 					_sendResponse(*it, connection);
+// 				}
 
-				if (connection.isClosed()) {
-					_connectionByFd.erase(it->fd);
-					it = _pollfds.erase(it);
-					continue;
-				}
-			}
+// 				if (connection.isClosed()) {
+// 					_connectionByFd.erase(it->fd);
+// 					it = _pollfds.erase(it);
+// 					continue;
+// 				}
+// 			}
 
-			it++;
-		}
-    }
-}
+// 			it++;
+// 		}
+//     }
+// }
 
 char **makeEnv(char** &env, http::Request& req){
 
@@ -107,19 +105,22 @@ void Server::_cgiHandler(http::Request &req, http::Response &res) {
 		close(pipefd[0]);
 }
 
-void Server::_addConnection(int serverFd) {
+int Server::getServerFd() const {
+	return _fd;
+}
+
+int Server::addConnection() {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
-	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
+	int clientFd = ::accept(_fd, (struct sockaddr*)&clientAddr, &addrLen);
 
 	if (clientFd < 0) {
 		perror("Failed to accept connection");
-		return;
+		return clientFd;
 	}
-
-	struct ::pollfd clientPollFd { clientFd, POLLIN, 0 };
-	_pollfds.push_back(clientPollFd);
-	_connectionByFd.emplace(clientFd, Connection(clientFd, ));
+	
+	_connectionByFd.emplace(clientFd, http::Connection(clientFd, _serverConfig));
+	return clientFd;
 }
 
 void Server::_read(struct ::pollfd& pollFd, http::Connection& con) {

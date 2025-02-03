@@ -42,7 +42,6 @@ SRCS			=	main.cpp \
 					\
 					Config.cpp \
 					\
-					Server.cpp \
 					\
 					SignalHandler.cpp \
 					\
@@ -53,6 +52,7 @@ SRCS			=	main.cpp \
 					\
 					Router.cpp
 
+# Server.cpp \
 # Add more sources here
 
 OBJECTS		:=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)

@@ -16,18 +16,21 @@
 class Server {
 	public:
 		Server() = default;
-		Server(const Config& config);
+		Server(int fd, const ServerConfig& serverConfig);
 		~Server();
 		void listen();
 
+		int addConnection();
+		int getServerFd() const;
+
 	private:
-		const Config& _config;
+		int _fd;
+		const ServerConfig& _serverConfig;
 		Router _router;
 		std::unordered_set<int>	_serverFds;
 		std::vector<pollfd> _pollfds;
 		std::unordered_map<int, http::Connection> _connectionByFd;
 
-		void _addConnection(int serverFd);
 		void _read(struct ::pollfd& pollFd, http::Connection& con);
 		void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
 		void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
