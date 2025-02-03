@@ -36,31 +36,37 @@ namespace http {
 		}
 	}
 
-	void Connection::sendResponse() {
+	bool Connection::sendResponse() {
 		if (isClosed() || _queue.empty()) {
-			return;
+			return false;
 		}
 
 		auto& [req, res] = _queue.front();
 
 		if (res.getStatus() != Response::Status::READY) {
-			return;
+			return false;
 		}
 
 		if (res.send()) {
-			const auto responseStatusCode = res.getStatusCode();
+			const StatusCode code = res.getStatusCode();
 			auto connectionHeader = req.getHeader(Header::CONNECTION);
 			_queue.pop();
 
 			if (
-				(connectionHeader.has_value() && *connectionHeader == "close")
-				|| responseStatusCode == StatusCode::BAD_REQUEST_400
-				|| responseStatusCode == StatusCode::INTERNAL_SERVER_ERROR_500
+				connectionHeader.value_or("") == "close"
+				|| code == StatusCode::BAD_REQUEST_400
+				|| code == StatusCode::REQUEST_TIMEOUT_408
+				|| code == StatusCode::INTERNAL_SERVER_ERROR_500
+				|| code == StatusCode::SERVICE_UNAVAILABLE_503
+				|| code == StatusCode::GATEWAY_TIMEOUT_504
 			) {
 				this->close();
-				return;
 			}
+
+			return true;
 		}
+
+		return false;
 	}
 
 	void Connection::close() {

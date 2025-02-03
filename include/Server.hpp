@@ -21,21 +21,17 @@ class Server {
 		void listen();
 
 	private:
-		const Config &_config;
+		const Config& _config;
 		Router _router;
 		std::unordered_set<int>	_serverFds;
 		std::vector<pollfd> _pollfds;
 		std::unordered_map<int, http::Connection> _connectionByFd;
-		std::unordered_map<int, http::Connection &> _connectionByPipeFd;
 
-		bool _addConnection(int fd);
-		bool _read(struct ::pollfd& pollFd, http::Connection& con);
-		bool _process(struct ::pollfd& pollFd, http::Connection& con);
+		void _addConnection(int serverFd);
+		void _read(struct ::pollfd& pollFd, http::Connection& con);
+		void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
+		void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
+		void _process(struct ::pollfd& pollFd, http::Connection& con);
 		void _sendResponse(struct ::pollfd& pollFd, http::Connection& con);
 		void _cleanup();
-
-		std::vector<pollfd>::iterator _removeConnection(
-			std::vector<pollfd>::const_iterator it,
-			http::Connection& con
-		);
 };

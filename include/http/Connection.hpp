@@ -17,7 +17,7 @@ namespace http {
 			Connection& operator=(const Connection&) = delete;
 
 			void append(char *data, ssize_t size);
-			void sendResponse();
+			bool sendResponse();
 			void close();
 
 			bool isClosed() const;

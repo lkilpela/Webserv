@@ -104,6 +104,12 @@ namespace http {
 		return *this;
 	}
 
+	void Response::appendBody(const std::uint8_t* data, size_t size) {
+		if (_status != Response::Status::READY) {
+			_body->append(data, size);
+		}
+	}
+
 	void Response::setText(StatusCode statusCode, const std::string& text) {
 		setStatusCode(statusCode);
 		setBody(std::make_unique<utils::StringPayload>(_clientSocket, text));

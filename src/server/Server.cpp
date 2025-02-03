@@ -21,49 +21,32 @@ void Server::listen() {
 
         if (::poll(_pollfds.data(), _pollfds.size(), 50) == -1)
 			perror("Poll failed");
+
         for (auto it = _pollfds.begin(); it != _pollfds.end();) {
-			auto &[fd, events, revents] = *it; // fd here can be server, client or pipe file descriptor
-
-			// if (revents == POLLIN) {
-			// 	for (const auto serverFd: _serverFds) {
-			// 		if (serverFd == fd) {
-			// 			_addConnection(serverFd);
-			// 			it++;
-			// 			continue;
-			// 		}
-			// 	}
-			// }
-
-			// for (const auto serverFd: _serverFds) {
-			// 	if (serverFd == fd) {
-			// 		_addConnection(serverFd);
-			// 		it++;
-			// 		continue;
-			// 	}
-			// }
+			const auto [fd, events, revents] = *it; // fd here can be server, client or pipe file descriptor
 
 			// if fd is not serverFD then we execute code below
 			if (_serverFds.find(fd) != _serverFds.end()) {
-				if (revents == POLLIN) {
+				if (revents & POLLIN) {
 					_addConnection(fd);
 				}
 			} else {
-				auto &connection = _connectionByFd[fd];
+				auto& connection = _connectionByFd[fd];
 
-				if (
-					connection.isClosed()
-					|| revents == POLLHUP
-					|| _read(*it, connection) == false
-					|| _process(*it, connection) == false
-				) {
-					it = _removeConnection(it, connection);
+				if (revents & POLLHUP) {
+					connection.close();
+				} else {
+					_read(*it, connection);
+					_process(*it, connection);
+					_sendResponse(*it, connection);
+				}
+
+				if (connection.isClosed()) {
+					_connectionByFd.erase(it->fd);
+					it = _pollfds.erase(it);
 					continue;
 				}
-				
-				_sendResponse(*it, connection);
 			}
-
-
 
 			it++;
 		}
@@ -94,19 +77,6 @@ void deleteEnv(char **env){
 	}
 	delete[] env;
 }
-
-// void Server::_process(http::Connection &connection) {
-// 	if (connection.getRequest().isCgi()) {
-// 		int pipefd[2];
-
-// 		if(pipe(pipefd) == -1)
-// 			perror("Pipe failed");
-
-// 		pollfd cgiData { pipefd[0], POLLIN, 0 };
-// 		_pollfds.push_back(cgiData);
-// 		_connectionByPipeFd.emplace(pipefd[0], connection)
-// 	}
-// }
 
 // void Server::cgiHandler(http::Request &req, http::Response &res) {
 
@@ -142,84 +112,91 @@ void deleteEnv(char **env){
 // if (req.getUrl().path ends with "abc.py") {
 // this is CGI request then do something with it
 
-bool Server::_addConnection(int serverFd) {
+void Server::_addConnection(int serverFd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
 	if (clientFd < 0) {
 		perror("Failed to accept connection");
-		return false;
+		return;
 	}
 
-	struct ::pollfd clientPollData { serverFd, POLLIN, 0 };
-	_pollfds.push_back(clientPollData);
-	_connectionByFd.emplace();
-	return true;
+	struct ::pollfd clientPollFd { clientFd, POLLIN, 0 };
+	_pollfds.push_back(clientPollFd);
+	_connectionByFd.emplace(clientFd, Connection(clientFd, ));
 }
 
-// bool Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
-	// if (revents == POLLIN) {
-			// 	if (utils::isInVector<int>(fd, _serverFds)) {
-			// 		_addConnection(fd);
-			// 		_connectionByFd.emplace(fd, connection);
-			// 	} else {
-			// 		if (connection.getRequest().isCgi()) {
-			// 			processCgi();
-			// 		} else {
-			// 			processNormalRequest();
-			// 			unsigned char buffer[2048];
-			// 			ssize_t bytesRead = recv(fd, buffer, 2048, MSG_NOSIGNAL);
-			// 			// client closed connection successfully
-			// 			if (bytesRead == 0) {
-			// 				connection.close();
-			// 				_connectionByFd.erase(fd);
-			// 				it = _pollfds.erase(it);
-			// 				continue;
-			// 			}
-			// 		}
-			// 		connection.readRequest(buffer, bytesRead);
-			// 	}
-			// }
-// 	if (pollFd.revents == POLLIN) {
-// 		if (_connectionByPipeFd.find(pollFd.fd) != _connectionByPipeFd.end()) {
-// 			return;
-// 		}
+void Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
+	if (pollFd.revents & POLLIN == 0) {
+		return;
+	}
 
-// 		unsigned char buffer[2048];
-// 		ssize_t bytesRead = recv(fd, buffer, 2048, MSG_NOSIGNAL);
-// 		// client closed connection successfully
-// 		if (bytesRead == 0) {
-// 			con.close();
-// 			_connectionByFd.erase(fd);
-// 			it = _pollfds.erase(it);
-// 			return &it;
-// 		}
-
-// 		con.readRequest(buffer, bytesRead);
-// 		return nullptr;
-// 	}
-
-// 	return true;
-// }
-
-void Server::_sendResponse(struct ::pollfd& pollFd, http::Connection& con) {
-	if (pollFd.revents & POLLOUT) {
-		// con.sendResponse()
-		// http::Response* res = con.getResponse();
-		// if (res != nullptr && res->send()) {
-		// 	pollFd.events &= ~POLLOUT;
-		// }
+	if (pollFd.fd) {
+		_readFromPipe(pollFd, con);
+	} else {
+		_readFromSocket(pollFd, con);
 	}
 }
 
-std::vector<pollfd>::iterator Server::_removeConnection(std::vector<pollfd>::const_iterator it, http::Connection& con)
-{
+void Server::_readFromPipe(struct ::pollfd& pollFd, http::Connection& con) {
+	unsigned char buffer[4096];
+	ssize_t bytesRead = ::read(pollFd.fd, buffer, sizeof(buffer));
+
+	if (bytesRead < 0) {
+		con.close();
+		return;
+	}
+
+	http::Response* res = con.getResponse();
+	if (res != nullptr) {
+		res->getBody()->append(buffer, bytesRead);
+	}
+}
+
+void Server::_readFromSocket(struct ::pollfd& pollFd, http::Connection& con) {
+	char buffer[4096];
+	ssize_t bytesRead = ::recv(pollFd.fd, buffer, sizeof(buffer), MSG_NOSIGNAL);
+
+	if (bytesRead == 0) {
+		con.close();
+		return;
+	}
+
+	if (bytesRead > 0) {
+		con.append(buffer, bytesRead);
+	}
+}
+
+void Server::_process(struct ::pollfd& pollFd, http::Connection& con) {
 	if (con.isClosed()) {
 		return;
 	}
-	_connectionByFd.erase(it->fd);
-	return _pollfds.erase(it);
+
+	using enum http::Response::Status;
+	http::Request* req = con.getRequest();
+	http::Response* res = con.getResponse();
+
+	if (res == nullptr) {
+		return;
+	}
+
+	if (res->getStatus() == PENDING) {
+		res->setStatus(IN_PROGRESS);
+		_router.handle(*req, *res);
+	}
+}
+
+void Server::_sendResponse(struct ::pollfd& pollFd, http::Connection& con) {
+	if (con.isClosed()) {
+		return;
+	}
+
+	if (pollFd.revents & POLLOUT) {
+		if (con.sendResponse()) {
+			pollFd.events &= ~POLLOUT;
+		}
+	}
 }
 
 void Server::_cleanup() {

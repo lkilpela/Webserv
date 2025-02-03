@@ -48,6 +48,10 @@ namespace utils {
 		}
 	}
 
+	void FilePayload::append(const std::uint8_t* data, size_t size) {
+		throw std::runtime_error("The append() method is not supported in FilePayload");
+	}
+
 	std::string FilePayload::toString() const {
 		_ifstream.seekg(0, std::ios::beg);
 		return std::string(
