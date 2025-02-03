@@ -25,27 +25,34 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/http/Connection.hpp \
 					$(INCLUDES)/http/Url.hpp \
 					$(INCLUDES)/http/constants.hpp \
-					$(INCLUDES)/http/index.hpp
-
-#$(INCLUDES)/Server.hpp
+					$(INCLUDES)/http/index.hpp \
+					$(INCLUDES)/Server.hpp
 
  # Add more headers here
 
-OBJ_DIR			=	./obj
-SRC_DIR			=	./src
-SRCS			=	Config.cpp \
-					main.cpp \
-					utils.cpp \
-					Router.cpp \
+OBJ_DIR			=	obj
+SRC_DIR			=	src
+SRCS			=	main.cpp \
+					\
+					Connection.cpp \
 					Request.cpp \
 					Response.cpp \
 					Url.cpp \
-					Payload.cpp \
+					utils.cpp \
+					\
+					Config.cpp \
+					\
+					Server.cpp \
+					\
+					SignalHandler.cpp \
+					\
 					common.cpp \
-					StringPayload.cpp \
 					FilePayload.cpp \
-					Connection.cpp
-#Server.cpp
+					Payload.cpp \
+					StringPayload.cpp \
+					\
+					Router.cpp
+
 # Add more sources here
 
 OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
@@ -53,13 +60,21 @@ OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 ################################################################################
 # RULES
 ################################################################################
-vpath %.cpp $(SRC_DIR) \ $(SRC_DIR)/parser  \ $(SRC_DIR)/utils \ $(SRC_DIR)/http
+vpath %.cpp	$(SRC_DIR) \
+			$(SRC_DIR)/http \
+			$(SRC_DIR)/parser \
+			$(SRC_DIR)/server \
+			$(SRC_DIR)/signal \
+			$(SRC_DIR)/utils
+
 # Add more paths here
 
-all: $(NAME)
+all: $(OBJ_DIR) $(NAME)
+
+$(OBJ_DIR):
+	@mkdir -p $(OBJ_DIR)
 
 $(OBJ_DIR)/%.o: %.cpp $(M_HEADERS)
-	@mkdir -p $(OBJ_DIR)
 	@echo "Compiling $< to $@"
 	@$(CXX_FULL) -c $< -o $@
 	@echo "$(G)Compiled: $< $(RC)"

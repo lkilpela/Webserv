@@ -49,6 +49,8 @@ namespace utils {
 	}
 
 	void FilePayload::append(const std::uint8_t* data, size_t size) {
+		(void)data;
+		(void)size;
 		throw std::runtime_error("The append() method is not supported in FilePayload");
 	}
 
