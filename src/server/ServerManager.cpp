@@ -2,6 +2,8 @@
 #include "ServerManager.hpp"
 #include "utils/index.hpp"
 
+using PollIterator = std::vector<pollfd>::iterator;
+
 ServerManager::ServerManager(const Config& config) : _config(config) {
 	for (int i = 0; i < config.servers.size(); i++) {
 		const int port = config.ports[i];
@@ -15,50 +17,72 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 
 void ServerManager::listen() {
 	while (_pollfds.size()) {
-		// if (sigintReceived){
-		// 	_cleanup();
-		// 	break;
-		// }
+        int ret = ::poll(_pollfds.data(), _pollfds.size(), 100);
 
-        if (::poll(_pollfds.data(), _pollfds.size(), 50) == -1)
+		if (ret == -1) {
 			perror("Poll failed");
+		}
 
-        for (auto it = _pollfds.begin(); it != _pollfds.end();) {
-			const auto [fd, events, revents] = *it; // fd here can be server, client or pipe file descriptor
+		if (ret > 0) {
+			_processPollfds();
+		}
 
-			for(auto& server: _servers) {
-				if (server.getServerFd() == fd) {
-					if (revents & POLLIN) {
-						int clientFd = server.addConnection();
-						if (clientFd >= 0) {
-							struct ::pollfd clientPollFd { clientFd, POLLIN, 0 };
-							_pollfds.push_back(clientPollFd);
-						}
-					}
-				} else {
-					server.process(fd);
-					// auto& connection = server.findConnection(fd);
-					// // auto& connection = _connectionByFd[fd];
+		_checkTimeout();
+		_updatePollfds();
+    }
+}
 
-					// if (revents & POLLHUP) {
-					// 	connection.close();
-					// } else {
-					// 	_read(*it, connection);
-					// 	_process(*it, connection);
-					// 	_sendResponse(*it, connection);
-					// }
+void ServerManager::_processPollfds() {
+	for (auto& pollfd : _pollfds) {
+		if (pollfd.revents & POLLHUP) {
+			_findServer(pollfd.fd).close
+			_stalePollfds.insert(pollfd.fd);
+			continue;
+		}
 
-					// if (connection.isClosed()) {
-					// 	_connectionByFd.erase(it->fd);
-					// 	it = _pollfds.erase(it);
-					// 	continue;
-					// }
+		if (pollfd.revents & POLLIN) {
+			auto it = std::ranges::find_if(_servers, [fd = pollfd.fd](const Server& server) {
+				return server.getServerFd() == fd;
+			});
+
+			if (it != _servers.end()) {
+				int clientFd = it->addConnection();
+
+				if (clientFd >= 0) {
+					_newPollfds.insert(clientFd);
 				}
 
+				continue;
 			}
-			// if fd is not serverFD then we execute code below
+			// for (auto server : _servers) {
+			// 	if (server.getServerFd() == pollfd.fd) {
 
-			it++;
+			// 	}
+
+			// 	server.process(pollfd.fd);
+			// }
 		}
-    }
+
+		if (pollfd.revents & POLLOUT) {
+			for (auto server : _servers) {
+				server.sendResponse(pollfd.fd);
+			}
+		}
+	}
+
+}
+
+void ServerManager::_updatePollfds() {
+	std::erase_if(_pollfds, [this](const struct ::pollfd& pollfd) {
+		return (_stalePollfds.contains(pollfd.fd));
+	});
+
+	_pollfds.reserve(_pollfds.size() + _newPollfds.size());
+
+	for (const int fd : _newPollfds) {
+		_pollfds.push_back({ fd, POLLIN, 0 });
+	}
+
+	_stalePollfds.clear();
+	_newPollfds.clear();
 }
