@@ -5,6 +5,7 @@
 #include <thread>
 // #include "SignalHandle.hpp"
 #include "Server.hpp"
+#include "ServerManager.hpp"
 #include "http/index.hpp"
 
 // volatile sig_atomic_t sigintReceived = 0;

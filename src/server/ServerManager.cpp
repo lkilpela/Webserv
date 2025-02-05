@@ -5,12 +5,15 @@
 using PollIterator = std::vector<pollfd>::iterator;
 
 ServerManager::ServerManager(const Config& config) : _config(config) {
+	_servers.reserve(config.servers.size());
+
 	for (int i = 0; i < config.servers.size(); i++) {
 		const int port = config.ports[i];
 		const ServerConfig serverConfig = config.servers[i];
 
 		int serverFd = utils::createPassiveSocket(port, 128, true);
 		_servers.push_back(Server(serverFd, serverConfig));
+		_serverMap.emplace(serverFd, &_servers.back());
 		_pollfds.push_back({ serverFd, POLLIN, 0 });
     }
 }
@@ -27,49 +30,65 @@ void ServerManager::listen() {
 			_processPollfds();
 		}
 
-		_checkTimeout();
+		_checkAllConnectionStatus();
 		_updatePollfds();
     }
 }
 
 void ServerManager::_processPollfds() {
 	for (auto& pollfd : _pollfds) {
+		auto server = _serverMap.at(pollfd.fd).get();
+
 		if (pollfd.revents & POLLHUP) {
-			_findServer(pollfd.fd).close
-			_stalePollfds.insert(pollfd.fd);
+			server.closeConnection(pollfd.fd);
 			continue;
 		}
 
 		if (pollfd.revents & POLLIN) {
-			auto it = std::ranges::find_if(_servers, [fd = pollfd.fd](const Server& server) {
-				return server.getServerFd() == fd;
-			});
-
-			if (it != _servers.end()) {
-				int clientFd = it->addConnection();
+			if (server.getServerFd() == pollfd.fd) {
+				int clientFd = server.addConnection();
 
 				if (clientFd >= 0) {
+					_serverMap[clientFd] = server;
 					_newPollfds.insert(clientFd);
 				}
 
 				continue;
 			}
-			// for (auto server : _servers) {
-			// 	if (server.getServerFd() == pollfd.fd) {
 
-			// 	}
-
-			// 	server.process(pollfd.fd);
-			// }
+			server.process(pollfd.fd, pollfd.events);
 		}
 
 		if (pollfd.revents & POLLOUT) {
-			for (auto server : _servers) {
-				server.sendResponse(pollfd.fd);
-			}
+			server.sendResponse(pollfd.fd, pollfd.events);
 		}
 	}
 
+}
+
+void ServerManager::_checkAllConnectionStatus() {
+	for (auto& server: _servers) {
+		std::erase_if(server.getAllConnections(), [](auto& pair) {
+			if (pair.connection.isClosed()) {
+				_stalePollfds.insert(pair.fd);
+				return true;
+			}
+
+			if (pair.connection.isTimedOut()) {
+				pair.connection.close();
+				_stalePollfds.insert(pair.fd);
+				return true;
+			}
+
+			return false;
+		});
+		// for (auto& [fd, connection] : server.getAllConnections()) {
+		// 	if (connection.isClosed()) {
+		// 		_stalePollfds.insert(fd);
+		// 		server.removeConnection(fd);
+		// 	}
+		// }
+	}
 }
 
 void ServerManager::_updatePollfds() {

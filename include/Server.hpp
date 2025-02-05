@@ -20,10 +20,12 @@ class Server {
 		~Server();
 
 		int addConnection();
+		void closeConnection(int fd);
 		void removeConnection(int fd);
-		void process(struct ::pollfd& pollFd, http::Connection& con);
-		http::Connection* findConnection(int fd);
+		void process(int fd, short& events);
+		void sendResponse(int fd, short& events);
 		int getServerFd() const;
+		std::unordered_map<int, http::Connection>& getAllConnections();
 
 	private:
 		int _fd;
@@ -31,11 +33,10 @@ class Server {
 		Router _router;
 		std::unordered_map<int, http::Connection> _connections;
 
-		void _read(struct ::pollfd& pollFd, http::Connection& con);
-		void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
-		void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
-		void _handle(struct ::pollfd& pollFd, http::Connection& con);
-		void _sendResponse(struct ::pollfd& pollFd, http::Connection& con);
-		void _cgiHandler(http::Request &req, http::Response &res);
+		// void _read(struct ::pollfd& pollFd, http::Connection& con);
+		// void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
+		// void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
+		// void _handle(struct ::pollfd& pollFd, http::Connection& con);
+		// void _cgiHandler(http::Request &req, http::Response &res);
 		void _cleanup();
 };
