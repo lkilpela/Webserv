@@ -20,11 +20,13 @@ int main(int argc, char **argv) {
 		// handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
+		// std::cout << config.servers[0].serverName << std::endl;
 		// std::vector<Server> servers;
 		ServerManager manager(config);
 		// Server server(config);
 		// server.listen();
 	} catch (const WSException& e) {
+		std::cerr << "HOANG HERE" << std::endl;
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;

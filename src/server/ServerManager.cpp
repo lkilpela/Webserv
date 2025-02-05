@@ -2,8 +2,6 @@
 #include "ServerManager.hpp"
 #include "utils/index.hpp"
 
-using PollIterator = std::vector<pollfd>::iterator;
-
 ServerManager::ServerManager(const Config& config) : _config(config) {
 	_servers.reserve(config.servers.size());
 
@@ -13,8 +11,8 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 
 		int serverFd = utils::createPassiveSocket(port, 128, true);
 		_servers.push_back(Server(serverFd, serverConfig));
-		_serverMap.emplace(serverFd, &_servers.back());
-		_pollfds.push_back({ serverFd, POLLIN, 0 });
+		// _serverMap.emplace(serverFd, _servers.back());
+		// _pollfds.push_back({ serverFd, POLLIN, 0 });
     }
 }
 
@@ -68,17 +66,17 @@ void ServerManager::_processPollfds() {
 
 void ServerManager::_checkAllConnectionStatus() {
 	for (auto& server: _servers) {
-		std::erase_if(server.getAllConnections(), [](auto& pair) {
-			if (pair.connection.isClosed()) {
-				_stalePollfds.insert(pair.fd);
+		std::erase_if(server.getAllConnections(), [this](auto& pair) {
+			if (pair.second.isClosed()) {
+				_stalePollfds.insert(pair.first);
 				return true;
 			}
 
-			if (pair.connection.isTimedOut()) {
-				pair.connection.close();
-				_stalePollfds.insert(pair.fd);
-				return true;
-			}
+			// if (pair.second.isTimedOut()) {
+			// 	pair.second.close();
+			// 	_stalePollfds.insert(pair.first);
+			// 	return true;
+			// }
 
 			return false;
 		});
