@@ -28,7 +28,7 @@ void ServerManager::listen() {
 			_processPollfds();
 		}
 
-		_checkAllConnectionStatus();
+		_pruneClosedConnections();
 		_updatePollfds();
     }
 }
@@ -64,7 +64,7 @@ void ServerManager::_processPollfds() {
 
 }
 
-void ServerManager::_checkAllConnectionStatus() {
+void ServerManager::_pruneClosedConnections() {
 	for (auto& server: _servers) {
 		auto& connections = server.getAllConnections();
 

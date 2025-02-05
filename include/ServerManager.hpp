@@ -23,6 +23,6 @@ class ServerManager {
 		std::unordered_set<int> _stalePollfds;
 
 		void _processPollfds();
-		void _checkAllConnectionStatus();
+		void _pruneClosedConnections();
 		void _updatePollfds();
 };
