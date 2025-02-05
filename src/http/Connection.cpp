@@ -16,15 +16,6 @@ namespace http {
 	}
 
 	void Connection::append(char *data, ssize_t size) {
-		if (isClosed()) {
-			return;
-		}
-
-		if (_isTimedOut()) {
-			this->close();
-			return;
-		}
-
 		_buffer.reserve(_buffer.size() + size);
 		_buffer.insert(_buffer.end(), data, data + size);
 		_lastReceived = std::chrono::steady_clock::now();
@@ -85,6 +76,16 @@ namespace http {
 		return (_clientSocket == -1);
 	}
 
+	bool Connection::isTimedOut() const {
+		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
+
+		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
+			return true;
+		}
+
+		return false;
+	}
+
 	Request* Connection::getRequest() {
 		if (_queue.size() == 0) {
 			return nullptr;
@@ -101,16 +102,6 @@ namespace http {
 
 		auto& pair = _queue.front();
 		return &pair.second;
-	}
-
-	bool Connection::_isTimedOut() const {
-		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
-
-		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
-			return true;
-		}
-
-		return false;
 	}
 
 	void Connection::_processBuffer() {

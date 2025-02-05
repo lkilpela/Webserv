@@ -15,7 +15,7 @@ namespace http {
 			Connection(int clientSocket, const ServerConfig& serverConfig);
 			Connection(const Connection&) = default;
 			~Connection() = default;
-			
+
 			Connection& operator=(const Connection&) = default;
 
 			void append(char *data, ssize_t size);
@@ -23,6 +23,7 @@ namespace http {
 			void close();
 
 			bool isClosed() const;
+			bool isTimedOut() const;
 
 			Request* getRequest();
 			Response* getResponse();
@@ -35,7 +36,6 @@ namespace http {
 			std::queue<std::pair<Request, Response>> _queue;
 			std::chrono::steady_clock::time_point _lastReceived;
 
-			bool _isTimedOut() const;
 			void _processBuffer();
 			void _parseHeader();
 			void _parseBody();
