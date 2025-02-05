@@ -50,6 +50,7 @@ SRCS			=	main.cpp \
 					common.cpp \
 					FilePayload.cpp \
 					Payload.cpp \
+					socket.cpp \
 					StringPayload.cpp \
 					\
 					Router.cpp

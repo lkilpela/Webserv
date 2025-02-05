@@ -36,4 +36,8 @@ namespace utils {
 	void StringPayload::setMessage(const std::string& message) {
 		_message = message;
 	}
+
+	std::unique_ptr<Payload> StringPayload::clone() const {
+		return std::make_unique<StringPayload>(*this);
+	}
 }

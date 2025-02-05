@@ -5,14 +5,14 @@
 ServerManager::ServerManager(const Config& config) : _config(config) {
 	_servers.reserve(config.servers.size());
 
-	for (int i = 0; i < config.servers.size(); i++) {
+	for (std::size_t i = 0; i < config.servers.size(); i++) {
 		const int port = config.ports[i];
 		const ServerConfig serverConfig = config.servers[i];
 
 		int serverFd = utils::createPassiveSocket(port, 128, true);
 		_servers.push_back(Server(serverFd, serverConfig));
-		// _serverMap.emplace(serverFd, _servers.back());
-		// _pollfds.push_back({ serverFd, POLLIN, 0 });
+		_serverMap.emplace(serverFd, _servers.back());
+		_pollfds.push_back({ serverFd, POLLIN, 0 });
     }
 }
 
@@ -35,7 +35,7 @@ void ServerManager::listen() {
 
 void ServerManager::_processPollfds() {
 	for (auto& pollfd : _pollfds) {
-		auto server = _serverMap.at(pollfd.fd).get();
+		auto& server = _serverMap.at(pollfd.fd).get();
 
 		if (pollfd.revents & POLLHUP) {
 			server.closeConnection(pollfd.fd);
@@ -47,7 +47,7 @@ void ServerManager::_processPollfds() {
 				int clientFd = server.addConnection();
 
 				if (clientFd >= 0) {
-					_serverMap[clientFd] = server;
+					_serverMap.emplace(clientFd, server);
 					_newPollfds.insert(clientFd);
 				}
 

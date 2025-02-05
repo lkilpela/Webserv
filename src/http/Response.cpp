@@ -21,6 +21,28 @@ namespace http {
 		, _header(utils::StringPayload(clientSocket, "")) {
 	}
 
+	Response::Response(const Response& other)
+		: _clientSocket(other._clientSocket)
+		, _status(other._status)
+		, _statusCode(other._statusCode)
+		, _headerByName(other._headerByName)
+		, _header(other._header)
+		, _body(other._body ? other._body->clone() : nullptr) {
+	}
+
+	Response& Response::operator=(const Response& other) {
+		if (this != &other) {
+			_clientSocket = other._clientSocket;
+			_status = other._status;
+			_statusCode = other._statusCode;
+			_headerByName = other._headerByName;
+			_header = other._header;
+			_body = other._body ? other._body->clone() : nullptr;
+		}
+
+		return *this;
+	}
+
 	bool Response::send() {
 		if (!_header.isSent()) {
 			_header.send();

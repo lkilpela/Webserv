@@ -19,11 +19,7 @@ int Server::addConnection() {
 	if (clientFd < 0) {
 		perror("Failed to accept connection");
 	} else {
-		// try {
-		// 	_connections.emplace(clientFd, http::Connection(clientFd, _serverConfig));
-		// } catch (const std::exception& error) {
-		// 	std::cerr << error.what() << std::endl;
-		// }
+		_connections.emplace(clientFd, http::Connection(clientFd, _serverConfig));
 	}
 
 	return clientFd;

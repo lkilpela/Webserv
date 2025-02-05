@@ -21,6 +21,29 @@ namespace utils {
 		}
 	}
 
+	FilePayload::FilePayload(const FilePayload& other) : Payload(other), _filePath(other._filePath) {
+		_ifstream.open(_filePath, std::ios::binary);
+
+		if (!_ifstream.is_open()) {
+			throw std::ios_base::failure("Failed to open " + _filePath.string());
+		}
+	}
+
+	FilePayload& FilePayload::operator=(const FilePayload& other) {
+		if (this != &other) {
+			Payload::operator=(other);
+			_filePath = other._filePath;
+
+			_ifstream.open(_filePath, std::ios::binary);
+
+			if (!_ifstream.is_open()) {
+				throw std::ios_base::failure("Failed to open " + _filePath.string());
+			}
+		}
+
+		return *this;
+	}
+
 	void FilePayload::send() {
 		if (Payload::_bytesSent >= _totalBytes) {
 			return;
@@ -60,5 +83,9 @@ namespace utils {
 			std::istreambuf_iterator<char>(_ifstream),
 			std::istreambuf_iterator<char>()
 		);
+	}
+
+	std::unique_ptr<Payload> FilePayload::clone() const {
+		return std::make_unique<FilePayload>(*this);
 	}
 }

@@ -13,8 +13,10 @@ namespace http {
 	class Connection {
 		public:
 			Connection(int clientSocket, const ServerConfig& serverConfig);
-			Connection(const Connection&) = delete;
-			Connection& operator=(const Connection&) = delete;
+			Connection(const Connection&) = default;
+			~Connection() = default;
+			
+			Connection& operator=(const Connection&) = default;
 
 			void append(char *data, ssize_t size);
 			bool sendResponse();

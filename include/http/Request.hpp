@@ -21,9 +21,10 @@ namespace http {
 
 			Request() = default;
 			explicit Request(Status status);
-			Request(const Request&) = delete;
+			Request(const Request&) = default;
 			Request(Request&&) noexcept = default;
 			~Request() = default;
+			
 			Request& operator=(const Request&) = default;
 			Request& operator=(Request&&) noexcept = default;
 
