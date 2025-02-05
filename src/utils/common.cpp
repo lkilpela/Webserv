@@ -261,9 +261,11 @@ namespace utils {
 	void printServerConfig(const ServerConfig& server) {
 		cout
 			<< YELLOW "Server Config: " RESET << server.serverName << endl
-			<< "Host: " << server.host << endl
-			<< "Port: " << server.port << endl
-			<< "Server Name: " << server.serverName << endl
+			<< "Host: " << server.host << endl;
+		for (const auto& port : server.ports) {
+			cout << "Port: " << port << endl;
+		}
+		cout << "Server Name: " << server.serverName << endl
 			<< "Error Pages: " << endl;
 		for (const auto& [code, path] : server.errorPages) {
 			cout << code << ": " << path << " " << endl;
