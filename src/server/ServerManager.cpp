@@ -66,26 +66,24 @@ void ServerManager::_processPollfds() {
 
 void ServerManager::_checkAllConnectionStatus() {
 	for (auto& server: _servers) {
-		std::erase_if(server.getAllConnections(), [this](auto& pair) {
-			if (pair.second.isClosed()) {
-				_stalePollfds.insert(pair.first);
-				return true;
+		auto& connections = server.getAllConnections();
+
+		for (auto it = connections.begin(); it != connections.end();) {
+			auto& [fd, connection] = *it;
+
+			if (connection.isTimedOut()) {
+				connection.close();
 			}
 
-			// if (pair.second.isTimedOut()) {
-			// 	pair.second.close();
-			// 	_stalePollfds.insert(pair.first);
-			// 	return true;
-			// }
+			if (connection.isClosed()) {
+				_serverMap.erase(fd);
+				_stalePollfds.insert(fd);
+				it = connections.erase(it);
+				continue;
+			}
 
-			return false;
-		});
-		// for (auto& [fd, connection] : server.getAllConnections()) {
-		// 	if (connection.isClosed()) {
-		// 		_stalePollfds.insert(fd);
-		// 		server.removeConnection(fd);
-		// 	}
-		// }
+			it++;
+		}
 	}
 }
 
