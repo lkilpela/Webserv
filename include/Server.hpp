@@ -16,22 +16,22 @@
 class Server {
 	public:
 		Server() = default;
-		Server(int fd, const ServerConfig& serverConfig);
+		Server(const ServerConfig& serverConfig);
 		~Server();
 
-		int addConnection();
+		int addConnection(int serverFd);
 		void closeConnection(int fd);
 		void removeConnection(int fd);
 		void process(int fd, short& events);
 		void sendResponse(int fd, short& events);
-		int getServerFd() const;
-		std::unordered_map<int, http::Connection>& getAllConnections();
+		const std::unordered_set<int>& getFds() const;
+		std::unordered_map<int, http::Connection>& getConnectionMap();
 
 	private:
-		int _fd;
+		std::unordered_set<int> _fds;
 		const ServerConfig& _serverConfig;
 		Router _router;
-		std::unordered_map<int, http::Connection> _connections;
+		std::unordered_map<int, http::Connection> _connectionMap;
 
 		// void _read(struct ::pollfd& pollFd, http::Connection& con);
 		// void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);

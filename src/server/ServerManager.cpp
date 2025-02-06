@@ -6,13 +6,15 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 	_servers.reserve(config.servers.size());
 
 	for (std::size_t i = 0; i < config.servers.size(); i++) {
-		const int port = config.ports[i];
 		const ServerConfig serverConfig = config.servers[i];
+		_servers.push_back(Server(serverConfig));
 
-		int serverFd = utils::createPassiveSocket(port, 128, true);
-		_servers.push_back(Server(serverFd, serverConfig));
-		_serverMap.emplace(serverFd, _servers.back());
-		_pollfds.push_back({ serverFd, POLLIN, 0 });
+		for (auto& server : _servers) {
+			for (const int serverFd : server.getFds()) {
+				_serverMap.emplace(serverFd, std::ref(server));
+				_pollfds.push_back({ serverFd, POLLIN, 0 });
+			}
+		}
     }
 }
 
@@ -43,11 +45,11 @@ void ServerManager::_processPollfds() {
 		}
 
 		if (pollfd.revents & POLLIN) {
-			if (server.getServerFd() == pollfd.fd) {
-				int clientFd = server.addConnection();
+			if (server.getFds().contains(pollfd.fd)) {
+				int clientFd = server.addConnection(pollfd.fd);
 
 				if (clientFd >= 0) {
-					_serverMap.emplace(clientFd, server);
+					_serverMap.emplace(clientFd, std::ref(server));
 					_newPollfds.insert(clientFd);
 				}
 
@@ -61,14 +63,13 @@ void ServerManager::_processPollfds() {
 			server.sendResponse(pollfd.fd, pollfd.events);
 		}
 	}
-
 }
 
 void ServerManager::_pruneClosedConnections() {
 	for (auto& server: _servers) {
-		auto& connections = server.getAllConnections();
+		auto& connectionMap = server.getConnectionMap();
 
-		for (auto it = connections.begin(); it != connections.end();) {
+		for (auto it = connectionMap.begin(); it != connectionMap.end();) {
 			auto& [fd, connection] = *it;
 
 			if (connection.isTimedOut()) {
@@ -78,7 +79,7 @@ void ServerManager::_pruneClosedConnections() {
 			if (connection.isClosed()) {
 				_serverMap.erase(fd);
 				_stalePollfds.insert(fd);
-				it = connections.erase(it);
+				it = connectionMap.erase(it);
 				continue;
 			}
 

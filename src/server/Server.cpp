@@ -5,35 +5,38 @@
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
 
-Server::Server(int fd, const ServerConfig& serverConfig)
-	: _fd(fd)
-	, _serverConfig(serverConfig)
-	, _router(serverConfig) {
+Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), _router(serverConfig) {
+	_fds.reserve(serverConfig.ports.size());
+
+	for (const int port : serverConfig.ports) {
+		int serverFd = utils::createPassiveSocket(serverConfig.host.data(), port, 128, true);
+		_fds.emplace(serverFd);
+	}
 }
 
-int Server::addConnection() {
+int Server::addConnection(int serverFd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
-	int clientFd = ::accept(_fd, (struct sockaddr*)&clientAddr, &addrLen);
+	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
 	if (clientFd < 0) {
 		perror("Failed to accept connection");
 	} else {
-		_connections.emplace(clientFd, http::Connection(clientFd, _serverConfig));
+		_connectionMap.emplace(clientFd, http::Connection(clientFd, _serverConfig));
 	}
 
 	return clientFd;
 }
 
 void Server::closeConnection(int fd) {
-	_connections.at(fd).close();
+	_connectionMap.at(fd).close();
 }
 
 void Server::removeConnection(int fd) {
-	auto it = _connections.find(fd);
+	auto it = _connectionMap.find(fd);
 
-	if (it != _connections.end()) {
-		_connections.erase(it);
+	if (it != _connectionMap.end()) {
+		_connectionMap.erase(it);
 	}
 }
 
@@ -45,7 +48,7 @@ void Server::process(int fd, short& events) {
 }
 
 void Server::sendResponse(int fd, short& events) {
-	auto& con = _connections.at(fd);
+	auto& con = _connectionMap.at(fd);
 
 	if (con.isClosed()) {
 		return;
@@ -56,12 +59,12 @@ void Server::sendResponse(int fd, short& events) {
 	}
 }
 
-int Server::getServerFd() const {
-	return _fd;
+const std::unordered_set<int>& Server::getFds() const {
+	return _fds;
 }
 
-std::unordered_map<int, http::Connection>& Server::getAllConnections() {
-	return _connections;
+std::unordered_map<int, http::Connection>& Server::getConnectionMap() {
+	return _connectionMap;
 }
 
 // char **makeEnv(char** &env, http::Request& req){
@@ -174,7 +177,7 @@ std::unordered_map<int, http::Connection>& Server::getAllConnections() {
 // }
 
 void Server::_cleanup() {
-	for (auto& [fd, con] : _connections) {
+	for (auto& [fd, con] : _connectionMap) {
 		con.close();
 	}
 }
