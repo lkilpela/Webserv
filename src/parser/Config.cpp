@@ -178,6 +178,6 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 Config ConfigParser::load() {
 	Config config;
 	parseConfig(filePath, config);
-	//utils::printConfig(config); // For testing
+	utils::printConfig(config); // For testing
 	return config;
 }
