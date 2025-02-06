@@ -10,22 +10,33 @@ Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), 
 
 	for (const int port : serverConfig.ports) {
 		int serverFd = utils::createPassiveSocket(serverConfig.host.data(), port, 128, true);
+		std::cout << "listening on " << serverConfig.host << ":" << port << std::endl;
 		_fds.emplace(serverFd);
 	}
 }
 
-int Server::addConnection(int serverFd) {
+std::vector<int> Server::addConnection(int serverFd) {
+	std::vector<int> connectedClients;
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
-	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
-	if (clientFd < 0) {
-		perror("Failed to accept connection");
-	} else {
-		_connectionMap.emplace(clientFd, http::Connection(clientFd, _serverConfig));
+	while (1) {
+		int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
+
+		if (clientFd < 0) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				break;
+			} else {
+				perror("Failed to accept connection");
+				break;
+			}
+		} else {
+			_connectionMap.emplace(clientFd, http::Connection(clientFd, _serverConfig));
+			connectedClients.push_back(clientFd);
+		}
 	}
 
-	return clientFd;
+	return connectedClients;
 }
 
 void Server::closeConnection(int fd) {
@@ -41,10 +52,20 @@ void Server::removeConnection(int fd) {
 }
 
 void Server::process(int fd, short& events) {
-	// auto& con = _connections.at(fd);
-	(void)fd;
 	(void) events;
+	auto& con = _connectionMap.at(fd);
 
+	unsigned char buffer[4096];
+
+	ssize_t bytesRead = recv(fd, buffer, 4096, MSG_NOSIGNAL);
+	con.append(buffer, bytesRead);
+	auto* req = con.getRequest();
+	auto* res = con.getResponse();
+
+	if (req && res) {
+		res->setText(http::StatusCode::OK_200, "Welcome!");
+		events |= POLLOUT;
+	}
 }
 
 void Server::sendResponse(int fd, short& events) {

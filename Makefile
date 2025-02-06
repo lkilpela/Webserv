@@ -39,6 +39,8 @@ SRCS			=	main.cpp \
 					Url.cpp \
 					utils.cpp \
 					Config.cpp \
+					Server.cpp \
+					ServerManager.cpp \
 					common.cpp \
 					FilePayload.cpp \
 					Payload.cpp \

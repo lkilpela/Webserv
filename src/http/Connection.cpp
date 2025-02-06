@@ -15,7 +15,7 @@ namespace http {
 		, _serverConfig(serverConfig) {
 	}
 
-	void Connection::append(char *data, ssize_t size) {
+	void Connection::append(const std::uint8_t* data, size_t size) {
 		_buffer.reserve(_buffer.size() + size);
 		_buffer.insert(_buffer.end(), data, data + size);
 		_lastReceived = std::chrono::steady_clock::now();
