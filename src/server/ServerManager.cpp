@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include "ServerManager.hpp"
 #include "utils/index.hpp"
+#include "SignalHandle.hpp"
 
 ServerManager::ServerManager(const Config& config) : _config(config) {
 	_servers.reserve(config.servers.size());
@@ -24,6 +25,8 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 
 void ServerManager::listen() {
 	while (_pollfds.size()) {
+		if (sigIntReceived)
+			break ;
         int ret = ::poll(_pollfds.data(), _pollfds.size(), 100);
 
 		if (ret == -1) {

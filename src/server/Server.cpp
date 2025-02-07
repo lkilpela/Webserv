@@ -189,6 +189,13 @@ std::unordered_map<int, http::Connection>& Server::getConnectionMap() {
 // }
 
 void Server::_cleanup() {
+	if (!_cgiProcesses.empty()){
+		for (auto& process : _cgiProcesses){
+			kill(process.pid, SIGINT);
+			waitpid(process.pid, nullptr, 0);
+			close(process.readEndPipe);
+		}
+	}
 	for (auto& [fd, con] : _connectionMap) {
 		con.close();
 	}

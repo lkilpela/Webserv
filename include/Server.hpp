@@ -13,6 +13,11 @@
 #include "http/Connection.hpp"
 #include "Router.hpp"
 
+struct Process {
+    pid_t pid;
+    int readEndPipe;
+};
+
 class Server {
 	public:
 		Server() = default;
@@ -32,11 +37,12 @@ class Server {
 		const ServerConfig& _serverConfig;
 		Router _router;
 		std::unordered_map<int, http::Connection> _connectionMap;
+		std::vector<Process> _cgiProcesses;
+		void _cleanup();
 
 		// void _read(struct ::pollfd& pollFd, http::Connection& con);
 		// void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
 		// void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
 		// void _handle(struct ::pollfd& pollFd, http::Connection& con);
 		// void _cgiHandler(http::Request &req, http::Response &res);
-		void _cleanup();
 };

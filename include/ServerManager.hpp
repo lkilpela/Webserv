@@ -25,4 +25,5 @@ class ServerManager {
 		void _processPollfds();
 		void _pruneClosedConnections();
 		void _updatePollfds();
+		void _destroy();
 };
