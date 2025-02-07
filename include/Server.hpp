@@ -19,7 +19,7 @@ class Server {
 		Server(const ServerConfig& serverConfig);
 		~Server();
 
-		std::vector<int> addConnection(int serverFd);
+		int addConnection(int serverFd);
 		void closeConnection(int fd);
 		void removeConnection(int fd);
 		void process(int fd, short& events);

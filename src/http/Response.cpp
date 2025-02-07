@@ -1,4 +1,3 @@
-#include <iostream>
 #include <sstream>
 #include <cstdint>
 #include <sys/socket.h>
@@ -6,15 +5,6 @@
 #include "Error.hpp"
 #include "utils/index.hpp"
 #include "http/utils.hpp"
-
-//  Behavior of send()
-// When send() returns:
-// >= 0: The number of bytes successfully sent.
-// < 0: An error occurred. If the error is EAGAIN or EWOULDBLOCK, send() does not block and returns -1.
-// Approach
-// To detect non-blocking cases (EAGAIN/EWOULDBLOCK):
-
-// If send() returns -1, assume the socket is not ready for writing, and rely on POLLOUT to resume sending.
 
 namespace http {
 	Response::Response(int clientSocket)
@@ -45,31 +35,22 @@ namespace http {
 	}
 
 	bool Response::send() {
-		// std::cout << _header.toString();
-		// std::cout << _body->toString();
+		if (!_header.isSent()) {
+			_header.send();
+			return false;
+		}
 
-		// if (!_header.isSent()) {
-		// 	_header.send();
-		// 	return false;
-		// }
-		// if (_body == nullptr) {
-		// 	return true;
-		// }
+		if (_body == nullptr) {
+			return true;
+		}
 
-		// _body->send();
-		// if (_body->isSent()) {
-		// 	return true;
-		// }
+		_body->send();
 
-		// return false;
-		// _body->send();
-		// _header.send();
-		std::string response(
-				_header.toString()
-			);
-		// std::cout << response;
-			::send(_clientSocket, response.data(), response.size(), MSG_NOSIGNAL);
-		return (true);
+		if (_body->isSent()) {
+			return true;
+		}
+
+		return false;
 	}
 
 	void Response::build() {
@@ -85,7 +66,6 @@ namespace http {
 		}
 
 		ostream << "\r\n";
-		std::cout << "ostream:\n" << ostream.str();
 		_header.setMessage(ostream.str());
 		setStatus(Response::Status::READY);
 	}

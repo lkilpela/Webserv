@@ -15,19 +15,18 @@ Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), 
 	}
 }
 
-std::vector<int> Server::addConnection(int serverFd) {
+int Server::addConnection(int serverFd) {
 	std::vector<int> connectedClients;
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 
-		int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
+	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
-		if (clientFd >= 0) {
-			_connectionMap.emplace(clientFd, http::Connection(clientFd, _serverConfig));
-			connectedClients.push_back(clientFd);
-		}
+	if (clientFd >= 0) {
+		_connectionMap.emplace(clientFd, http::Connection(clientFd, _serverConfig));
+	}
 
-	return connectedClients;
+	return clientFd;
 }
 
 void Server::closeConnection(int fd) {
@@ -54,23 +53,12 @@ void Server::process(int fd, short& events) {
 
 	if (req && res && res->getStatus() == http::Response::Status::PENDING) {
 		res->setText(http::StatusCode::OK_200, "Welcome!");
-		std::cout << res->getBody()->toString() << std::endl;
 		events |= POLLOUT;
 	}
-	// events |= POLLOUT;
 }
 
 void Server::sendResponse(int fd, short& events) {
 	auto& con = _connectionMap.at(fd);
-
-	if (con.isClosed()) {
-		return;
-	}
-
-	if (con.getResponse() == nullptr) {
-		// std::cout << 
-		return;
-	}
 
 	if (con.sendResponse()) {
 		events &= ~POLLOUT;

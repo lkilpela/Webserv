@@ -19,8 +19,8 @@ class ServerManager {
 		std::vector<Server>	_servers;
 		std::vector<struct ::pollfd> _pollfds;
 		std::unordered_map<int, std::reference_wrapper<Server>> _serverMap;
-		std::unordered_set<int> _newPollfds;
-		std::unordered_set<int> _stalePollfds;
+		std::unordered_set<int> _newFds;
+		std::unordered_set<int> _staleFds;
 
 		void _processPollfds();
 		void _pruneClosedConnections();

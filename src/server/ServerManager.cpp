@@ -8,17 +8,14 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 	for (std::size_t i = 0; i < config.servers.size(); i++) {
 		const ServerConfig serverConfig = config.servers[i];
 		_servers.push_back(Server(serverConfig));
-
-		for (auto& server : _servers) {
-			for (const int serverFd : server.getFds()) {
-				_serverMap.emplace(serverFd, std::ref(server));
-				_pollfds.push_back({ serverFd, POLLIN, 0 });
-			}
-		}
     }
 
-	for (auto& pollfd : _pollfds) {
-		std::cout << pollfd.fd << std::endl;
+	for (auto& server : _servers) {
+		for (const int serverFd : server.getFds()) {
+			std::cout << serverFd << std::endl;
+			_serverMap.emplace(serverFd, std::ref(server));
+			_pollfds.push_back({ serverFd, POLLIN, 0 });
+		}
 	}
 }
 
@@ -42,7 +39,6 @@ void ServerManager::listen() {
 void ServerManager::_processPollfds() {
 	for (auto& pollfd : _pollfds) {
 		auto& server = _serverMap.at(pollfd.fd).get();
-		// std::cout << "Processing pollfd {" << pollfd.fd << "}" << std::endl;
 
 		if (pollfd.revents & POLLHUP) {
 			server.closeConnection(pollfd.fd);
@@ -51,12 +47,11 @@ void ServerManager::_processPollfds() {
 
 		if (pollfd.revents & POLLIN) {
 			if (server.getFds().contains(pollfd.fd)) {
-				auto clientFds = server.addConnection(pollfd.fd);
+				int clientFd = server.addConnection(pollfd.fd);
 
-				for (int clientFd : clientFds) {
-
+				if (clientFd >= 0) {
 					_serverMap.emplace(clientFd, std::ref(server));
-					_newPollfds.insert(clientFd);
+					_newFds.insert(clientFd);
 				}
 
 				continue;
@@ -66,17 +61,7 @@ void ServerManager::_processPollfds() {
 		}
 
 		if (pollfd.revents & POLLOUT) {
-			// std::string response(
-			// 	"HTTP/1.1 200 OK\r\n"
-			// 	"Content-Length: 8\r\n"
-			// 	"Content-Type: text/plain; charset=utf-8\r\n\r\n"
-			// 	"Welcome!"
-			// );
-
-			// ::send(pollfd.fd, response.data(), response.size(), MSG_NOSIGNAL);
 			server.sendResponse(pollfd.fd, pollfd.events);
-			// pollfd.revents &= ~POLLOUT;
-			// server.sendResponse(pollfd.fd, pollfd.events);
 		}
 	}
 }
@@ -94,7 +79,7 @@ void ServerManager::_pruneClosedConnections() {
 
 			if (connection.isClosed()) {
 				_serverMap.erase(fd);
-				_stalePollfds.insert(fd);
+				_staleFds.insert(fd);
 				it = connectionMap.erase(it);
 				continue;
 			}
@@ -105,16 +90,16 @@ void ServerManager::_pruneClosedConnections() {
 }
 
 void ServerManager::_updatePollfds() {
-	_pollfds.reserve(_pollfds.size() + _newPollfds.size());
+	_pollfds.reserve(_pollfds.size() + _newFds.size());
 
-	for (const int fd : _newPollfds) {
+	for (const int fd : _newFds) {
 		_pollfds.push_back({ fd, POLLIN, 0 });
 	}
 
 	std::erase_if(_pollfds, [this](const struct ::pollfd& pollfd) {
-		return (_stalePollfds.contains(pollfd.fd));
+		return (_staleFds.contains(pollfd.fd));
 	});
 
-	_stalePollfds.clear();
-	_newPollfds.clear();
+	_staleFds.clear();
+	_newFds.clear();
 }
