@@ -20,21 +20,12 @@ std::vector<int> Server::addConnection(int serverFd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 
-	while (1) {
 		int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
-		if (clientFd < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				break;
-			} else {
-				perror("Failed to accept connection");
-				break;
-			}
-		} else {
+		if (clientFd >= 0) {
 			_connectionMap.emplace(clientFd, http::Connection(clientFd, _serverConfig));
 			connectedClients.push_back(clientFd);
 		}
-	}
 
 	return connectedClients;
 }
@@ -52,7 +43,6 @@ void Server::removeConnection(int fd) {
 }
 
 void Server::process(int fd, short& events) {
-	(void) events;
 	auto& con = _connectionMap.at(fd);
 
 	unsigned char buffer[4096];
@@ -63,6 +53,7 @@ void Server::process(int fd, short& events) {
 	auto* res = con.getResponse();
 
 	if (req && res) {
+		std::cout << "res->setText == Welcome" << std::endl;
 		res->setText(http::StatusCode::OK_200, "Welcome!");
 		events |= POLLOUT;
 	}

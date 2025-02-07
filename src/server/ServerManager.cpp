@@ -31,27 +31,6 @@ void ServerManager::listen() {
 		}
 
 		if (ret > 0) {
-			// for (auto& server : _servers) {
-			// 	for (auto )
-			// }
-			// if (pollfd.revents & POLLIN) {
-			// 	auto& server = _serverMap.at(pollfd.fd).get();
-
-			// 	if (server.getFds().contains(pollfd.fd)) {
-			// 		std::cout << "Processing pollfd {" << pollfd.fd << "}" << std::endl;
-			// 		int clientFd = server.addConnection(pollfd.fd);
-
-			// 		if (clientFd >= 0) {
-			// 			_serverMap.emplace(clientFd, std::ref(server));
-			// 			_newPollfds.insert(clientFd);
-			// 		}
-
-			// 		continue;
-			// 	}
-
-			// 	server.process(pollfd.fd, pollfd.events);
-			// }
-
 			_processPollfds();
 		}
 
@@ -62,37 +41,36 @@ void ServerManager::listen() {
 
 void ServerManager::_processPollfds() {
 	for (auto& pollfd : _pollfds) {
-		// auto& server = _serverMap.at(pollfd.fd).get();
+		auto& server = _serverMap.at(pollfd.fd).get();
 		// std::cout << "Processing pollfd {" << pollfd.fd << "}" << std::endl;
 
 		if (pollfd.revents & POLLHUP) {
-			auto& server = _serverMap.at(pollfd.fd).get();
 			server.closeConnection(pollfd.fd);
 			continue;
 		}
 
 		if (pollfd.revents & POLLIN) {
-			auto& server = _serverMap.at(pollfd.fd).get();
-
 			if (server.getFds().contains(pollfd.fd)) {
 				// std::cout << "Processing pollfd {" << pollfd.fd << "}" << std::endl;
 				auto clientFds = server.addConnection(pollfd.fd);
 
 				for (int clientFd : clientFds) {
-					std::cout << "clientFd " << clientFd << " is added to _serverMap" << std::endl;
 
 					_serverMap.emplace(clientFd, std::ref(server));
+					// std::cout << "_serverMap.at clientFd {" << clientFd << "}" << std::endl;
+					// std::cout << "_serverMap.at clientFd after {" << clientFd << "}" << std::endl;
+					// std::cout << "_serverMap.size()=" << _serverMap.size() << std::endl;
 					_newPollfds.insert(clientFd);
 				}
 
 				continue;
 			}
 
+			std::cout << "Calling server.process()" << std::endl;
 			server.process(pollfd.fd, pollfd.events);
 		}
 
 		if (pollfd.revents & POLLOUT) {
-			auto& server = _serverMap.at(pollfd.fd).get();
 			server.sendResponse(pollfd.fd, pollfd.events);
 		}
 	}
@@ -105,9 +83,9 @@ void ServerManager::_pruneClosedConnections() {
 		for (auto it = connectionMap.begin(); it != connectionMap.end();) {
 			auto& [fd, connection] = *it;
 
-			if (connection.isTimedOut()) {
-				connection.close();
-			}
+			// if (connection.isTimedOut()) {
+			// 	connection.close();
+			// }
 
 			if (connection.isClosed()) {
 				_serverMap.erase(fd);
@@ -122,15 +100,15 @@ void ServerManager::_pruneClosedConnections() {
 }
 
 void ServerManager::_updatePollfds() {
-	std::erase_if(_pollfds, [this](const struct ::pollfd& pollfd) {
-		return (_stalePollfds.contains(pollfd.fd));
-	});
-
 	_pollfds.reserve(_pollfds.size() + _newPollfds.size());
 
 	for (const int fd : _newPollfds) {
 		_pollfds.push_back({ fd, POLLIN, 0 });
 	}
+
+	std::erase_if(_pollfds, [this](const struct ::pollfd& pollfd) {
+		return (_stalePollfds.contains(pollfd.fd));
+	});
 
 	_stalePollfds.clear();
 	_newPollfds.clear();
