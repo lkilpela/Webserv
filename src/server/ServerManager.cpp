@@ -51,27 +51,32 @@ void ServerManager::_processPollfds() {
 
 		if (pollfd.revents & POLLIN) {
 			if (server.getFds().contains(pollfd.fd)) {
-				// std::cout << "Processing pollfd {" << pollfd.fd << "}" << std::endl;
 				auto clientFds = server.addConnection(pollfd.fd);
 
 				for (int clientFd : clientFds) {
 
 					_serverMap.emplace(clientFd, std::ref(server));
-					// std::cout << "_serverMap.at clientFd {" << clientFd << "}" << std::endl;
-					// std::cout << "_serverMap.at clientFd after {" << clientFd << "}" << std::endl;
-					// std::cout << "_serverMap.size()=" << _serverMap.size() << std::endl;
 					_newPollfds.insert(clientFd);
 				}
 
 				continue;
 			}
 
-			std::cout << "Calling server.process()" << std::endl;
 			server.process(pollfd.fd, pollfd.events);
 		}
 
 		if (pollfd.revents & POLLOUT) {
+			// std::string response(
+			// 	"HTTP/1.1 200 OK\r\n"
+			// 	"Content-Length: 8\r\n"
+			// 	"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+			// 	"Welcome!"
+			// );
+
+			// ::send(pollfd.fd, response.data(), response.size(), MSG_NOSIGNAL);
 			server.sendResponse(pollfd.fd, pollfd.events);
+			// pollfd.revents &= ~POLLOUT;
+			// server.sendResponse(pollfd.fd, pollfd.events);
 		}
 	}
 }

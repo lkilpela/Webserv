@@ -52,17 +52,23 @@ void Server::process(int fd, short& events) {
 	auto* req = con.getRequest();
 	auto* res = con.getResponse();
 
-	if (req && res) {
-		std::cout << "res->setText == Welcome" << std::endl;
+	if (req && res && res->getStatus() == http::Response::Status::PENDING) {
 		res->setText(http::StatusCode::OK_200, "Welcome!");
+		std::cout << res->getBody()->toString() << std::endl;
 		events |= POLLOUT;
 	}
+	// events |= POLLOUT;
 }
 
 void Server::sendResponse(int fd, short& events) {
 	auto& con = _connectionMap.at(fd);
 
 	if (con.isClosed()) {
+		return;
+	}
+
+	if (con.getResponse() == nullptr) {
+		// std::cout << 
 		return;
 	}
 

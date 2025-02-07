@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sstream>
 #include <cstdint>
 #include <sys/socket.h>
@@ -44,21 +45,31 @@ namespace http {
 	}
 
 	bool Response::send() {
-		if (!_header.isSent()) {
-			_header.send();
-			return false;
-		}
+		// std::cout << _header.toString();
+		// std::cout << _body->toString();
 
-		if (_body == nullptr) {
-			return true;
-		}
+		// if (!_header.isSent()) {
+		// 	_header.send();
+		// 	return false;
+		// }
+		// if (_body == nullptr) {
+		// 	return true;
+		// }
 
-		_body->send();
-		if (_body->isSent()) {
-			return true;
-		}
+		// _body->send();
+		// if (_body->isSent()) {
+		// 	return true;
+		// }
 
-		return false;
+		// return false;
+		// _body->send();
+		// _header.send();
+		std::string response(
+				_header.toString()
+			);
+		// std::cout << response;
+			::send(_clientSocket, response.data(), response.size(), MSG_NOSIGNAL);
+		return (true);
 	}
 
 	void Response::build() {
@@ -74,6 +85,7 @@ namespace http {
 		}
 
 		ostream << "\r\n";
+		std::cout << "ostream:\n" << ostream.str();
 		_header.setMessage(ostream.str());
 		setStatus(Response::Status::READY);
 	}
