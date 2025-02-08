@@ -18,7 +18,7 @@ namespace http {
 
 			Connection& operator=(const Connection&) = default;
 
-			void append(const std::uint8_t* data, size_t size);
+			void read();
 			bool sendResponse();
 			void close();
 

@@ -12,7 +12,6 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 
 	for (auto& server : _servers) {
 		for (const int serverFd : server.getFds()) {
-			std::cout << serverFd << std::endl;
 			_serverMap.emplace(serverFd, std::ref(server));
 			_pollfds.push_back({ serverFd, POLLIN, 0 });
 		}

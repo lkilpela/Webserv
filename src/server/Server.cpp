@@ -44,16 +44,24 @@ void Server::removeConnection(int fd) {
 void Server::process(int fd, short& events) {
 	auto& con = _connectionMap.at(fd);
 
-	unsigned char buffer[4096];
+	con.read();
 
-	ssize_t bytesRead = recv(fd, buffer, 4096, MSG_NOSIGNAL);
-	con.append(buffer, bytesRead);
 	auto* req = con.getRequest();
 	auto* res = con.getResponse();
 
-	if (req && res && res->getStatus() == http::Response::Status::PENDING) {
-		res->setText(http::StatusCode::OK_200, "Welcome!");
-		events |= POLLOUT;
+	if (req == nullptr || res == nullptr) {
+		return;
+	}
+
+	using enum http::Response::Status;
+	
+	if (res->getStatus() == PENDING) {
+		res->setStatus(IN_PROGRESS);
+		_router.handle(*req, *res);
+
+		if (res->getStatus() == READY) {
+			events |= POLLOUT;
+		}
 	}
 }
 
@@ -150,35 +158,6 @@ std::unordered_map<int, http::Connection>& Server::getConnectionMap() {
 // 	http::Response* res = con.getResponse();
 // 	if (res != nullptr) {
 // 		res->getBody()->append(buffer, bytesRead);
-// 	}
-// }
-
-// void Server::_readFromSocket(struct ::pollfd& pollFd, http::Connection& con) {
-// 	char buffer[4096];
-// 	ssize_t bytesRead = ::recv(pollFd.fd, buffer, sizeof(buffer), MSG_NOSIGNAL);
-
-// 	if (bytesRead == 0) {
-// 		con.close();
-// 		return;
-// 	}
-
-// 	if (bytesRead > 0) {
-// 		con.append(buffer, bytesRead);
-// 	}
-// }
-
-// void Server::_handle(struct ::pollfd& pollFd, http::Connection& con) {
-// 	using enum http::Response::Status;
-// 	http::Request* req = con.getRequest();
-// 	http::Response* res = con.getResponse();
-
-// 	if (res == nullptr) {
-// 		return;
-// 	}
-
-// 	if (res->getStatus() == PENDING) {
-// 		res->setStatus(IN_PROGRESS);
-// 		_router.handle(*req, *res);
 // 	}
 // }
 

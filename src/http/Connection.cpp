@@ -15,15 +15,29 @@ namespace http {
 		, _serverConfig(serverConfig) {
 	}
 
-	void Connection::append(const std::uint8_t* data, size_t size) {
-		_buffer.reserve(_buffer.size() + size);
-		_buffer.insert(_buffer.end(), data, data + size);
-		_lastReceived = std::chrono::steady_clock::now();
-		_processBuffer();
+	void Connection::read() {
+		if (isClosed()) {
+			return;
+		}
 
-		if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
-			_queue.emplace(std::move(_request), Response(_clientSocket));
-			_request.clear();
+		unsigned char buf[4096];
+		ssize_t bytesRead = recv(_clientSocket, buf, sizeof(buf), MSG_NOSIGNAL);
+
+		if (bytesRead == 0) {
+			this->close();
+			return;
+		}
+
+		if (bytesRead > 0) {
+			_buffer.reserve(_buffer.size() + bytesRead);
+			_buffer.insert(_buffer.end(), buf, buf + bytesRead);
+			_lastReceived = std::chrono::steady_clock::now();
+			_processBuffer();
+
+			if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
+				_queue.emplace(std::move(_request), Response(_clientSocket));
+				_request.clear();
+			}
 		}
 	}
 
