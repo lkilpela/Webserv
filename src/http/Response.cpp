@@ -6,19 +6,32 @@
 #include "utils/index.hpp"
 #include "http/utils.hpp"
 
-//  Behavior of send()
-// When send() returns:
-// >= 0: The number of bytes successfully sent.
-// < 0: An error occurred. If the error is EAGAIN or EWOULDBLOCK, send() does not block and returns -1.
-// Approach
-// To detect non-blocking cases (EAGAIN/EWOULDBLOCK):
-
-// If send() returns -1, assume the socket is not ready for writing, and rely on POLLOUT to resume sending.
-
 namespace http {
 	Response::Response(int clientSocket)
 		: _clientSocket(clientSocket)
 		, _header(utils::StringPayload(clientSocket, "")) {
+	}
+
+	Response::Response(const Response& other)
+		: _clientSocket(other._clientSocket)
+		, _status(other._status)
+		, _statusCode(other._statusCode)
+		, _headerByName(other._headerByName)
+		, _header(other._header)
+		, _body(other._body ? other._body->clone() : nullptr) {
+	}
+
+	Response& Response::operator=(const Response& other) {
+		if (this != &other) {
+			_clientSocket = other._clientSocket;
+			_status = other._status;
+			_statusCode = other._statusCode;
+			_headerByName = other._headerByName;
+			_header = other._header;
+			_body = other._body ? other._body->clone() : nullptr;
+		}
+
+		return *this;
 	}
 
 	bool Response::send() {
@@ -32,6 +45,7 @@ namespace http {
 		}
 
 		_body->send();
+
 		if (_body->isSent()) {
 			return true;
 		}

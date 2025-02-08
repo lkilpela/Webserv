@@ -118,6 +118,10 @@ namespace utils {
 		});
 		return str;
 	}
+	void closeFDs(const std::vector<int>& serverFds) {
+    for (int fd : serverFds)
+        close(fd);
+	}	
 
 	std::size_t convertSizeToBytes(const string& sizeStr) {
 		std::size_t size = std::stoul(sizeStr);

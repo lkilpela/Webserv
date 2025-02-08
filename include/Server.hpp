@@ -1,38 +1,42 @@
 #pragma once
 
+#define BACKLOG 128
+
 #include "Config.hpp"
 #include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <fcntl.h>
 #include <unordered_map>
 #include <cstring>
-#include <vector>
+#include <unordered_set>
 #include <algorithm>
 #include <functional>
 #include <poll.h>
 #include "http/Connection.hpp"
-#define BACKLOG 128
-
-class Request;
-class Response;
+#include "Router.hpp"
 
 class Server {
 	public:
 		Server() = default;
-		Server(const Config& config);
+		Server(const ServerConfig& serverConfig);
 		~Server();
-		void listen();
-		void processCGI(Request& req);
-		void processHttpClient(Request& req, Response& res);
+
+		int addConnection(int serverFd);
+		void closeConnection(int fd);
+		void removeConnection(int fd);
+		void process(int fd, short& events);
+		void sendResponse(int fd, short& events);
+		const std::unordered_set<int>& getFds() const;
+		std::unordered_map<int, http::Connection>& getConnectionMap();
 
 	private:
-		std::vector<int> _serverFds;
-		std::vector<pollfd> _pollfds;
-		std::unordered_map<int, std::pair<Request, Response>> _requestResponseByFd;
-		std::vector<int> _clientFds;
-		std::unordered_map<int, http::Connection> _connectionByFd;
+		std::unordered_set<int> _fds;
+		const ServerConfig& _serverConfig;
+		Router _router;
+		std::unordered_map<int, http::Connection> _connectionMap;
 
-		void _addClient(std::size_t i);
-		void _addRoute(std::string, std::function<void(Request& req, Response& res)>);
+		// void _read(struct ::pollfd& pollFd, http::Connection& con);
+		// void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
+		// void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
+		// void _handle(struct ::pollfd& pollFd, http::Connection& con);
+		// void _cgiHandler(http::Request &req, http::Response &res);
+		void _cleanup();
 };

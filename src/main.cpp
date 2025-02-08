@@ -5,9 +5,10 @@
 #include <exception>
 #include <thread>
 //#include "SignalHandle.hpp"
+#include "ServerManager.hpp"
 #include "http/index.hpp"
 
-volatile sig_atomic_t sigintReceived = 0;
+// volatile sig_atomic_t sigintReceived = 0;
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -19,9 +20,8 @@ int main(int argc, char **argv) {
 		//handleSignals();
 		ConfigParser parser(argv[1]);
 		Config config = parser.load();
-		//std::vector<Server> servers;
-		//Server server(config);
-		//server.listen();
+		ServerManager serverManager(config);
+		serverManager.listen();
 	} catch (const WSException& e) {
 		std::cerr << "Error: " << e.code() << " " << e.code().message() << std::endl;
 	} catch (const std::exception& e) {

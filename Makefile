@@ -39,17 +39,20 @@ SRCS			=	main.cpp \
 					Url.cpp \
 					utils.cpp \
 					Config.cpp \
+					Server.cpp \
+					ServerManager.cpp \
 					common.cpp \
 					FilePayload.cpp \
 					Payload.cpp \
+					socket.cpp \
 					StringPayload.cpp \
 					Router.cpp
 #SignalHandler.cpp
 #Server.cpp
 
-# Add more sources here
+# SignalHandler.cpp \
 
-OBJECTS			=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
+OBJECTS		:=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
 ################################################################################
 # RULES
@@ -73,7 +76,7 @@ $(OBJ_DIR)/%.o: %.cpp $(M_HEADERS)
 	@$(CXX_FULL) -c $< -o $@
 	@echo "$(G)Compiled: $< $(RC)"
 
-$(NAME): $(OBJECTS)
+$(NAME): $(OBJ_DIR) $(OBJECTS)
 	@echo "--------------------------------------------"
 	@$(CXX_FULL) $(OBJECTS) -o $(NAME)
 	@echo "[$(NAME)] $(B)Built target $(NAME)$(RC)"
@@ -143,7 +146,7 @@ $(TEST_NAME): $(TEST_OBJECTS) $(LIB_NAME)
 $(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
 	@mkdir -p $(OBJ_DIR)
 	@echo "Compiling $< to $@"
-	@$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS) $(GTEST_HEADERS) -c $< -o $@
+	@$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(GTEST_HEADERS) -c $< -o $@
 	@echo "$(G)Compiled: $< $(RC)"
 
 clean_test:

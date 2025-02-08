@@ -15,24 +15,29 @@ namespace http {
 		, _serverConfig(serverConfig) {
 	}
 
-	void Connection::append(char *data, ssize_t size) {
+	void Connection::read() {
 		if (isClosed()) {
 			return;
 		}
 
-		if (_isTimedOut()) {
+		unsigned char buf[4096];
+		ssize_t bytesRead = recv(_clientSocket, buf, sizeof(buf), MSG_NOSIGNAL);
+
+		if (bytesRead == 0) {
 			this->close();
 			return;
 		}
 
-		_buffer.reserve(_buffer.size() + size);
-		_buffer.insert(_buffer.end(), data, data + size);
-		_lastReceived = std::chrono::steady_clock::now();
-		_processBuffer();
+		if (bytesRead > 0) {
+			_buffer.reserve(_buffer.size() + bytesRead);
+			_buffer.insert(_buffer.end(), buf, buf + bytesRead);
+			_lastReceived = std::chrono::steady_clock::now();
+			_processBuffer();
 
-		if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
-			_queue.emplace(std::move(_request), Response(_clientSocket));
-			_request.clear();
+			if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
+				_queue.emplace(std::move(_request), Response(_clientSocket));
+				_request.clear();
+			}
 		}
 	}
 
@@ -85,6 +90,16 @@ namespace http {
 		return (_clientSocket == -1);
 	}
 
+	bool Connection::isTimedOut() const {
+		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
+
+		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
+			return true;
+		}
+
+		return false;
+	}
+
 	Request* Connection::getRequest() {
 		if (_queue.size() == 0) {
 			return nullptr;
@@ -101,16 +116,6 @@ namespace http {
 
 		auto& pair = _queue.front();
 		return &pair.second;
-	}
-
-	bool Connection::_isTimedOut() const {
-		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
-
-		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
-			return true;
-		}
-
-		return false;
 	}
 
 	void Connection::_processBuffer() {

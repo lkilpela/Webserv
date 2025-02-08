@@ -17,11 +17,11 @@ namespace http {
 			};
 
 			Response(int clientSocket);
-			Response(const Response&) = delete;
+			Response(const Response& other);
 			Response(Response&&) noexcept = default;
 			~Response() = default;
 
-			Response& operator=(const Response&) = delete;
+			Response& operator=(const Response& other);
 
 			bool send();
 
