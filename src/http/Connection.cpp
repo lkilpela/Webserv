@@ -138,6 +138,7 @@ namespace http {
 		auto it = utils::findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
 
 		if (it == end && _buffer.size() > MAX_REQUEST_HEADER_SIZE) {
+			std::cout << "_parseHeader error > MAX_REQUEST_HEADER_SIZE" << std::endl;
 			_request.setStatus(Request::Status::BAD);
 			return;
 		}
@@ -147,6 +148,7 @@ namespace http {
 				_request = std::move(Request::parseHeader(std::string(begin, it + 4)));
 				_buffer.erase(begin, it + 4);
 			} catch (const std::invalid_argument &e) {
+				std::cout << "_parseHeader error @Request::parseHeader()" << std::endl;
 				_request.setStatus(Request::Status::BAD);
 			}
 		}
@@ -201,6 +203,7 @@ namespace http {
 				buffer.insert(buffer.end(), firstIt + 2, secondIt);
 				currentPos += secondIt + 2 - start;
 			} catch (const std::invalid_argument& e) {
+				std::cout << "_parseHeader error invalid_argument" << std::endl;
 				_request.setStatus(Request::Status::BAD);
 				return;
 			}

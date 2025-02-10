@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/wait.h>
@@ -67,6 +68,7 @@ void Server::process(int fd, short& events) {
 
 	if (res->getStatus() == PENDING) {
 		res->setStatus(IN_PROGRESS);
+		std::cout << "Is chunked request? " << req->isChunked() << ", is BAD_REQUEST? " << (req->getStatus() == http::Request::Status::BAD) << std::endl;
 		_router.handle(*req, *res);
 
 		if (res->getStatus() == READY) {
