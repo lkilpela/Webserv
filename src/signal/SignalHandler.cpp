@@ -2,7 +2,7 @@
 
 void handleSigInt(int sig){
 	(void)sig;
-	sigintReceived = 1;
+	sigIntReceived = 1;
 }
 
 void handleSignals(){

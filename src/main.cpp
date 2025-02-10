@@ -4,11 +4,9 @@
 //#include "Server.hpp"
 #include <exception>
 #include <thread>
-//#include "SignalHandle.hpp"
+#include "SignalHandle.hpp"
 #include "ServerManager.hpp"
 #include "http/index.hpp"
-
-// volatile sig_atomic_t sigintReceived = 0;
 
 int main(int argc, char **argv) {
 	if (argc != 2) {

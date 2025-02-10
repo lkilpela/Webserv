@@ -188,19 +188,24 @@ std::unordered_map<int, http::Connection>& Server::getConnectionMap() {
 // 	}
 // }
 
+
+Server::~Server() {
+	_cleanup();
+}
+
 void Server::_cleanup() {
-	if (!_cgiProcesses.empty()){
-		for (auto& process : _cgiProcesses){
-			kill(process.pid, SIGINT);
-			waitpid(process.pid, nullptr, 0);
-			close(process.readEndPipe);
-		}
-	}
 	for (auto& [fd, con] : _connectionMap) {
 		con.close();
 	}
 }
 
-Server::~Server() {
+void Server::_shutDownServer(){
+	if (!_cgiProcesses.empty()){
+		for (auto& process : _cgiProcesses){
+			kill(process.get().pid, SIGINT);
+			waitpid(process.get().pid, nullptr, 0);
+			close(process.get().readEndPipe);
+		}
+	}
 	_cleanup();
 }

@@ -25,8 +25,10 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 
 void ServerManager::listen() {
 	while (_pollfds.size()) {
-		if (sigIntReceived)
+		if (sigIntReceived){
+			_shutDownServers();
 			break ;
+		}
         int ret = ::poll(_pollfds.data(), _pollfds.size(), 100);
 
 		if (ret == -1) {
@@ -115,4 +117,9 @@ void ServerManager::_updatePollfds() {
 
 	_stalePollfds.clear();
 	_newPollfds.clear();
+}
+
+void ServerManager::_shutDownServers(){
+	for (auto& server : _servers)
+		server._shutDownServer();
 }

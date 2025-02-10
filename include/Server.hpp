@@ -31,13 +31,14 @@ class Server {
 		void sendResponse(int fd, short& events);
 		const std::unordered_set<int>& getFds() const;
 		std::unordered_map<int, http::Connection>& getConnectionMap();
+		void _shutDownServer();
 
 	private:
-		std::unordered_set<int> _fds;
 		const ServerConfig& _serverConfig;
 		Router _router;
+		std::unordered_set<int> _fds;
 		std::unordered_map<int, http::Connection> _connectionMap;
-		std::vector<Process> _cgiProcesses;
+		std::vector<std::reference_wrapper<Process>> _cgiProcesses;
 		void _cleanup();
 
 		// void _read(struct ::pollfd& pollFd, http::Connection& con);
