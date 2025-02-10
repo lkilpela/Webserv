@@ -39,15 +39,15 @@ void ConfigParser::parseServerBlock(ifstream &file, ServerConfig &server) {
 	});
 	}
 
-	void ConfigParser::parseLocationBlock(ifstream &file, Location &location) {
+void ConfigParser::parseLocationBlock(ifstream &file, Location &location) {
 	utils::parseBlock(file, "location", [&](const string &line) {
 		parseLocation(line, location);
 	});
 	}
 
 	// Function to parse global configuration lines
-	void ConfigParser::parseGlobal(const string &line, ServerConfig &server) {
-		const ParserMap globalParsers = {
+void ConfigParser::parseGlobal(const string &line, ServerConfig &server) {
+	const ParserMap globalParsers = {
 		{"host", [&](const string &value) {
 			if (!server.host.empty() || !utils::isValidIP(value)) {
 				THROW_CONFIG_ERROR(EINVAL, "Invalid host");
@@ -55,11 +55,7 @@ void ConfigParser::parseServerBlock(ifstream &file, ServerConfig &server) {
 			server.host = value;
 		}},
 		{"port", [&](const string &value) {
-			if (server.port != 0) {
-				THROW_CONFIG_ERROR(EINVAL, "Invalid port");
-			}
-			server.port = utils::parsePort(value);
-			//std::cout << "Port: " << server.port << std::endl;
+			server.ports.push_back(utils::parsePort(value));
 		}},
 		{"server_name", [&](const string &value) {
 			if (!server.serverName.empty()) {
@@ -73,8 +69,7 @@ void ConfigParser::parseServerBlock(ifstream &file, ServerConfig &server) {
 			iss >> code >> path;
 			fullPath = getConfigPath(path);
 			utils::validateErrorPage(code, fullPath);
-			server.errorPages[std::stoi(code)] = fullPath; // Store in map
-			//std::cout << "Error Page: " << code << " " << fullPath << std::endl;
+			server.errorPages[std::stoi(code)] = fullPath;
 		}},
 		{"client_max_body_size", [&](const string &value) {
 			if (!server.clientMaxBodySizeStr.empty() || !utils::isValidSize(value)) {
@@ -183,6 +178,6 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 Config ConfigParser::load() {
 	Config config;
 	parseConfig(filePath, config);
-	//utils::printConfig(config); // For testing
+	utils::printConfig(config); // For testing
 	return config;
 }

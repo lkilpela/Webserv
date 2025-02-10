@@ -13,26 +13,36 @@
 #include "http/Connection.hpp"
 #include "Router.hpp"
 
+struct Process {
+    pid_t pid;
+    int readEndPipe;
+};
+
 class Server {
 	public:
 		Server() = default;
-		Server(const Config& config);
+		Server(const ServerConfig& serverConfig);
 		~Server();
-		void listen();
+
+		std::vector<int> addConnection(int serverFd);
+		void closeConnection(int fd);
+		void removeConnection(int fd);
+		void process(int fd, short& events);
+		void sendResponse(int fd, short& events);
+		const std::unordered_set<int>& getFds() const;
+		std::unordered_map<int, http::Connection>& getConnectionMap();
 
 	private:
-		const Config& _config;
+		std::unordered_set<int> _fds;
+		const ServerConfig& _serverConfig;
 		Router _router;
-		std::unordered_set<int>	_serverFds;
-		std::vector<pollfd> _pollfds;
-		std::unordered_map<int, http::Connection> _connectionByFd;
-
-		void _addConnection(int serverFd);
-		void _read(struct ::pollfd& pollFd, http::Connection& con);
-		void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
-		void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
-		void _process(struct ::pollfd& pollFd, http::Connection& con);
-		void _sendResponse(struct ::pollfd& pollFd, http::Connection& con);
-		void _cgiHandler(http::Request &req, http::Response &res);
+		std::unordered_map<int, http::Connection> _connectionMap;
+		std::vector<Process> _cgiProcesses;
 		void _cleanup();
+
+		// void _read(struct ::pollfd& pollFd, http::Connection& con);
+		// void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
+		// void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
+		// void _handle(struct ::pollfd& pollFd, http::Connection& con);
+		// void _cgiHandler(http::Request &req, http::Response &res);
 };

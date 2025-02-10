@@ -1,6 +1,7 @@
 #include "SignalHandle.hpp"
 
 void handleSigInt(int sig){
+	(void)sig;
 	sigintReceived = 1;
 }
 

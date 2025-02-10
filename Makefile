@@ -3,7 +3,7 @@
 # COMPILATION
 ################################################################################
 CXX				=	g++
-CXX_STRICT		=	-Wall -Wextra -Werror -std=c++20
+CXX_STRICT		=	-Wall -Wextra -Werror -std=c++20 -Wno-pessimizing-move
 DB_FLAGS		=	-g
 HEADERS			=	-I $(INCLUDES)
 CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
@@ -33,27 +33,24 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 OBJ_DIR			=	obj
 SRC_DIR			=	src
 SRCS			=	main.cpp \
-					\
 					Connection.cpp \
 					Request.cpp \
 					Response.cpp \
 					Url.cpp \
 					utils.cpp \
-					\
 					Config.cpp \
-					\
 					Server.cpp \
-					\
-					SignalHandler.cpp \
-					\
+					ServerManager.cpp \
 					common.cpp \
 					FilePayload.cpp \
 					Payload.cpp \
+					socket.cpp \
 					StringPayload.cpp \
-					\
 					Router.cpp
+#SignalHandler.cpp
+#Server.cpp
 
-# Add more sources here
+# SignalHandler.cpp \
 
 OBJECTS		:=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
