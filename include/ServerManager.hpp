@@ -21,9 +21,10 @@ class ServerManager {
 		std::unordered_map<int, std::size_t> _pollFdIndexByFd;
 		std::unordered_map<int, std::reference_wrapper<Server>> _serverByFd;
 
-		void _processPollFds();
-		void _updatePollFds();
+		void _addPollFd(int fd, Server& server);
 		void _removePollFd(int fd);
+		void _updatePollFds();
+		void _processPollFds();
 		void _updateClientConnections(Server& server);
 		void _updatePipeConnections(Server& server);
 };

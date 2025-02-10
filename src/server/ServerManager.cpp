@@ -12,9 +12,7 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 
 	for (auto& server : _servers) {
 		for (const int serverFd : server.getServerFds()) {
-			_pollFds.push_back({ serverFd, POLLIN, 0 });
-			_pollFdIndexByFd[serverFd] = _pollFds.size() - 1;
-			_serverByFd.emplace(serverFd, std::ref(server));
+			_addPollFd(serverFd, server);
 		}
 	}
 }
@@ -33,6 +31,38 @@ void ServerManager::listen() {
 
 		_updatePollFds();
     }
+}
+
+void ServerManager::_addPollFd(int fd, Server& server) {
+	auto it = _pollFdIndexByFd.find(fd);
+
+	if (it != _pollFdIndexByFd.end()) {
+		return;
+	}
+
+	_pollFds.push_back({ fd, POLLIN, 0 });
+	_pollFdIndexByFd[fd] = _pollFds.size() - 1;
+	_serverByFd.emplace(fd, std::ref(server));
+}
+
+void ServerManager::_removePollFd(int fd) {
+	auto it = _pollFdIndexByFd.find(fd);
+
+	if (it == _pollFdIndexByFd.end()) {
+		return;
+	}
+
+	const std::size_t index = it->second;
+
+	_pollFdIndexByFd.erase(it);
+	_serverByFd.erase(fd);
+
+	if (index != _pollFds.size() - 1) {
+		std::swap(_pollFds[index], _pollFds.back());
+		_pollFdIndexByFd[_pollFds[index].fd] = index;
+	}
+
+	_pollFds.pop_back();
 }
 
 void ServerManager::_processPollFds() {
@@ -67,59 +97,40 @@ void ServerManager::_updatePollFds() {
 	}
 }
 
-void ServerManager::_removePollFd(int fd) {
-	auto it = _pollFdIndexByFd.find(fd);
-
-	if (it == _pollFdIndexByFd.end()) {
-		return;
-	}
-
-	const std::size_t index = it->second;
-	
-	_pollFdIndexByFd.erase(it);
-
-	if (index != _pollFds.size() - 1) {
-		std::swap(_pollFds[index], _pollFds.back());
-		_pollFdIndexByFd[_pollFds[index].fd] = index;
-	}
-
-	_pollFds.pop_back();
-}
-
 void ServerManager::_updateClientConnections(Server& server) {
 	auto& clients = server.getClients();
 
 	for (auto it = clients.begin(); it != clients.end();) {
 		auto& [fd, connection] = *it;
 
-		// if (connection.isTimedOut()) {
-		// 	connection.close();
-		// }
+		if (connection.isTimedOut()) {
+			connection.close();
+		}
 
 		if (connection.isClosed()) {
 			_removePollFd(fd);
-			_serverByFd.erase(fd);
 			it = clients.erase(it);
 			continue;
 		}
 
-		auto pollfdIt = std::ranges::find_if(_pollFds, [fd](const struct ::pollfd& pollfd) { return pollfd.fd == fd; });
-
-		if (pollfdIt == _pollFds.end()) {
-			_pollFds.push_back({ fd, POLLIN, 0 });
-			_serverByFd.emplace(fd, std::ref(server));
-		}
-
+		_addPollFd(fd, server);
 		it++;
 	}
 }
 
 void ServerManager::_updatePipeConnections(Server& server) {
-	auto& pipeConnections = server.getPipes();
+	auto& pipeConnections = server.getPipeProcess();
 
 	for (auto it = pipeConnections.begin(); it != pipeConnections.end();) {
-		auto& [pipeFd, clientFd] = *it;
+		auto& [pipeFd, process] = *it;
 
+		if (process.isPipeClosed) {
+			_removePollFd(pipeFd);
+			it = pipeConnections.erase(it);
+			continue;
+		}
+
+		_addPollFd(pipeFd, server);
 		it++;
 	}
 }

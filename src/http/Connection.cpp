@@ -91,11 +91,11 @@ namespace http {
 	}
 
 	bool Connection::isTimedOut() const {
-		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
+		// auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
 
-		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
-			return true;
-		}
+		// if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
+		// 	return true;
+		// }
 
 		return false;
 	}

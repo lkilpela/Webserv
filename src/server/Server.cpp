@@ -6,12 +6,16 @@
 #include "SignalHandle.hpp"
 
 Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), _router(serverConfig) {
-	_fds.reserve(serverConfig.ports.size());
+	_router.get(handleGetRequest);
+	_router.post(handlePostRequest);
+	_router.del(handleDeleteRequest);
+
+	_serverFds.reserve(serverConfig.ports.size());
 
 	for (const int port : serverConfig.ports) {
 		int serverFd = utils::createPassiveSocket(serverConfig.host.data(), port, 128, true);
 		std::cout << "listening on " << serverConfig.host << ":" << port << std::endl;
-		_fds.emplace(serverFd);
+		_serverFds.emplace(serverFd);
 	}
 }
 
@@ -26,36 +30,25 @@ void Server::addClientTo(int serverFd) {
 	}
 }
 
-// void Server::close(int fd) {
-// 	auto it = _connectionByClientFd.find(fd);
-
-// 	if (it != _connectionByClientFd.end()) {
-// 		it->second.close();
-// 		_closedFds.insert(fd);
-
-// 		for (auto& [pipeFd, weakPtr] : _pipeFdToClientFd) {
-// 			if (weakPtr.lock() == it->second) {
-// 				_closedFds.insert(pipeFd);
-// 				break;
-// 			}
-// 		}
-
-// 		return;
-// 	}
-
-// 	if (_pipeFdToClientFd.find(fd) != _pipeFdToClientFd.end()) {
-// 		::close(fd);
-// 		_closedFds.insert(fd);
-// 	}
-// }
-
-void Server::removeClosedConnections() {
-	for (const int fd : _closedFds) {
-		_connectionByClientFd.erase(fd);
-		_pipeFdToClientFd.erase(fd);
+void Server::close(int fd) {
+	if (_processByPipeFd.find(fd) != _processByPipeFd.end()) {
+		return _closePipeFd(fd);
 	}
 
-	_closedFds.clear();
+	auto it = _connectionByClientFd.find(fd);
+
+	if (it == _connectionByClientFd.end() || it->second.isClosed()) {
+		return;
+	}
+
+	for (auto& [pipeFd, process] : _processByPipeFd) {
+		if (process.clientFd == fd) {
+			_closePipeFd(pipeFd);
+			if (process.isPipeClosed) {
+				it->second.close();
+			}
+		}
+	}
 }
 
 void Server::process(int fd, short& events) {
@@ -91,15 +84,38 @@ void Server::sendResponse(int fd, short& events) {
 }
 
 const std::unordered_set<int>& Server::getServerFds() const {
-	return _fds;
+	return _serverFds;
 }
 
 std::unordered_map<int, http::Connection>& Server::getClients() {
 	return _connectionByClientFd;
 }
 
-std::unordered_map<int, int>& Server::getPipes() {
-	return _pipeFdToClientFd;
+std::unordered_map<int, Process>& Server::getPipeProcess() {
+	return _processByPipeFd;
+}
+
+void Server::_closePipeFd(int fd) {
+	auto it = _processByPipeFd.find(fd);
+
+	if (it != _processByPipeFd.end()) {
+		auto& process = it->second;
+
+		if (!process.isPipeClosed) {
+			pid_t pid;
+
+			pid = ::waitpid(process.pid, NULL, WNOHANG);
+
+			if (pid > 0) {
+				::close(fd);
+				process.pipeFd = -1;
+				process.isPipeClosed = true;
+				return;
+			}
+
+			::kill(process.pid, SIGTERM);
+		}
+	}
 }
 
 // char **makeEnv(char** &env, http::Request& req){
