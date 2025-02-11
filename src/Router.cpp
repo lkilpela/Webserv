@@ -6,9 +6,6 @@
 #include "utils/Payload.hpp"
 #include "http/Url.hpp"
 
-#include <cerrno>
-#include <cstring>
-
 using http::StatusCode;
 using http::Request;
 using http::Response;
@@ -124,10 +121,8 @@ void handleGetRequest(const Location& loc, const string& requestPath, Request& r
 void handlePostRequest(const Location& loc, const string& requestPath, Request& req, Response& res) {
 	try {
 		fs::path uploadPath = computeFilePath(loc, requestPath);
-		std::cout << "uploadPath.string()=" << uploadPath.string() << std::endl;
 		std::ofstream file(uploadPath.string() + "hoang.jpg", std::ios::binary);
-		if (!file.is_open()) {
-			std::cerr << "Error: " << std::strerror(errno) << "\n";
+		if (!file) {
 			std::cerr<< YELLOW "Failed to open file" RESET << std::endl;
 			res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 			return;

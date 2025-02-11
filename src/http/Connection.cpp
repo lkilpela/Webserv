@@ -31,8 +31,12 @@ namespace http {
 		if (bytesRead > 0) {
 			_buffer.reserve(_buffer.size() + bytesRead);
 			_buffer.insert(_buffer.end(), buf, buf + bytesRead);
-			// std::cout << "_buffer's content=" << std::string(_buffer.begin(), _buffer.end()) <<std::endl;
 			_lastReceived = std::chrono::steady_clock::now();
+
+			if (_queue.size() > 0) {
+				return;
+			}
+
 			_processBuffer();
 
 			if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
@@ -177,48 +181,39 @@ namespace http {
 		auto end = _buffer.end();
 		auto currentPos = begin;
 
-		// std::cout << "processing=" << std::string(begin, end) << std::endl;
 		buffer.reserve(_buffer.size());
 
 		while (true) {
 			auto delimPos = utils::findDelimiter(currentPos, end, {'\r', '\n'});
 
 			if (delimPos == end || std::distance(delimPos, end) < 2) {
-				return;
+				break;
 			}
-
-			// if (delimPos == currentPos) {
-			// 	std::cout << "delim == currentPos" << *delimPos << *currentPos << std::endl;
-			// 	return;
-			// }
 
 			try {
 				std::size_t chunkSize = parseChunkSize(std::string(currentPos, delimPos));
 				std::size_t distance = static_cast<std::size_t>(std::distance(delimPos + 2, end));
 
-				if (distance < chunkSize) {
+				if (distance < chunkSize + 2) {
 					break;
 				}
 
+				currentPos = delimPos + 2;
+
 				if (chunkSize == 0) {
-					if (distance < 2) {
-						break;
-					}
-
-					if (*(delimPos + 2) == '\r' && *(delimPos + 3) == '\n') {
+					if (*currentPos == '\r' && *(currentPos + 1) == '\n') {
 						isChunkEnd = true;
-						currentPos = delimPos + 4;
+						currentPos += 2;
 						break;
 					}
-
+			
 					throw std::invalid_argument(R"(Error: Chunk body did not end with 0\r\n\r\n)");
 				}
 
-				currentPos = delimPos + 2;
 				buffer.insert(buffer.end(), currentPos, currentPos + chunkSize);
-				currentPos += chunkSize;
+				currentPos += chunkSize + 2;
 			} catch (const std::invalid_argument& e) {
-				std::cout << "_parseHeader error invalid_argument" << std::endl;
+				std::cout << e.what() << std::endl;
 				_request.setStatus(Request::Status::BAD);
 				return;
 			}
