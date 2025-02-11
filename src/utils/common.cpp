@@ -1,17 +1,20 @@
-#include "Config.hpp"
-#include "utils/common.hpp"
-#include "Error.hpp"
-#include <regex> // std::regex, std::regex_match
-#include <filesystem> // std::filesystem
-#include <stdexcept> // std::invalid_argument, std::out_of_range
-#include <iostream> // std::cout, std::endl
 #include <algorithm> // std::find
 #include <cctype> // std::tolower
+#include <chrono>
 #include <fcntl.h> // fcntl
-#include <unistd.h> // close
+#include <filesystem> // std::filesystem
+#include <iostream> // std::cout, std::endl
+#include <random>
+#include <regex> // std::regex, std::regex_match
 #include <sstream> // std::istringstream
+#include <stdexcept> // std::invalid_argument, std::out_of_range
+#include <unistd.h> // close
+
+#include "Config.hpp"
+#include "Error.hpp"
 #include "http/Request.hpp"
 #include "http/Response.hpp"
+#include "utils/common.hpp"
 
 using std::string;
 using std::vector;
@@ -20,6 +23,19 @@ using std::endl;
 namespace fs = std::filesystem;
 
 namespace utils {
+	std::string generate_random_string() {
+		auto now = std::chrono::system_clock::now();
+		auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+		// Generate a random number
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<int> dist(10000, 99999);
+
+		// Combine timestamp and random number for uniqueness
+		return std::to_string(now_ms) + "_" + std::to_string(dist(gen));
+	}
+
 	bool parseBool(const string &value) {
 		if (value == "on") {
 			return true;
@@ -121,7 +137,7 @@ namespace utils {
 	void closeFDs(const std::vector<int>& serverFds) {
     for (int fd : serverFds)
         close(fd);
-	}	
+	}
 
 	std::size_t convertSizeToBytes(const string& sizeStr) {
 		std::size_t size = std::stoul(sizeStr);
