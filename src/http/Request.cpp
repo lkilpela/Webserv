@@ -120,13 +120,15 @@ namespace http {
 		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
 
 		for (const auto& [name, value] : headersByNames) {
+			if (name == stringOf(Header::CONTENT_LENGTH)) {
+				request.setContentLength(std::stoul(value));
+			}
+
+			if (name == stringOf(Header::TRANSFER_ENCODING) && value == "chunked" && method == "GET") {
+				throw std::invalid_argument("Chunked transfer encoding is not allowed in GET requests");
+			}
+			
 			request.setHeader(name, value);
-		}
-
-		auto contentLength = request.getHeader(Header::CONTENT_LENGTH);
-
-		if (contentLength.has_value()) {
-			request.setContentLength(std::stoul(*contentLength));
 		}
 
 		request
