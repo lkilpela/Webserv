@@ -36,6 +36,7 @@ class Server {
 		const std::unordered_set<int>& getServerFds() const;
 		std::unordered_map<int, http::Connection>& getClients();
 		std::unordered_map<int, Process>& getPipeProcess();
+		void _shutDownServer();
 
 	private:
 		const ServerConfig& _serverConfig;
