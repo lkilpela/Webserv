@@ -87,10 +87,14 @@ namespace http {
 			}
 
 			std::size_t colonPos = line.find(":");
-			std::string name = line.substr(0, colonPos);
-			std::string header = utils::trimSpace(line.substr(colonPos + 1));
-			headerByName[name] = header;
+			std::string headerName = line.substr(0, colonPos);
+			std::string headerValue = utils::trimSpace(line.substr(colonPos + 1));
+			headerByName[headerName] = headerValue;
 		}
+
+		// if (name == stringOf(Header::CONTENT_LENGTH)) {
+		// 		request.setContentLength(std::stoul(value));
+		// 	}
 
 		if (headerByName.find(stringOf(Header::HOST)) == headerByName.end()) {
 			throw std::invalid_argument("No Host found in header request");

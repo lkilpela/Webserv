@@ -116,10 +116,10 @@ namespace http {
 		Request request;
 
 		const auto& [method, uri, version] = parseRequestLine(rawRequestHeader);
-		const auto& headersByNames = parseRequestHeaders(rawRequestHeader);
-		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
+		const auto& headersMap = parseRequestHeaders(rawRequestHeader);
+		Url url = Url::parse(headersMap.at(stringOf(Header::HOST)) + uri);
 
-		for (const auto& [name, value] : headersByNames) {
+		for (const auto& [name, value] : headersMap) {
 			if (name == stringOf(Header::CONTENT_LENGTH)) {
 				request.setContentLength(std::stoul(value));
 			}
@@ -127,7 +127,7 @@ namespace http {
 			if (name == stringOf(Header::TRANSFER_ENCODING) && value == "chunked" && method == "GET") {
 				throw std::invalid_argument("Chunked transfer encoding is not allowed in GET requests");
 			}
-			
+
 			request.setHeader(name, value);
 		}
 
@@ -137,5 +137,29 @@ namespace http {
 			.setVersion(version)
 			.setStatus(Status::HEADER_COMPLETE);
 		return request;
+	}
+
+	void Request::parseMultipart(
+		std::vector<uint8_t>& rawRequestBody,
+		std::vector<UploadFile>& result,
+		const std::string& boundary
+	) {
+		const std::string finalBoundary(boundary + "--\r\n");
+		const std::string nameDelim("filename=");
+		auto begin = rawRequestBody.begin();
+		auto end = rawRequestBody.end();
+
+		auto endPos = std::search(begin, end, finalBoundary.begin(), finalBoundary.end());
+
+		if (endPos == end) {
+			return;
+		}
+
+		auto currentPos = begin;
+
+		while (currentPos != endPos) {
+			currentPos = std::search(currentPos, end, nameDelim.begin(), nameDelim.end());
+			currentPos += 2;
+		}
 	}
 }

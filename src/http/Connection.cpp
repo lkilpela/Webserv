@@ -127,12 +127,19 @@ namespace http {
 		if (_request.getStatus() == Request::Status::INCOMPLETE) {
 			_parseHeader();
 		}
-		std::cout << "_request.isChunked()? " << _request.isChunked() << std::endl;
+
 		if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
-			if (_request.isChunked()) {
-				_parseChunkedBody();
-			} else {
-				_parseBody();
+			if (_request.getMethod() == "GET" || _request.getMethod() == "DELETE") {
+				_request.setStatus(Request::Status::COMPLETE);
+				return;
+			}
+
+			if (_request.getMethod() == "POST") {
+				if (_request.isChunked()) {
+					return _parseChunkedBody();
+				} else {
+					return _parseBody();
+				}
 			}
 		}
 	}
@@ -143,7 +150,6 @@ namespace http {
 		auto it = utils::findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
 
 		if (it == end && _buffer.size() > MAX_REQUEST_HEADER_SIZE) {
-			std::cout << "_parseHeader error > MAX_REQUEST_HEADER_SIZE, _buffer.size()=" << _buffer.size() << std::endl;
 			_request.setStatus(Request::Status::BAD);
 			return;
 		}
@@ -153,20 +159,43 @@ namespace http {
 				_request = std::move(Request::parseHeader(std::string(begin, it + 4)));
 				_buffer.erase(begin, it + 4);
 			} catch (const std::invalid_argument &e) {
-				std::cout << "_parseHeader error @Request::parseHeader()" << std::endl;
 				_request.setStatus(Request::Status::BAD);
 			}
 		}
 	}
 
 	void Connection::_parseBody() {
+		auto contentType = _request.getHeader(Header::CONTENT_TYPE).value_or("");
+
+		if (!contentType.starts_with("multipart/form-data")) {
+			_request.setStatus(Request::Status::BAD);
+		}
+
+		// auto header = _request.getHeader(Header::CONTENT_LENGTH);
+
 		std::size_t contentLength = _request.getContentLength();
 
-		if (contentLength == 0) {
-			_request.setStatus(Request::Status::COMPLETE);
+		if (contentLength > _serverConfig.clientMaxBodySize) {
+			_request.setStatus(Request::Status::BAD);
 			return;
 		}
 
+		auto pos = contentType.find("boundary=");
+		std::string boundary = contentType.substr(pos + 9);
+
+		auto begin = _buffer.begin();
+		auto end = _buffer.end();
+		auto delim = utils::findDelimiter(begin, end, {'-', '-', '\r', '\n', '\r', '\n'});
+
+		std::string closingBoundary (boundary + "--\r\n");
+
+		auto it = std::search(_buffer.begin(), _buffer.end(), closingBoundary.begin(), closingBoundary.end());
+
+		if (it == _buffer.end()) {
+			return;
+		}
+
+		utils::parseBody
 		if (_buffer.size() >= contentLength) {
 			_request.appendBody(_buffer.begin(), _buffer.begin() + contentLength);
 			_buffer.erase(_buffer.begin(), _buffer.begin() + contentLength + 4);
@@ -206,14 +235,13 @@ namespace http {
 						currentPos += 2;
 						break;
 					}
-			
+
 					throw std::invalid_argument(R"(Error: Chunk body did not end with 0\r\n\r\n)");
 				}
 
 				buffer.insert(buffer.end(), currentPos, currentPos + chunkSize);
 				currentPos += chunkSize + 2;
 			} catch (const std::invalid_argument& e) {
-				std::cout << e.what() << std::endl;
 				_request.setStatus(Request::Status::BAD);
 				return;
 			}
