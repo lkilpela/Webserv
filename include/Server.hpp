@@ -15,7 +15,7 @@
 
 class Server {
 	public:
-		Server() = default;
+		Server() = delete;
 		Server(const ServerConfig& serverConfig);
 		~Server();
 

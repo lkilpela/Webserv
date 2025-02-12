@@ -3,10 +3,10 @@
 #include "utils/index.hpp"
 
 ServerManager::ServerManager(const Config& config) : _config(config) {
-	_servers.reserve(config.servers.size());
+	_servers.reserve(_config.servers.size());
 
-	for (std::size_t i = 0; i < config.servers.size(); i++) {
-		const ServerConfig serverConfig = config.servers[i];
+	for (std::size_t i = 0; i < _config.servers.size(); i++) {
+		const ServerConfig& serverConfig = _config.servers[i];
 		_servers.push_back(Server(serverConfig));
     }
 

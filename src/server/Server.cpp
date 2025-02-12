@@ -13,6 +13,11 @@ Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), 
 		std::cout << "listening on " << serverConfig.host << ":" << port << std::endl;
 		_fds.emplace(serverFd);
 	}
+
+	// Register the handle methods
+	_router.get(handleGetRequest);
+	_router.post(handlePostRequest);
+	_router.del(handleDeleteRequest);
 }
 
 int Server::addConnection(int serverFd) {

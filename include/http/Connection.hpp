@@ -16,7 +16,7 @@ namespace http {
 			Connection(const Connection&) = default;
 			~Connection() = default;
 
-			Connection& operator=(const Connection&) = default;
+			Connection& operator=(const Connection&) = delete;
 
 			void read();
 			bool sendResponse();

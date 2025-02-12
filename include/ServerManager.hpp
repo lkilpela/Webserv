@@ -9,7 +9,7 @@
 
 class ServerManager {
 	public:
-		ServerManager() = default;
+		ServerManager() = delete;
 		ServerManager(const Config& config);
 		~ServerManager() = default;
 		void listen();
