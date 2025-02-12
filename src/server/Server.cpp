@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/wait.h>
@@ -6,77 +7,117 @@
 #include "SignalHandle.hpp"
 
 Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), _router(serverConfig) {
-	_fds.reserve(serverConfig.ports.size());
+	_router.get(handleGetRequest);
+	_router.post(handlePostRequest);
+	_router.del(handleDeleteRequest);
+
+	_serverFds.reserve(serverConfig.ports.size());
 
 	for (const int port : serverConfig.ports) {
 		int serverFd = utils::createPassiveSocket(serverConfig.host.data(), port, 128, true);
 		std::cout << "listening on " << serverConfig.host << ":" << port << std::endl;
-		_fds.emplace(serverFd);
+		_serverFds.emplace(serverFd);
 	}
 }
 
-std::vector<int> Server::addConnection(int serverFd) {
-	std::vector<int> connectedClients;
+void Server::addClientTo(int serverFd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 
-		int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
+	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
-		if (clientFd >= 0) {
-			_connectionMap.emplace(clientFd, http::Connection(clientFd, _serverConfig));
-			connectedClients.push_back(clientFd);
+	if (clientFd >= 0) {
+		_connectionByClientFd.emplace(clientFd, http::Connection(clientFd, _serverConfig));
+	}
+}
+
+void Server::close(int fd) {
+	if (_processByPipeFd.find(fd) != _processByPipeFd.end()) {
+		return _closePipeFd(fd);
+	}
+
+	auto it = _connectionByClientFd.find(fd);
+
+	if (it == _connectionByClientFd.end() || it->second.isClosed()) {
+		return;
+	}
+
+	for (auto& [pipeFd, process] : _processByPipeFd) {
+		if (process.clientFd == fd) {
+			_closePipeFd(pipeFd);
+			if (process.isPipeClosed) {
+				it->second.close();
+			}
 		}
-
-	return connectedClients;
-}
-
-void Server::closeConnection(int fd) {
-	_connectionMap.at(fd).close();
-}
-
-void Server::removeConnection(int fd) {
-	auto it = _connectionMap.find(fd);
-
-	if (it != _connectionMap.end()) {
-		_connectionMap.erase(it);
 	}
 }
 
 void Server::process(int fd, short& events) {
-	auto& con = _connectionMap.at(fd);
+	auto& con = _connectionByClientFd.at(fd);
 
-	unsigned char buffer[4096];
+	con.read();
 
-	ssize_t bytesRead = recv(fd, buffer, 4096, MSG_NOSIGNAL);
-	con.append(buffer, bytesRead);
 	auto* req = con.getRequest();
 	auto* res = con.getResponse();
 
-	if (req && res) {
-		std::cout << "res->setText == Welcome" << std::endl;
-		res->setText(http::StatusCode::OK_200, "Welcome!");
-		events |= POLLOUT;
+	if (req == nullptr || res == nullptr) {
+		return;
+	}
+
+	using enum http::Response::Status;
+
+	if (res->getStatus() == PENDING) {
+		res->setStatus(IN_PROGRESS);
+		std::cout << "Is chunked request? " << req->isChunked() << ", is BAD_REQUEST? " << (req->getStatus() == http::Request::Status::BAD) << std::endl;
+		_router.handle(*req, *res);
+
+		if (res->getStatus() == READY) {
+			events |= POLLOUT;
+		}
 	}
 }
 
 void Server::sendResponse(int fd, short& events) {
-	auto& con = _connectionMap.at(fd);
-
-	if (con.isClosed()) {
-		return;
-	}
+	auto& con = _connectionByClientFd.at(fd);
 
 	if (con.sendResponse()) {
 		events &= ~POLLOUT;
 	}
 }
 
-const std::unordered_set<int>& Server::getFds() const {
-	return _fds;
+const std::unordered_set<int>& Server::getServerFds() const {
+	return _serverFds;
 }
 
-std::unordered_map<int, http::Connection>& Server::getConnectionMap() {
-	return _connectionMap;
+std::unordered_map<int, http::Connection>& Server::getClients() {
+	return _connectionByClientFd;
+}
+
+std::unordered_map<int, Process>& Server::getPipeProcess() {
+	return _processByPipeFd;
+}
+
+void Server::_closePipeFd(int fd) {
+	auto it = _processByPipeFd.find(fd);
+
+	if (it != _processByPipeFd.end()) {
+		auto& process = it->second;
+
+		if (!process.isPipeClosed) {
+			pid_t pid;
+
+			pid = ::waitpid(process.pid, NULL, WNOHANG);
+
+			if (pid > 0) {
+				::close(fd);
+				process.pipeFd = -1;
+				process.isPipeClosed = true;
+				return;
+			}
+
+			::kill(process.pid, SIGTERM);
+		}
+	}
 }
 
 // char **makeEnv(char** &env, http::Request& req){
@@ -194,7 +235,7 @@ Server::~Server() {
 }
 
 void Server::_cleanup() {
-	for (auto& [fd, con] : _connectionMap) {
+	for (auto& [fd, con] : _connectionByClientFd) {
 		con.close();
 	}
 }

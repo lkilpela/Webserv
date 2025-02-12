@@ -14,8 +14,10 @@
 #include "Router.hpp"
 
 struct Process {
-    pid_t pid;
-    int readEndPipe;
+	int pipeFd;
+	int clientFd;
+	bool isPipeClosed { false };
+	pid_t pid;
 };
 
 class Server {
@@ -24,26 +26,28 @@ class Server {
 		Server(const ServerConfig& serverConfig);
 		~Server();
 
-		std::vector<int> addConnection(int serverFd);
-		void closeConnection(int fd);
-		void removeConnection(int fd);
+		void addClientTo(int serverFd);
+		void close(int fd);
 		void process(int fd, short& events);
 		void sendResponse(int fd, short& events);
-		const std::unordered_set<int>& getFds() const;
-		std::unordered_map<int, http::Connection>& getConnectionMap();
+
+		const std::unordered_set<int>& getServerFds() const;
+		std::unordered_map<int, http::Connection>& getClients();
+		std::unordered_map<int, Process>& getPipeProcess();
 		void _shutDownServer();
 
 	private:
 		const ServerConfig& _serverConfig;
 		Router _router;
-		std::unordered_set<int> _fds;
-		std::unordered_map<int, http::Connection> _connectionMap;
-		std::vector<std::reference_wrapper<Process>> _cgiProcesses;
-		void _cleanup();
+		std::unordered_set<int> _serverFds;
+		std::unordered_map<int, http::Connection> _connectionByClientFd;
+		std::unordered_map<int, Process> _processByPipeFd;
 
 		// void _read(struct ::pollfd& pollFd, http::Connection& con);
 		// void _readFromPipe(struct ::pollfd& pollFd, http::Connection& con);
 		// void _readFromSocket(struct ::pollfd& pollFd, http::Connection& con);
 		// void _handle(struct ::pollfd& pollFd, http::Connection& con);
 		// void _cgiHandler(http::Request &req, http::Response &res);
+		void _closePipeFd(int fd);
+		void _cleanup();
 };

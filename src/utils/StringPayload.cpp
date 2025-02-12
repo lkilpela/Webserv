@@ -27,6 +27,7 @@ namespace utils {
 
 	void StringPayload::append(const std::uint8_t* data, size_t size) {
 		_message.append(reinterpret_cast<const char*>(data), size);
+		_totalBytes = _message.size();
 	}
 
 	std::string StringPayload::toString() const {
@@ -35,6 +36,7 @@ namespace utils {
 
 	void StringPayload::setMessage(const std::string& message) {
 		_message = message;
+		_totalBytes = _message.size();
 	}
 
 	std::unique_ptr<Payload> StringPayload::clone() const {

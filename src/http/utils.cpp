@@ -33,6 +33,7 @@ namespace http {
 	}
 
 	std::size_t parseChunkSize(std::string chunkSizeLine) {
+		std::cout << "chunkSizeLine=" << chunkSizeLine << ", size=" << chunkSizeLine.size() << std::endl;
 		std::size_t semicolonPos = chunkSizeLine.find(";");
 
 		if (semicolonPos != std::string::npos) {
@@ -43,6 +44,7 @@ namespace http {
 		std::istringstream stream(chunkSizeLine);
 
 		if (!(stream >> std::hex >> chunkSize)) {
+			std::cout << "Failed to parse chunk size" << std::endl;
 			throw std::invalid_argument("Failed to parse chunk size");
 		}
 
