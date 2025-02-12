@@ -1,5 +1,7 @@
 #include "SignalHandle.hpp"
 
+volatile sig_atomic_t sigIntReceived = 0;
+
 void handleSigInt(int sig){
 	(void)sig;
 	sigIntReceived = 1;

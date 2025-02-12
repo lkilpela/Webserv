@@ -19,12 +19,12 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 }
 
 void ServerManager::listen() {
-	while (_pollfds.size()) {
+	while (_pollFds.size()) {
 		if (sigIntReceived){
 			_shutDownServers();
 			break ;
 		}
-        int ret = ::poll(_pollfds.data(), _pollfds.size(), 100);
+        int ret = ::poll(_pollFds.data(), _pollFds.size(), 100);
 
 		if (ret == -1) {
 			perror("Poll failed");

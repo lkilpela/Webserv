@@ -241,12 +241,13 @@ void Server::_cleanup() {
 }
 
 void Server::_shutDownServer(){
-	if (!_cgiProcesses.empty()){
-		for (auto& process : _cgiProcesses){
-			kill(process.get().pid, SIGINT);
-			waitpid(process.get().pid, nullptr, 0);
-			close(process.get().readEndPipe);
-		}
+
+	auto cgiProcesses = getPipeProcess();
+	
+	for (auto& child : cgiProcesses){
+		kill(child.second.pid, SIGINT);
+		waitpid(child.second.pid, nullptr, 0);
+		child.second.isPipeClosed = true;
+		close(child.second.pipeFd);
 	}
-	_cleanup();
 }

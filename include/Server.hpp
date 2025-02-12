@@ -30,8 +30,6 @@ class Server {
 		void close(int fd);
 		void process(int fd, short& events);
 		void sendResponse(int fd, short& events);
-		const std::unordered_set<int>& getFds() const;
-		void _shutDownServer();
 
 		const std::unordered_set<int>& getServerFds() const;
 		std::unordered_map<int, http::Connection>& getClients();
