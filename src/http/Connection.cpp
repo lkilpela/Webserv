@@ -15,15 +15,34 @@ namespace http {
 		, _serverConfig(serverConfig) {
 	}
 
-	void Connection::append(const std::uint8_t* data, size_t size) {
-		_buffer.reserve(_buffer.size() + size);
-		_buffer.insert(_buffer.end(), data, data + size);
-		_lastReceived = std::chrono::steady_clock::now();
-		_processBuffer();
+	void Connection::read() {
+		if (isClosed()) {
+			return;
+		}
 
-		if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
-			_queue.emplace(std::move(_request), Response(_clientSocket));
-			_request.clear();
+		unsigned char buf[4096];
+		ssize_t bytesRead = recv(_clientSocket, buf, sizeof(buf), MSG_NOSIGNAL);
+
+		if (bytesRead == 0) {
+			this->close();
+			return;
+		}
+
+		if (bytesRead > 0) {
+			_buffer.reserve(_buffer.size() + bytesRead);
+			_buffer.insert(_buffer.end(), buf, buf + bytesRead);
+			_lastReceived = std::chrono::steady_clock::now();
+
+			if (_queue.size() > 0) {
+				return;
+			}
+
+			_processBuffer();
+
+			if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
+				_queue.emplace(std::move(_request), Response(_clientSocket));
+				_request.clear();
+			}
 		}
 	}
 
@@ -77,11 +96,11 @@ namespace http {
 	}
 
 	bool Connection::isTimedOut() const {
-		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
+		// auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
 
-		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
-			return true;
-		}
+		// if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
+		// 	return true;
+		// }
 
 		return false;
 	}
@@ -108,7 +127,7 @@ namespace http {
 		if (_request.getStatus() == Request::Status::INCOMPLETE) {
 			_parseHeader();
 		}
-
+		std::cout << "_request.isChunked()? " << _request.isChunked() << std::endl;
 		if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
 			if (_request.isChunked()) {
 				_parseChunkedBody();
@@ -124,6 +143,7 @@ namespace http {
 		auto it = utils::findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
 
 		if (it == end && _buffer.size() > MAX_REQUEST_HEADER_SIZE) {
+			std::cout << "_parseHeader error > MAX_REQUEST_HEADER_SIZE, _buffer.size()=" << _buffer.size() << std::endl;
 			_request.setStatus(Request::Status::BAD);
 			return;
 		}
@@ -133,6 +153,7 @@ namespace http {
 				_request = std::move(Request::parseHeader(std::string(begin, it + 4)));
 				_buffer.erase(begin, it + 4);
 			} catch (const std::invalid_argument &e) {
+				std::cout << "_parseHeader error @Request::parseHeader()" << std::endl;
 				_request.setStatus(Request::Status::BAD);
 			}
 		}
@@ -156,44 +177,50 @@ namespace http {
 	void Connection::_parseChunkedBody() {
 		std::vector<uint8_t> buffer;
 		bool isChunkEnd = false;
-		std::size_t currentPos = 0;
 		auto begin = _buffer.begin();
 		auto end = _buffer.end();
+		auto currentPos = begin;
 
 		buffer.reserve(_buffer.size());
 
 		while (true) {
-			auto start = begin + currentPos;
-			auto firstIt = utils::findDelimiter(start, end, {'\r', '\n'});
-			auto secondIt = (firstIt == end) ? end : utils::findDelimiter(firstIt + 2, end, {'\r', '\n'});;
+			auto delimPos = utils::findDelimiter(currentPos, end, {'\r', '\n'});
 
-			if (firstIt == end || secondIt == end) {
-				return;
+			if (delimPos == end || std::distance(delimPos, end) < 2) {
+				break;
 			}
 
 			try {
-				std::size_t chunkSize = parseChunkSize(std::string(start, firstIt));
+				std::size_t chunkSize = parseChunkSize(std::string(currentPos, delimPos));
+				std::size_t distance = static_cast<std::size_t>(std::distance(delimPos + 2, end));
 
-				if (chunkSize == 0) {
-					isChunkEnd = true;
-					currentPos += secondIt + 2 - start;
+				if (distance < chunkSize + 2) {
 					break;
 				}
 
-				if (static_cast<std::size_t>(std::distance(firstIt + 2, secondIt)) != chunkSize) {
-					throw std::invalid_argument("Error: chunk size does not match the actual data size.");
+				currentPos = delimPos + 2;
+
+				if (chunkSize == 0) {
+					if (*currentPos == '\r' && *(currentPos + 1) == '\n') {
+						isChunkEnd = true;
+						currentPos += 2;
+						break;
+					}
+			
+					throw std::invalid_argument(R"(Error: Chunk body did not end with 0\r\n\r\n)");
 				}
 
-				buffer.insert(buffer.end(), firstIt + 2, secondIt);
-				currentPos += secondIt + 2 - start;
+				buffer.insert(buffer.end(), currentPos, currentPos + chunkSize);
+				currentPos += chunkSize + 2;
 			} catch (const std::invalid_argument& e) {
+				std::cout << e.what() << std::endl;
 				_request.setStatus(Request::Status::BAD);
 				return;
 			}
 		}
 
 		_request.appendBody(buffer.begin(), buffer.end());
-		_buffer.erase(begin, begin + currentPos);
+		_buffer.erase(begin, currentPos);
 
 		if (isChunkEnd) {
 			_request.setStatus(Request::Status::COMPLETE);

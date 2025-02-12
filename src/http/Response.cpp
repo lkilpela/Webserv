@@ -6,15 +6,6 @@
 #include "utils/index.hpp"
 #include "http/utils.hpp"
 
-//  Behavior of send()
-// When send() returns:
-// >= 0: The number of bytes successfully sent.
-// < 0: An error occurred. If the error is EAGAIN or EWOULDBLOCK, send() does not block and returns -1.
-// Approach
-// To detect non-blocking cases (EAGAIN/EWOULDBLOCK):
-
-// If send() returns -1, assume the socket is not ready for writing, and rely on POLLOUT to resume sending.
-
 namespace http {
 	Response::Response(int clientSocket)
 		: _clientSocket(clientSocket)
@@ -54,6 +45,7 @@ namespace http {
 		}
 
 		_body->send();
+
 		if (_body->isSent()) {
 			return true;
 		}

@@ -7,16 +7,6 @@
 #include "http/Request.hpp"
 #include "http/utils.hpp"
 
-// Behavior of recv()
-// When recv() returns:
-// > 0: Data was successfully received.
-// 0: The peer has performed an orderly shutdown (connection closed).
-// < 0: An error occurred. If the error is EAGAIN or EWOULDBLOCK, recv() does not block and returns -1 immediately.
-// Approach
-// To detect non-blocking cases (EAGAIN/EWOULDBLOCK):
-
-// If recv() returns -1 and the socket is non-blocking, assume it’s a temporary error and retry when POLLIN is triggered again.
-
 namespace http {
 	Request::Request(Status status) : _status(status) {}
 
