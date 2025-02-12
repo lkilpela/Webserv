@@ -26,8 +26,8 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/http/Url.hpp \
 					$(INCLUDES)/http/constants.hpp \
 					$(INCLUDES)/http/index.hpp \
-					$(INCLUDES)/utils/SignalHandler.hpp \
-					# $(INCLUDES)/Server.hpp
+					$(INCLUDES)/Server.hpp \
+					$(INCLUDES)/SignalHandle.hpp
 
  # Add more headers here
 
@@ -49,7 +49,7 @@ SRCS			=	main.cpp \
 					StringPayload.cpp \
 					Router.cpp \
 					SignalHandler.cpp
-# Server.cpp
+#Server.cpp
 
 # SignalHandler.cpp \
 
