@@ -18,6 +18,11 @@ Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), 
 	_router.get(handleGetRequest);
 	_router.post(handlePostRequest);
 	_router.del(handleDeleteRequest);
+
+    // Pass the CGI handler function to Router
+	_router.setCgiHandler([this](const Location& loc, const std::string& requestPath, http::Request& req, http::Response& res) {
+		this->handleCGI(req, res, requestPath, loc);
+	});
 }
 
 int Server::addConnection(int serverFd) {
@@ -85,6 +90,7 @@ const std::unordered_set<int>& Server::getFds() const {
 std::unordered_map<int, http::Connection>& Server::getConnectionMap() {
 	return _connectionMap;
 }
+
 
 // char **makeEnv(char** &env, http::Request& req){
 

@@ -26,6 +26,11 @@ class Server {
 		void sendResponse(int fd, short& events);
 		const std::unordered_set<int>& getFds() const;
 		std::unordered_map<int, http::Connection>& getConnectionMap();
+		
+		void handleCGI(const http::Request& request,
+						http::Response& response,
+						const std::string& requestPath,
+						const Location& location);
 
 	private:
 		std::unordered_set<int> _fds;

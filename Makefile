@@ -46,7 +46,8 @@ SRCS			=	main.cpp \
 					Payload.cpp \
 					socket.cpp \
 					StringPayload.cpp \
-					Router.cpp
+					Router.cpp \
+					CgiHandler.cpp
 #SignalHandler.cpp
 #Server.cpp
 
