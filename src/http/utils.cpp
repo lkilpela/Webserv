@@ -32,25 +32,6 @@ namespace http {
 		return true;
 	}
 
-	std::size_t parseChunkSize(std::string chunkSizeLine) {
-		std::cout << "chunkSizeLine=" << chunkSizeLine << ", size=" << chunkSizeLine.size() << std::endl;
-		std::size_t semicolonPos = chunkSizeLine.find(";");
-
-		if (semicolonPos != std::string::npos) {
-			chunkSizeLine = chunkSizeLine.substr(0, semicolonPos);
-		}
-
-		std::size_t chunkSize;
-		std::istringstream stream(chunkSizeLine);
-
-		if (!(stream >> std::hex >> chunkSize)) {
-			std::cout << "Failed to parse chunk size" << std::endl;
-			throw std::invalid_argument("Failed to parse chunk size");
-		}
-
-		return chunkSize;
-	}
-
 	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestHeader) {
 		std::size_t pos = rawRequestHeader.find("\r\n");
 

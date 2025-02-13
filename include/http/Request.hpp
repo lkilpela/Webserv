@@ -1,13 +1,15 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
-#include <vector>
 #include <optional>
 #include <span>
+#include <string>
 #include <unordered_map>
+#include <vector>
+
 #include "Url.hpp"
 #include "constants.hpp"
+#include "utils.hpp"
 
 namespace http {
 	class Request {
@@ -51,12 +53,17 @@ namespace http {
 			Request& setVersion(const std::string& version);
 
 			static Request parseHeader(const std::string &rawRequestHeader);
-			
-			static void parseMultipart(
-				std::vector<uint8_t>& rawRequestBody,
-				std::vector<UploadFile>& result,
-				const std::string& boundary
-			);
+
+			struct BodyParser {
+				// static void parseMultipart(
+				// 	std::vector<uint8_t>& rawRequestBody,
+				// 	std::vector<UploadFile>& result,
+				// 	const std::string& boundary
+				// );
+
+				static std::size_t parseChunkSize(std::string chunkSizeLine);
+				static bool parseChunk(std::vector<uint8_t>& rawRequestBody, std::vector<uint8_t>& result);
+			};
 
 		private:
 			std::string _method;

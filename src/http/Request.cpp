@@ -139,31 +139,90 @@ namespace http {
 		return request;
 	}
 
-	void Request::parseMultipart(
-		std::vector<uint8_t>& rawRequestBody,
-		std::vector<UploadFile>& result,
-		const std::string& boundary
-	) {
-		const std::string finalBoundary(boundary + "--\r\n");
-		const std::string nameDelim("filename=");
+	// void Request::parseMultipart(
+	// 	std::vector<uint8_t>& rawRequestBody,
+	// 	std::vector<UploadFile>& result,
+	// 	const std::string& boundary
+	// ) {
+	// 	const std::string finalBoundary(boundary + "--\r\n");
+	// 	const std::string nameDelim("filename=");
+	// 	auto begin = rawRequestBody.begin();
+	// 	auto end = rawRequestBody.end();
+
+	// 	auto endPos = std::search(begin, end, finalBoundary.begin(), finalBoundary.end());
+
+	// 	if (endPos == end) {
+	// 		return;
+	// 	}
+
+	// 	auto currentPos = begin;
+
+	// 	while (currentPos != endPos) {
+	// 		currentPos = std::search(currentPos, end, nameDelim.begin(), nameDelim.end());
+
+	// 		UploadFile uploadFile;
+
+	// 		result.push_back(uploadFile);
+	// 		currentPos += 2;
+	// 	}
+	// }
+
+	std::size_t Request::BodyParser::parseChunkSize(std::string chunkSizeLine) {
+		std::size_t semicolonPos = chunkSizeLine.find(";");
+
+		if (semicolonPos != std::string::npos) {
+			chunkSizeLine = chunkSizeLine.substr(0, semicolonPos);
+		}
+
+		std::size_t chunkSize;
+		std::istringstream stream(chunkSizeLine);
+
+		if (!(stream >> std::hex >> chunkSize)) {
+			throw std::invalid_argument("Failed to parse chunk size");
+		}
+
+		return chunkSize;
+	}
+
+	bool Request::BodyParser::parseChunk(std::vector<uint8_t>& rawRequestBody, std::vector<uint8_t>& result) {
+		bool isChunkEnd = false;
 		auto begin = rawRequestBody.begin();
 		auto end = rawRequestBody.end();
-
-		auto endPos = std::search(begin, end, finalBoundary.begin(), finalBoundary.end());
-
-		if (endPos == end) {
-			return;
-		}
-
 		auto currentPos = begin;
 
-		while (currentPos != endPos) {
-			currentPos = std::search(currentPos, end, nameDelim.begin(), nameDelim.end());
+		result.reserve(rawRequestBody.size());
 
-			UploadFile uploadFile;
+		while (true) {
+			auto delimPos = utils::findDelimiter(currentPos, end, {'\r', '\n'});
 
-			result.push_back(uploadFile);
-			currentPos += 2;
+			if (delimPos == end || std::distance(delimPos, end) < 2) {
+				break;
+			}
+
+			std::size_t chunkSize = parseChunkSize(std::string(currentPos, delimPos));
+			std::size_t distance = static_cast<std::size_t>(std::distance(delimPos + 2, end));
+
+			if (distance < chunkSize + 2) {
+				break;
+			}
+
+			currentPos = delimPos + 2;
+
+			if (chunkSize == 0) {
+				if (*currentPos == '\r' && *(currentPos + 1) == '\n') {
+					isChunkEnd = true;
+					currentPos += 2;
+					break;
+				}
+
+				throw std::invalid_argument(R"(Error: Chunk body did not end with 0\r\n\r\n)");
+			}
+
+			result.insert(result.end(), currentPos, currentPos + chunkSize);
+			currentPos += chunkSize + 2;
 		}
+
+		rawRequestBody.erase(begin, currentPos);
+		return isChunkEnd;
 	}
 }
