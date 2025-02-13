@@ -159,6 +159,10 @@ namespace http {
 
 		while (currentPos != endPos) {
 			currentPos = std::search(currentPos, end, nameDelim.begin(), nameDelim.end());
+
+			UploadFile uploadFile;
+
+			result.push_back(uploadFile);
 			currentPos += 2;
 		}
 	}
