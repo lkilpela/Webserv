@@ -27,7 +27,10 @@ void ServerManager::listen() {
         int ret = ::poll(_pollFds.data(), _pollFds.size(), 100);
 
 		if (ret == -1) {
-			perror("Poll failed");
+			if (errno == EINTR)
+            	continue;
+			else
+				perror("Poll failed");
 		}
 
 		if (ret > 0) {
