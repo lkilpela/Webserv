@@ -32,25 +32,6 @@ namespace http {
 		return true;
 	}
 
-	std::size_t parseChunkSize(std::string chunkSizeLine) {
-		std::cout << "chunkSizeLine=" << chunkSizeLine << ", size=" << chunkSizeLine.size() << std::endl;
-		std::size_t semicolonPos = chunkSizeLine.find(";");
-
-		if (semicolonPos != std::string::npos) {
-			chunkSizeLine = chunkSizeLine.substr(0, semicolonPos);
-		}
-
-		std::size_t chunkSize;
-		std::istringstream stream(chunkSizeLine);
-
-		if (!(stream >> std::hex >> chunkSize)) {
-			std::cout << "Failed to parse chunk size" << std::endl;
-			throw std::invalid_argument("Failed to parse chunk size");
-		}
-
-		return chunkSize;
-	}
-
 	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestHeader) {
 		std::size_t pos = rawRequestHeader.find("\r\n");
 
@@ -87,10 +68,14 @@ namespace http {
 			}
 
 			std::size_t colonPos = line.find(":");
-			std::string name = line.substr(0, colonPos);
-			std::string header = utils::trimSpace(line.substr(colonPos + 1));
-			headerByName[name] = header;
+			std::string headerName = line.substr(0, colonPos);
+			std::string headerValue = utils::trimSpace(line.substr(colonPos + 1));
+			headerByName[headerName] = headerValue;
 		}
+
+		// if (name == stringOf(Header::CONTENT_LENGTH)) {
+		// 		request.setContentLength(std::stoul(value));
+		// 	}
 
 		if (headerByName.find(stringOf(Header::HOST)) == headerByName.end()) {
 			throw std::invalid_argument("No Host found in header request");

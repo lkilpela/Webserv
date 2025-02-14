@@ -123,107 +123,149 @@ namespace http {
 		return &pair.second;
 	}
 
-	void Connection::_processBuffer() {
-		if (_request.getStatus() == Request::Status::INCOMPLETE) {
-			_parseHeader();
-		}
-		std::cout << "_request.isChunked()? " << _request.isChunked() << std::endl;
-		if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
-			if (_request.isChunked()) {
-				_parseChunkedBody();
-			} else {
-				_parseBody();
-			}
-		}
-	}
-
 	void Connection::_parseHeader() {
 		auto begin = _buffer.begin();
 		auto end = _buffer.end();
 		auto it = utils::findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
 
 		if (it == end && _buffer.size() > MAX_REQUEST_HEADER_SIZE) {
-			std::cout << "_parseHeader error > MAX_REQUEST_HEADER_SIZE, _buffer.size()=" << _buffer.size() << std::endl;
 			_request.setStatus(Request::Status::BAD);
 			return;
 		}
 
 		if (it != end) {
-			try {
-				_request = std::move(Request::parseHeader(std::string(begin, it + 4)));
-				_buffer.erase(begin, it + 4);
-			} catch (const std::invalid_argument &e) {
-				std::cout << "_parseHeader error @Request::parseHeader()" << std::endl;
-				_request.setStatus(Request::Status::BAD);
-			}
+			_request = std::move(Request::parseHeader(std::string(begin, it + 4)));
+			_buffer.erase(begin, it + 4);
 		}
 	}
 
 	void Connection::_parseBody() {
-		std::size_t contentLength = _request.getContentLength();
+		std::vector<uint8_t> result;
 
-		if (contentLength == 0) {
-			_request.setStatus(Request::Status::COMPLETE);
+		if (_request.isChunked()) {
+			bool isComplete = Request::BodyParser::parseChunk(_buffer, result);
+			_request.appendBody(result.begin(), result.end());
+
+			if (isComplete) {
+				_request.setStatus(Request::Status::COMPLETE);
+			}
+
 			return;
 		}
 
-		if (_buffer.size() >= contentLength) {
-			_request.appendBody(_buffer.begin(), _buffer.begin() + contentLength);
-			_buffer.erase(_buffer.begin(), _buffer.begin() + contentLength + 4);
-			_request.setStatus(Request::Status::COMPLETE);
+		// 		if (_request.getHeader(Header::CONTENT_TYPE).value_or("").starts_with("multipart/form-data")) {
+		// 			return _parseBody();
+		// 		}
+		// auto contentType = _request.getHeader(Header::CONTENT_TYPE).value_or("");
+
+		// if (!contentType.starts_with("multipart/form-data")) {
+		// 	_request.setStatus(Request::Status::BAD);
+		// }
+
+		// auto header = _request.getHeader(Header::CONTENT_LENGTH);
+
+		// std::size_t contentLength = _request.getContentLength();
+
+		// if (contentLength > _serverConfig.clientMaxBodySize) {
+		// 	_request.setStatus(Request::Status::BAD);
+		// 	return;
+		// }
+
+		// auto pos = contentType.find("boundary=");
+		// std::string boundary = contentType.substr(pos + 9);
+
+		// auto begin = _buffer.begin();
+		// auto end = _buffer.end();
+		// auto delim = utils::findDelimiter(begin, end, {'-', '-', '\r', '\n', '\r', '\n'});
+
+		// std::string closingBoundary (boundary + "--\r\n");
+
+		// auto it = std::search(_buffer.begin(), _buffer.end(), closingBoundary.begin(), closingBoundary.end());
+
+		// if (it == _buffer.end()) {
+		// 	return;
+		// }
+
+		// utils::parseBody
+		// if (_buffer.size() >= contentLength) {
+		// 	_request.appendBody(_buffer.begin(), _buffer.begin() + contentLength);
+		// 	_buffer.erase(_buffer.begin(), _buffer.begin() + contentLength + 4);
+		// 	_request.setStatus(Request::Status::COMPLETE);
+		// }
+	}
+
+	void Connection::_processBuffer() {
+		using enum Request::Status;
+
+		try {
+			if (_request.getStatus() == INCOMPLETE) {
+				_parseHeader();
+			}
+
+			if (_request.getStatus() == HEADER_COMPLETE) {
+				if (_request.getMethod() == "GET" || _request.getMethod() == "DELETE") {
+					_request.setStatus(COMPLETE);
+					return;
+				}
+
+				if (_request.getMethod() == "POST") {
+					_parseBody();
+				}
+			}
+		} catch (const std::invalid_argument &e) {
+			_request.setStatus(BAD);
 		}
 	}
 
-	void Connection::_parseChunkedBody() {
-		std::vector<uint8_t> buffer;
-		bool isChunkEnd = false;
-		auto begin = _buffer.begin();
-		auto end = _buffer.end();
-		auto currentPos = begin;
+	// void Connection::_parseChunkedBody() {
+	// 	std::vector<uint8_t> buffer;
+	// 	bool isChunkEnd = false;
+	// 	auto begin = _buffer.begin();
+	// 	auto end = _buffer.end();
+	// 	auto currentPos = begin;
 
-		buffer.reserve(_buffer.size());
+	// 	buffer.reserve(_buffer.size());
 
-		while (true) {
-			auto delimPos = utils::findDelimiter(currentPos, end, {'\r', '\n'});
+	// 	while (true) {
+	// 		auto delimPos = utils::findDelimiter(currentPos, end, {'\r', '\n'});
 
-			if (delimPos == end || std::distance(delimPos, end) < 2) {
-				break;
-			}
+	// 		if (delimPos == end || std::distance(delimPos, end) < 2) {
+	// 			break;
+	// 		}
 
-			try {
-				std::size_t chunkSize = parseChunkSize(std::string(currentPos, delimPos));
-				std::size_t distance = static_cast<std::size_t>(std::distance(delimPos + 2, end));
+	// 		try {
+	// 			std::size_t chunkSize = parseChunkSize(std::string(currentPos, delimPos));
+	// 			std::size_t distance = static_cast<std::size_t>(std::distance(delimPos + 2, end));
 
-				if (distance < chunkSize + 2) {
-					break;
-				}
+	// 			if (distance < chunkSize + 2) {
+	// 				break;
+	// 			}
 
-				currentPos = delimPos + 2;
+	// 			currentPos = delimPos + 2;
 
-				if (chunkSize == 0) {
-					if (*currentPos == '\r' && *(currentPos + 1) == '\n') {
-						isChunkEnd = true;
-						currentPos += 2;
-						break;
-					}
-			
-					throw std::invalid_argument(R"(Error: Chunk body did not end with 0\r\n\r\n)");
-				}
+	// 			if (chunkSize == 0) {
+	// 				if (*currentPos == '\r' && *(currentPos + 1) == '\n') {
+	// 					isChunkEnd = true;
+	// 					currentPos += 2;
+	// 					break;
+	// 				}
 
-				buffer.insert(buffer.end(), currentPos, currentPos + chunkSize);
-				currentPos += chunkSize + 2;
-			} catch (const std::invalid_argument& e) {
-				std::cout << e.what() << std::endl;
-				_request.setStatus(Request::Status::BAD);
-				return;
-			}
-		}
+	// 				throw std::invalid_argument(R"(Error: Chunk body did not end with 0\r\n\r\n)");
+	// 			}
 
-		_request.appendBody(buffer.begin(), buffer.end());
-		_buffer.erase(begin, currentPos);
+	// 			buffer.insert(buffer.end(), currentPos, currentPos + chunkSize);
+	// 			currentPos += chunkSize + 2;
+	// 		} catch (const std::invalid_argument& e) {
+	// 			_request.setStatus(Request::Status::BAD);
+	// 			return;
+	// 		}
+	// 	}
 
-		if (isChunkEnd) {
-			_request.setStatus(Request::Status::COMPLETE);
-		}
-	}
+	// 	_request.appendBody(buffer.begin(), buffer.end());
+	// 	_buffer.erase(begin, currentPos);
+
+	// 	if (isChunkEnd) {
+	// 		_request.setStatus(Request::Status::COMPLETE);
+	// 	}
+	// }
 }
