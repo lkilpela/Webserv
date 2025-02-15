@@ -29,15 +29,8 @@ namespace http {
         std::string fragment;
 
 		Url() = default;
-		Url(const Url &) = default;
-		Url(Url &&) noexcept = default;
-
-		Url &operator=(const Url &) = default;
-		Url &operator=(Url &&) noexcept = default;
-
-		static Url parse(const std::string &url);
+		Url(const Url&) = default;
+		~Url() = default;
+		Url& operator=(const Url&) = default;
 	};
-
-	std::ostream &operator<<(std::ostream &ostream, const Url &url);
-
 }

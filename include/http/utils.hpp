@@ -178,5 +178,9 @@ namespace http {
 	bool isValidHeaderField(const std::string &headerField);
 
 	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestHeader);
-	std::unordered_map<std::string, std::string> parseRequestHeaders(const std::string &rawRequestHeader);
+	std::unordered_map<std::string, std::string> parseRequestHeaderFields(const std::string &rawRequestHeader);
+	Url parseUrl(const std::string& fullUrl);
+
+	std::size_t parseChunkSize(std::string chunkSizeLine);
+	bool unchunk(std::vector<uint8_t>& chunkedBuffer, std::vector<uint8_t>& result);
 }

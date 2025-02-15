@@ -36,7 +36,6 @@ SRCS			=	main.cpp \
 					Connection.cpp \
 					Request.cpp \
 					Response.cpp \
-					Url.cpp \
 					utils.cpp \
 					Config.cpp \
 					Server.cpp \

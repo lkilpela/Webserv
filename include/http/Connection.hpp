@@ -31,7 +31,7 @@ namespace http {
 		private:
 			int _clientSocket;
 			const ServerConfig& _serverConfig;
-			Request _request { Request::Status::INCOMPLETE };
+			Request _request { Request::Status::PENDING };
 			std::vector<std::uint8_t> _buffer;
 			std::queue<std::pair<Request, Response>> _queue;
 			std::chrono::steady_clock::time_point _lastReceived;

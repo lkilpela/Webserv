@@ -5,6 +5,8 @@
 #include <iostream>
 #include <algorithm>
 #include <array>
+#include <iterator>
+
 #include "http/Connection.hpp"
 #include "http/utils.hpp"
 #include "utils/common.hpp"
@@ -140,17 +142,26 @@ namespace http {
 	}
 
 	void Connection::_parseBody() {
-		std::vector<uint8_t> result;
+		if (_request.isChunkEncoding()) {
+			std::vector<uint8_t> result;
 
-		if (_request.isChunked()) {
-			bool isComplete = Request::BodyParser::parseChunk(_buffer, result);
-			_request.appendBody(result.begin(), result.end());
+			bool isUnchunkingComplete = unchunk(_buffer, result);
 
-			if (isComplete) {
+			_request.setRawBody(
+				std::make_move_iterator(result.begin()),
+				std::make_move_iterator(result.end()),
+				true
+			);
+
+			if (isUnchunkingComplete) {
 				_request.setStatus(Request::Status::COMPLETE);
 			}
 
 			return;
+		}
+
+		if (_request.isMultipart()) {
+			auto boundary = _request.getBoundary();
 		}
 
 		// 		if (_request.getHeader(Header::CONTENT_TYPE).value_or("").starts_with("multipart/form-data")) {
@@ -198,7 +209,7 @@ namespace http {
 		using enum Request::Status;
 
 		try {
-			if (_request.getStatus() == INCOMPLETE) {
+			if (_request.getStatus() == PENDING) {
 				_parseHeader();
 			}
 
