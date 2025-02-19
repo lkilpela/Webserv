@@ -6,12 +6,6 @@
 #include "constants.hpp"
 
 namespace http {
-	struct UploadFile {
-		std::string name;
-		std::string contentType;
-		std::vector<uint8_t> data;
-	};
-
 	constexpr const char* getMimeType(const std::string &extension) {
 		if (extension == "aac") return "audio/aac";
 		if (extension == "abw") return "application/x-abiword";
@@ -176,11 +170,4 @@ namespace http {
 
 	bool hasHeaderName(const std::string &headerName);
 	bool isValidHeaderField(const std::string &headerField);
-
-	std::array<std::string, 3> parseRequestLine(const std::string &rawRequestHeader);
-	std::unordered_map<std::string, std::string> parseRequestHeaderFields(const std::string &rawRequestHeader);
-	Url parseUrl(const std::string& fullUrl);
-
-	std::size_t parseChunkSize(std::string chunkSizeLine);
-	bool unchunk(std::vector<uint8_t>& chunkedBuffer, std::vector<uint8_t>& result);
 }

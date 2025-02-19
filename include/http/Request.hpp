@@ -2,12 +2,11 @@
 
 #include <cstdint>
 #include <optional>
-#include <span>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include "Url.hpp"
+#include "data_types.hpp"
 #include "constants.hpp"
 #include "utils.hpp"
 
@@ -36,6 +35,7 @@ namespace http {
 			bool isMultipart() const;
 
 			const std::string& getMethod() const;
+			const std::string& getUri() const;
 			const Url& getUrl() const;
 			const std::string& getVersion() const;
 			std::string getBoundary() const;
@@ -61,11 +61,10 @@ namespace http {
 			Request& setHeader(const std::string& name, const std::string& value);
 			Request& setHeader(Header header, const std::string& value);
 			Request& setMethod(const std::string& method);
+			Request& setUri(const std::string& uri);
 			Request& setStatus(Request::Status status);
 			Request& setUrl(const Url& url);
 			Request& setVersion(const std::string& version);
-
-			static Request parseHeader(const std::string &rawRequestHeader);
 
 		private:
 			std::string _method;

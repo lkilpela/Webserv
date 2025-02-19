@@ -1,15 +1,14 @@
 #pragma once
 
-#include <string>
+#include <fstream>
 #include <functional>
-#include "http/Request.hpp"
-#include "http/Response.hpp"
-#include "Config.hpp"
-#include "http/Url.hpp"
-#include <unordered_map>
 #include <iostream>
 #include <sstream>
-#include <fstream>
+#include <string>
+#include <unordered_map>
+
+#include "http/index.hpp"
+#include "Config.hpp"
 
 // Forward declaration
 void handleGetRequest(const Location& loc, const std::string& requestPath, http::Request& request, http::Response& response);
@@ -34,7 +33,7 @@ class Router {
 	private:
 		ServerConfig _serverConfig;
 		std::string requestPath;
-	
+
 		std::unordered_map<std::string, Handler> _routes; // method -> handler
 		std::unordered_map<std::string, Location> _locationConfigs; // route -> location config
 

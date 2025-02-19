@@ -1,9 +1,10 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <cstdint>
 
 namespace http {
-
 	/**
 	 * Example of a full uri
 	 * `https://hoatran:WDAcasdYYT@www.example.com:8080/path/to/resource?search=apple&limit=10#section2`
@@ -18,7 +19,7 @@ namespace http {
 	 * - fragment = `section2`
 	 *
 	*/
-	struct Url final {
+	struct Url {
 		std::string scheme;
         std::string user;
         std::string password;
@@ -32,5 +33,12 @@ namespace http {
 		Url(const Url&) = default;
 		~Url() = default;
 		Url& operator=(const Url&) = default;
+	};
+
+	struct MultipartElement {
+		std::string name;
+		std::string fileName;
+		std::string contentType;
+		std::vector<uint8_t> rawData;
 	};
 }

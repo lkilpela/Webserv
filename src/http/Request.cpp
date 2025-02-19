@@ -27,9 +27,21 @@ namespace http {
 		return (getHeader(Header::CONTENT_TYPE).value_or("").starts_with("multipart/form-data"));
 	}
 
-	const std::string& Request::getMethod() const { return _method; }
-	const Url& Request::getUrl() const { return _url; }
-	const std::string& Request::getVersion() const { return _version; }
+	const std::string& Request::getMethod() const {
+		return _method;
+	}
+
+	const std::string& Request::getUri() const {
+		return _uri;
+	}
+
+	const Url& Request::getUrl() const {
+		return _url;
+	}
+
+	const std::string& Request::getVersion() const {
+		return _version;
+	}
 
 	std::string Request::getBoundary() const {
 		std::string contentType = getHeader(Header::CONTENT_TYPE).value_or("");
@@ -49,7 +61,9 @@ namespace http {
 		return boundary;
 	}
 
-	std::size_t Request::getContentLength() const { return _contentLength; }
+	std::size_t Request::getContentLength() const {
+		return _contentLength;
+	}
 
 	std::optional<std::string> Request::getHeader(Header header) const {
 		auto it = _headerFields.find(stringOf(header));
@@ -118,6 +132,11 @@ namespace http {
 		return *this;
 	}
 
+	Request& Request::setUri(const std::string& uri) {
+		_uri = uri;
+		return *this;
+	}
+
 	Request& Request::setStatus(Request::Status status) {
 		_status = status;
 		return *this;
@@ -132,68 +151,4 @@ namespace http {
 		_version = version;
 		return *this;
 	}
-
-	/**
-	 * @brief Parse the given string request header into a http::Request object
-	 *
-	 * @param rawRequestHeader The http request header in string format.
-	 *
-	 * @return http::Request request
-	 *
-	 * @throw std::invalid_argument
-	 */
-	Request Request::parseHeader(const std::string& rawRequestHeader) {
-		Request request;
-
-		const auto& [method, uri, version] = parseRequestLine(rawRequestHeader);
-		const auto& headerFields = parseRequestHeaderFields(rawRequestHeader);
-		Url url = parseUrl(headerFields.at(stringOf(Header::HOST)) + uri);
-
-		for (const auto& [name, value] : headerFields) {
-			if (name == stringOf(Header::CONTENT_LENGTH)) {
-				request.setContentLength(std::stoul(value));
-			}
-
-			if (name == stringOf(Header::TRANSFER_ENCODING) && value == "chunked" && method == "GET") {
-				throw std::invalid_argument("Chunked transfer encoding is not allowed in GET requests");
-			}
-
-			request.setHeader(name, value);
-		}
-
-		request
-			.setMethod(method)
-			.setUrl(url)
-			.setVersion(version)
-			.setStatus(Status::HEADER_COMPLETE);
-		return request;
-	}
-
-	// void Request::parseMultipart(
-	// 	std::vector<uint8_t>& rawRequestBody,
-	// 	std::vector<UploadFile>& result,
-	// 	const std::string& boundary
-	// ) {
-	// 	const std::string finalBoundary(boundary + "--\r\n");
-	// 	const std::string nameDelim("filename=");
-	// 	auto begin = rawRequestBody.begin();
-	// 	auto end = rawRequestBody.end();
-
-	// 	auto endPos = std::search(begin, end, finalBoundary.begin(), finalBoundary.end());
-
-	// 	if (endPos == end) {
-	// 		return;
-	// 	}
-
-	// 	auto currentPos = begin;
-
-	// 	while (currentPos != endPos) {
-	// 		currentPos = std::search(currentPos, end, nameDelim.begin(), nameDelim.end());
-
-	// 		UploadFile uploadFile;
-
-	// 		result.push_back(uploadFile);
-	// 		currentPos += 2;
-	// 	}
-	// }
 }

@@ -37,8 +37,6 @@ namespace http {
 			std::chrono::steady_clock::time_point _lastReceived;
 
 			void _processBuffer();
-			void _parseHeader();
 			void _parseBody();
-			void _parseChunkedBody();
 	};
 }

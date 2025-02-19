@@ -1,10 +1,7 @@
 #include "Config.hpp"
 #include "Router.hpp"
-#include "http/Request.hpp"
-#include "http/Response.hpp"
-#include "utils/common.hpp"
-#include "utils/Payload.hpp"
-#include "http/Url.hpp"
+#include "http/index.hpp"
+#include "utils/index.hpp"
 
 using http::StatusCode;
 using http::Request;
@@ -127,7 +124,7 @@ void handlePostRequest(const Location& loc, const string& requestPath, Request& 
 			res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 			return;
 		}
-		file.write(reinterpret_cast<const char*>(req.getBody().data()), req.getBody().size());
+		file.write(reinterpret_cast<const char*>(req.getRawBody().data()), req.getRawBody().size());
 		res.setText(http::StatusCode::OK_200, "File uploaded successfully");
 	} catch (const std::exception& e) {
 		res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
