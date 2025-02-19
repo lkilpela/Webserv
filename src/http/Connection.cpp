@@ -126,63 +126,6 @@ namespace http {
 		return &pair.second;
 	}
 
-	void Connection::_parseBody() {
-		std::vector<uint8_t> result;
-
-		if (_request.isChunkEncoding()) {
-			// bool isUnchunkingComplete = parseChunkRequestBody(_buffer, result);
-
-			_request.setRawBody(
-				std::make_move_iterator(result.begin()),
-				std::make_move_iterator(result.end()),
-				true
-			);
-
-			// if (isUnchunkingComplete) {
-			// 	_request.setStatus(Request::Status::COMPLETE);
-			// }
-
-			return;
-		}
-
-		std::size_t contentLength = _request.getContentLength();
-
-		if (_request.isMultipart()) {
-			std::string boundary = _request.getBoundary();
-			std::string finalBoundary(boundary + "--\r\n");
-			auto begin = _buffer.begin();
-			auto end = _buffer.end();
-			auto it = std::search(begin, end, finalBoundary.begin(), finalBoundary.end());
-
-			if (it == _buffer.end()) {
-				return;
-			}
-
-			_request.setRawBody(
-				std::make_move_iterator(begin),
-				std::make_move_iterator(it + finalBoundary.size()),
-				false
-			);
-
-			_buffer.erase(begin, it + finalBoundary.size());
-			_request.setStatus(Request::Status::COMPLETE);
-			return;
-		}
-
-
-
-		if (contentLength > 0 && _buffer.size() >= contentLength) {
-			_request.setRawBody(
-				std::make_move_iterator(_buffer.begin()),
-				std::make_move_iterator(_buffer.begin() + contentLength),
-				false
-			);
-
-			_buffer.erase(_buffer.begin(), _buffer.begin() + contentLength);
-			_request.setStatus(Request::Status::COMPLETE);
-		}
-	}
-
 	void Connection::_processBuffer() {
 		using enum Request::Status;
 
@@ -198,7 +141,7 @@ namespace http {
 				}
 
 				if (_request.getMethod() == "POST") {
-					_parseBody();
+					parseRequestBody(_buffer, _request, _serverConfig.clientMaxBodySize);
 				}
 			}
 		} catch (const std::invalid_argument &e) {
