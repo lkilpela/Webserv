@@ -31,27 +31,15 @@ def main():
             response_body = handle_post()
         else:
             response_body = "<h1>405 Method Not Allowed</h1>"
-            print("HTTP/1.1 405 Method Not Allowed")
-            print("Content-Type: text/html")
-            print("Connection: close")
-            print()
             print(response_body)
             return
 
         # Send HTTP response
-        print("HTTP/1.1 200 OK")
-        print("Content-Type: text/html")
-        print("Connection: close")
-        print()
         print(f"<html><body>{response_body}</body></html>")
 
     except Exception as e:
         # Log error and return 500 status
         sys.stderr.write(f"CGI Error: {str(e)}\n")
-        print("HTTP/1.1 500 Internal Server Error")
-        print("Content-Type: text/html")
-        print("Connection: close")
-        print()
         print("<html><body><h1>Internal Server Error</h1></body></html>")
 
 if __name__ == "__main__":

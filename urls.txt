@@ -1,0 +1,7 @@
+http://localhost:8080/
+http://localhost:8080/ POST {"whatever"}
+http://localhost:5000/
+http://localhost:5000/ POST {"whatever"}
+http://localhost:3000/
+http://localhost:3000/static/
+http://localhost:3000/uploads/ POST {"whatever"}
