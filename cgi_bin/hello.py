@@ -2,89 +2,57 @@
 import os
 import sys
 import urllib.parse
-import cgi
-import cgitb
 
-cgitb.enable()  # Enable CGI error reporting
+def handle_get():
+    """Handles GET requests by reading the query string."""
+    query_string = os.environ.get("QUERY_STRING", "")
+    params = urllib.parse.parse_qs(query_string)
+    name = params.get("name", ["Guest"])[0]
 
-UPLOAD_DIR = "/var/www/uploads"  # Adjust path as needed
+    return f"<h1>GET Request Received</h1><p>Hello, {name}!</p>"
 
-def serve_file(filename):
-    """Serve a requested file via GET."""
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
-    if not os.path.exists(filepath):
-        print("HTTP/1.1 404 Not Found")
-        print("Content-Type: text/html")
-        print("Connection: keep-alive")
-        print()
-        print("<html><body><h1>404 Not Found</h1><p>File not found.</p></body></html>")
-        return
-    
-    with open(filepath, "rb") as f:
-        file_data = f.read()
-    
-    print("HTTP/1.1 200 OK")
-    print("Content-Type: application/octet-stream")  # Change if needed
-    print(f"Content-Length: {len(file_data)}")
-    print("Connection: keep-alive")
-    print()
-    sys.stdout.buffer.write(file_data)  # Write binary response
+def handle_post():
+    """Handles POST requests by reading the request body."""
+    content_length = int(os.environ.get("CONTENT_LENGTH", 0))
+    post_data = sys.stdin.read(content_length) if content_length > 0 else ""
+    params = urllib.parse.parse_qs(post_data)
+    name = params.get("name", ["Guest"])[0]
 
-def handle_file_upload():
-    """Handle a file upload via POST."""
-    form = cgi.FieldStorage()
-    
-    if "file" not in form or not form["file"].filename:
-        print("HTTP/1.1 400 Bad Request")
-        print("Content-Type: text/html")
-        print("Connection: keep-alive")
-        print()
-        print("<html><body><h1>400 Bad Request</h1><p>No file uploaded.</p></body></html>")
-        return
-    
-    file_item = form["file"]
-    filename = os.path.basename(file_item.filename)
-    filepath = os.path.join(UPLOAD_DIR, filename)
-
-    with open(filepath, "wb") as f:
-        f.write(file_item.file.read())
-
-    print("HTTP/1.1 200 OK")
-    print("Content-Type: text/html")
-    print("Connection: keep-alive")
-    print()
-    print(f"<html><body><h1>File Uploaded</h1><p>File saved as: {filename}</p></body></html>")
+    return f"<h1>POST Request Received</h1><p>Hello, {name}!</p>"
 
 def main():
-    """Process GET and POST requests."""
-    request_method = os.environ.get("REQUEST_METHOD", "GET")
+    """Determines request type and processes it accordingly."""
+    try:
+        request_method = os.environ.get("REQUEST_METHOD", "GET")
 
-    if request_method == "GET":
-        query_string = os.environ.get("QUERY_STRING", "")
-        params = urllib.parse.parse_qs(query_string)
-        filename = params.get("file", [None])[0]
-
-        if filename:
-            serve_file(filename)
+        if request_method == "GET":
+            response_body = handle_get()
+        elif request_method == "POST":
+            response_body = handle_post()
         else:
-            print("HTTP/1.1 400 Bad Request")
+            response_body = "<h1>405 Method Not Allowed</h1>"
+            print("HTTP/1.1 405 Method Not Allowed")
             print("Content-Type: text/html")
-            print("Connection: keep-alive")
+            print("Connection: close")
             print()
-            print("<html><body><h1>400 Bad Request</h1><p>Missing file parameter.</p></body></html>")
-    
-    elif request_method == "POST":
-        handle_file_upload()
-    
-    else:
-        print("HTTP/1.1 405 Method Not Allowed")
+            print(response_body)
+            return
+
+        # Send HTTP response
+        print("HTTP/1.1 200 OK")
         print("Content-Type: text/html")
-        print("Connection: keep-alive")
+        print("Connection: close")
         print()
-        print("<html><body><h1>405 Method Not Allowed</h1></body></html>")
+        print(f"<html><body>{response_body}</body></html>")
+
+    except Exception as e:
+        # Log error and return 500 status
+        sys.stderr.write(f"CGI Error: {str(e)}\n")
+        print("HTTP/1.1 500 Internal Server Error")
+        print("Content-Type: text/html")
+        print("Connection: close")
+        print()
+        print("<html><body><h1>Internal Server Error</h1></body></html>")
 
 if __name__ == "__main__":
     main()
-
-
