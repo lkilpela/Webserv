@@ -14,5 +14,5 @@ namespace http {
 	void parseRequestHeader(std::vector<uint8_t>& buffer, Request& request);
 	void parseRequestBody(std::vector<uint8_t>& buffer, Request& request, std::size_t clientMaxBodySize);
 
-	std::vector<MultipartElement> parseMultipart(const std::vector<uint8_t>& rawBody, const std::string& boundary);
+	std::vector<MultipartElement> parseMultipart(const std::vector<uint8_t>& rawMultipart, const std::string& boundary);
 }

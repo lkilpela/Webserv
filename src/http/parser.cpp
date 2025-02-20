@@ -135,6 +135,42 @@ namespace {
 
 		buffer.erase(begin, currentPos);
 	}
+
+	void parseMultipartHeader(const std::string& header, http::MultipartElement& element) {
+		std::istringstream istream(header);
+		std::string line;
+		std::size_t startPos;
+		std::size_t endPos;
+
+		std::getline(istream, line);
+		std::getline(istream, line);
+		startPos = line.find("name=");
+		endPos = line.find(";", startPos);
+		element.name = utils::trimSpace(line.substr(startPos + 5, endPos - startPos - 5));
+
+		if (element.name.front() == '"' && element.name.back() == '"') {
+			if (element.name.size() == 2) {
+				element.name = "";
+			} else if (element.name.size() > 2) {
+				element.name = element.name.substr(1, element.name.size() - 2);
+			}
+		}
+
+		startPos = line.find("filename=");
+		element.fileName = utils::trimSpace(line.substr(startPos + 9));
+
+		if (element.fileName.front() == '"' && element.fileName.back() == '"') {
+			if (element.fileName.size() == 2) {
+				element.fileName = "";
+			} else if (element.fileName.size() > 2) {
+				element.fileName = element.fileName.substr(1, element.fileName.size() - 2);
+			}
+		}
+
+		std::getline(istream, line);
+		startPos = line.find(":");
+		element.contentType = utils::trimSpace(line.substr(startPos + 1));
+	}
 }
 
 namespace http {
@@ -160,8 +196,8 @@ namespace http {
 	}
 
 	void parseRequestHeader(std::vector<uint8_t>& buffer, Request& request) {
-		std::string_view crlf("\r\n");
-		std::string_view emptyLine("\r\n\r\n");
+		std::string crlf("\r\n");
+		std::string emptyLine("\r\n\r\n");
 
 		auto begin = buffer.begin();
 		auto end = buffer.end();
@@ -186,6 +222,7 @@ namespace http {
 	}
 
 	void parseRequestBody(std::vector<uint8_t>& buffer, Request& request, std::size_t clientMaxBodySize) {
+		// std::cout << "parseRequestBody() called" << std::endl;
 		if (request.isChunkEncoding()) {
 			return dechunk(buffer, request, clientMaxBodySize);
 		}
@@ -193,35 +230,56 @@ namespace http {
 		std::size_t contentLength = request.getContentLength();
 
 		if (contentLength >= clientMaxBodySize) {
+			std::cout << "Exceeded request max body size" << std::endl;
 			throw std::invalid_argument("Exceeded request max body size");
 		}
 
-		if (buffer.size() >= contentLength) {
-			request.setRawBody(
+		if (buffer.size() < contentLength) {
+			return;
+		}
+
+		request
+			.setRawBody(
 				std::make_move_iterator(buffer.begin()),
 				std::make_move_iterator(buffer.begin() + contentLength),
 				false
-			);
-			request.setStatus(Request::Status::COMPLETE);
+			)
+			.setStatus(Request::Status::COMPLETE);
+
+		if (request.isMultipart()) {
+			std::cout << "request.isMultipart" << std::endl;
+			std::string finalBoundary("--" + request.getBoundary() + "--\r\n");
+			auto begin = request.getRawBody().begin();
+			auto end = request.getRawBody().end();
+
+			if (std::search(begin, end, finalBoundary.begin(), finalBoundary.end()) == end) {
+				std::cout << "Could not find finalBoundary" << finalBoundary << std::endl;
+				request.setStatus(Request::Status::BAD);
+			}
 		}
 	}
 
-	std::vector<MultipartElement> parseMultipart(const std::vector<uint8_t>& rawBody, const std::string& boundary) {
-		std::vector<MultipartElement> result;
-		const std::string finalBoundary(boundary + "--\r\n");
-		const std::string nameDelim("filename=");
-		auto currentPos = rawBody.begin();
-		auto end = rawBody.end();
+	std::vector<MultipartElement> parseMultipart(const std::vector<uint8_t>& rawMultipart, const std::string& boundary) {
+		std::vector<MultipartElement> elements;
+		std::string startBoundary("--" + boundary);
+		std::string finalBoundary("--" + boundary + "--\r\n");
+		std::string emptyLine("\r\n\r\n");
 
-		while (currentPos != end) {
-			currentPos = std::search(currentPos, end, nameDelim.begin(), nameDelim.end());
+		auto begin = rawMultipart.begin();
+		auto end = std::search(begin, rawMultipart.end(), finalBoundary.begin(), finalBoundary.end());
+		auto current = begin;
 
+		while (begin != end) {
 			MultipartElement element;
-
-			result.push_back(element);
-			currentPos += 2;
+			current = std::search(begin, end, emptyLine.begin(), emptyLine.end());
+			parseMultipartHeader(std::string(begin, current + 2), element);
+			begin = current + 4;
+			current = std::search(begin, end, startBoundary.begin(), startBoundary.end());
+			element.rawData.insert(element.rawData.end(), begin, current);
+			elements.push_back(element);
+			begin = current;
 		}
 
-		return result;
+		return elements;
 	}
 }
