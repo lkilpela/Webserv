@@ -5,7 +5,10 @@
 #include <iostream>
 #include <algorithm>
 #include <array>
+#include <iterator>
+
 #include "http/Connection.hpp"
+#include "http/parser.hpp"
 #include "http/utils.hpp"
 #include "utils/common.hpp"
 
@@ -32,6 +35,11 @@ namespace http {
 			_buffer.reserve(_buffer.size() + bytesRead);
 			_buffer.insert(_buffer.end(), buf, buf + bytesRead);
 			_lastReceived = std::chrono::steady_clock::now();
+
+			if (_queue.size() > 0) {
+				return;
+			}
+
 			_processBuffer();
 
 			if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
@@ -91,11 +99,11 @@ namespace http {
 	}
 
 	bool Connection::isTimedOut() const {
-		auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
+		// auto elapsedTime = std::chrono::steady_clock::now() - _lastReceived;
 
-		if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
-			return true;
-		}
+		// if (elapsedTime > std::chrono::milliseconds(_serverConfig.timeoutIdle)) {
+		// 	return true;
+		// }
 
 		return false;
 	}
@@ -119,98 +127,25 @@ namespace http {
 	}
 
 	void Connection::_processBuffer() {
-		if (_request.getStatus() == Request::Status::INCOMPLETE) {
-			_parseHeader();
-		}
+		using enum Request::Status;
 
-		if (_request.getStatus() == Request::Status::HEADER_COMPLETE) {
-			if (_request.isChunked()) {
-				_parseChunkedBody();
-			} else {
-				_parseBody();
-			}
-		}
-	}
-
-	void Connection::_parseHeader() {
-		auto begin = _buffer.begin();
-		auto end = _buffer.end();
-		auto it = utils::findDelimiter(begin, end, {'\r', '\n', '\r', '\n'});
-
-		if (it == end && _buffer.size() > MAX_REQUEST_HEADER_SIZE) {
-			_request.setStatus(Request::Status::BAD);
-			return;
-		}
-
-		if (it != end) {
-			try {
-				_request = std::move(Request::parseHeader(std::string(begin, it + 4)));
-				_buffer.erase(begin, it + 4);
-			} catch (const std::invalid_argument &e) {
-				_request.setStatus(Request::Status::BAD);
-			}
-		}
-	}
-
-	void Connection::_parseBody() {
-		std::size_t contentLength = _request.getContentLength();
-
-		if (contentLength == 0) {
-			_request.setStatus(Request::Status::COMPLETE);
-			return;
-		}
-
-		if (_buffer.size() >= contentLength) {
-			_request.appendBody(_buffer.begin(), _buffer.begin() + contentLength);
-			_buffer.erase(_buffer.begin(), _buffer.begin() + contentLength + 4);
-			_request.setStatus(Request::Status::COMPLETE);
-		}
-	}
-
-	void Connection::_parseChunkedBody() {
-		std::vector<uint8_t> buffer;
-		bool isChunkEnd = false;
-		std::size_t currentPos = 0;
-		auto begin = _buffer.begin();
-		auto end = _buffer.end();
-
-		buffer.reserve(_buffer.size());
-
-		while (true) {
-			auto start = begin + currentPos;
-			auto firstIt = utils::findDelimiter(start, end, {'\r', '\n'});
-			auto secondIt = (firstIt == end) ? end : utils::findDelimiter(firstIt + 2, end, {'\r', '\n'});;
-
-			if (firstIt == end || secondIt == end) {
-				return;
+		try {
+			if (_request.getStatus() == PENDING) {
+				parseRequestHeader(_buffer, _request);
 			}
 
-			try {
-				std::size_t chunkSize = parseChunkSize(std::string(start, firstIt));
-
-				if (chunkSize == 0) {
-					isChunkEnd = true;
-					currentPos += secondIt + 2 - start;
-					break;
+			if (_request.getStatus() == HEADER_COMPLETE) {
+				if (_request.getMethod() == "GET" || _request.getMethod() == "DELETE") {
+					_request.setStatus(COMPLETE);
+					return;
 				}
 
-				if (static_cast<std::size_t>(std::distance(firstIt + 2, secondIt)) != chunkSize) {
-					throw std::invalid_argument("Error: chunk size does not match the actual data size.");
+				if (_request.getMethod() == "POST") {
+					parseRequestBody(_buffer, _request, _serverConfig.clientMaxBodySize);
 				}
-
-				buffer.insert(buffer.end(), firstIt + 2, secondIt);
-				currentPos += secondIt + 2 - start;
-			} catch (const std::invalid_argument& e) {
-				_request.setStatus(Request::Status::BAD);
-				return;
 			}
-		}
-
-		_request.appendBody(buffer.begin(), buffer.end());
-		_buffer.erase(begin, begin + currentPos);
-
-		if (isChunkEnd) {
-			_request.setStatus(Request::Status::COMPLETE);
+		} catch (const std::invalid_argument &e) {
+			_request.setStatus(BAD);
 		}
 	}
 }

@@ -14,18 +14,25 @@ namespace http {
 		_method.clear();
 		_url = Url();
 		_version.clear();
-		_headers.clear();
-		_body.clear();
-		_status = Request::Status::INCOMPLETE;
+		_headerFields.clear();
+		_rawBody.clear();
+		_status = Request::Status::PENDING;
 	}
 
-	bool Request::isChunked() const {
-		auto header = getHeader(Header::TRANSFER_ENCODING);
-		return (header.has_value() && *header == "chunked");
+	bool Request::isChunkEncoding() const {
+		return (getHeader(Header::TRANSFER_ENCODING).value_or("") == "chunked");
+	}
+
+	bool Request::isMultipart() const {
+		return (getHeader(Header::CONTENT_TYPE).value_or("").starts_with("multipart/form-data"));
 	}
 
 	const std::string& Request::getMethod() const {
 		return _method;
+	}
+
+	const std::string& Request::getUri() const {
+		return _uri;
 	}
 
 	const Url& Request::getUrl() const {
@@ -36,30 +43,72 @@ namespace http {
 		return _version;
 	}
 
-	std::optional<std::string> Request::getHeader(Header header) const {
-		auto it = _headers.find(stringOf(header));
+	std::string Request::getBoundary() const {
+		std::string contentType = getHeader(Header::CONTENT_TYPE).value_or("");
+		std::string lowercaseContentType = utils::lowerCase(contentType);
+		std::size_t pos = lowercaseContentType.find("boundary=");
 
-		if (it == _headers.end()) {
-			return std::nullopt;
+		if (pos == std::string::npos) {
+			return "";
 		}
 
-		return it->second;
+		std::string boundary = contentType.substr(pos + 9);
+
+		if (boundary.size() > 2 && boundary.front() == '"' && boundary.back() == '"') {
+			boundary = boundary.substr(1, boundary.size() - 2);
+		}
+
+		return boundary;
 	}
 
 	std::size_t Request::getContentLength() const {
 		return _contentLength;
 	}
 
-	const std::span<const std::uint8_t> Request::getBody() const {
-		return std::span<const std::uint8_t>(_body);
+	std::optional<std::string> Request::getHeader(Header header) const {
+		auto it = _headerFields.find(stringOf(header));
+
+		if (it == _headerFields.end()) {
+			return std::nullopt;
+		}
+
+		return it->second;
+	}
+
+
+	const std::vector<std::uint8_t>& Request::getRawBody() const {
+		return _rawBody;
 	}
 
 	Request::Status Request::getStatus() const {
 		return _status;
 	}
 
-	Request& Request::appendBody(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end) noexcept {
-		_body.insert(_body.end(), std::move_iterator(begin), std::move_iterator(end));
+	Request& Request::setRawBody(
+		std::vector<uint8_t>::const_iterator begin,
+		std::vector<uint8_t>::const_iterator end,
+		bool append
+	) {
+		if (append) {
+			_rawBody.insert(_rawBody.end(), begin, end);
+		} else {
+			_rawBody.assign(begin, end);
+		}
+
+		return *this;
+	}
+
+	Request& Request::setRawBody(
+		std::move_iterator<std::vector<uint8_t>::iterator> begin,
+		std::move_iterator<std::vector<uint8_t>::iterator> end,
+		bool append
+	) noexcept {
+		if (append) {
+			_rawBody.insert(_rawBody.end(), begin, end);
+		} else {
+			_rawBody.assign(begin, end);
+		}
+
 		return *this;
 	}
 
@@ -69,17 +118,22 @@ namespace http {
 	}
 
 	Request& Request::setHeader(const std::string& name, const std::string& value) {
-		_headers[name] = value;
+		_headerFields[name] = value;
 		return *this;
 	}
 
 	Request& Request::setHeader(Header header, const std::string& value) {
-		_headers[stringOf(header)] = value;
+		_headerFields[stringOf(header)] = value;
 		return *this;
 	}
 
 	Request& Request::setMethod(const std::string& method) {
 		_method = method;
+		return *this;
+	}
+
+	Request& Request::setUri(const std::string& uri) {
+		_uri = uri;
 		return *this;
 	}
 
@@ -93,47 +147,8 @@ namespace http {
 		return *this;
 	}
 
-	Request& Request::setUrl(Url&& url) {
-		_url = std::move(url);
-		return *this;
-	}
-
 	Request& Request::setVersion(const std::string& version) {
 		_version = version;
 		return *this;
-	}
-
-	/**
-	 * @brief Parse the given string request header into a http::Request object
-	 *
-	 * @param rawRequestHeader The http request header in string format.
-	 *
-	 * @return http::Request request
-	 *
-	 * @throw std::invalid_argument
-	 */
-	Request Request::parseHeader(const std::string& rawRequestHeader) {
-		Request request;
-
-		const auto& [method, uri, version] = parseRequestLine(rawRequestHeader);
-		const auto& headersByNames = parseRequestHeaders(rawRequestHeader);
-		Url url = Url::parse(headersByNames.at(stringOf(Header::HOST)) + uri);
-
-		for (const auto& [name, value] : headersByNames) {
-			request.setHeader(name, value);
-		}
-
-		auto contentLength = request.getHeader(Header::CONTENT_LENGTH);
-
-		if (contentLength.has_value()) {
-			request.setContentLength(std::stoul(*contentLength));
-		}
-
-		request
-			.setMethod(method)
-			.setUrl(std::move(url))
-			.setVersion(version)
-			.setStatus(Status::HEADER_COMPLETE);
-		return request;
 	}
 }

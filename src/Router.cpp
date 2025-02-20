@@ -1,10 +1,7 @@
 #include "Config.hpp"
 #include "Router.hpp"
-#include "http/Request.hpp"
-#include "http/Response.hpp"
-#include "utils/common.hpp"
-#include "utils/Payload.hpp"
-#include "http/Url.hpp"
+#include "http/index.hpp"
+#include "utils/index.hpp"
 
 using http::StatusCode;
 using http::Request;
@@ -18,6 +15,35 @@ namespace fs = std::filesystem;
 ** /cgi-bin/
 ** /uploads/
 */
+
+namespace {
+	void handleMultipartPostRequest(fs::path uploadPath, fs::path rootPath, Request& req, Response& res) {
+		auto elements = http::parseMultipart(req.getRawBody(), req.getBoundary());
+		std::string responseMessage;
+
+		for (auto& element : elements) {
+			try {
+				std::ofstream file(uploadPath.string() + utils::generate_random_string() + "_" + element.fileName, std::ios::binary);
+
+				if (!file) {
+					std::cerr<< YELLOW "Failed to open file" RESET << std::endl;
+					res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, rootPath / "500.html");
+					return;
+				}
+
+				file.write(reinterpret_cast<const char*>(element.rawData.data()), element.rawData.size());
+				file.close();
+				responseMessage += "File '" + element.fileName + "' uploaded successfully\n";
+			} catch (const std::exception& e) {
+				res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, rootPath / "500.html");
+				return;
+			}
+		}
+
+		res.setText(http::StatusCode::OK_200, responseMessage);
+	}
+}
+
 void Router::addLocations(const ServerConfig& serverConfig) {
 	_serverConfig = serverConfig;
 	for (const auto& location : serverConfig.locations) {
@@ -119,16 +145,26 @@ void handleGetRequest(const Location& loc, const string& requestPath, Request& r
 
 // Function to handle POST requests
 void handlePostRequest(const Location& loc, const string& requestPath, Request& req, Response& res) {
+	fs::path uploadPath = computeFilePath(loc, requestPath);
+
+	if (req.isMultipart()) {
+		return handleMultipartPostRequest(uploadPath, loc.root, req, res);
+	}
+
 	try {
-		fs::path uploadPath = computeFilePath(loc, requestPath);
-		std::ofstream file(uploadPath.string(), std::ios::binary);
+		const std::string& contentType = req.getHeader(http::Header::CONTENT_TYPE).value_or("");
+		const std::string& ext = http::getExtensionFromMimeType(contentType);
+
+		std::ofstream file(uploadPath.string() + utils::generate_random_string() + ext, std::ios::binary);
+
 		if (!file) {
-			std::cerr<< YELLOW "Failed to open file" RESET << std::endl;
+			std::cerr << YELLOW "Failed to open file" RESET << std::endl;
 			res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 			return;
 		}
-		file.write(reinterpret_cast<const char*>(req.getBody().data()), req.getBody().size());
-		res.setText(http::StatusCode::OK_200, "File uploaded successfully");
+
+		file.write(reinterpret_cast<const char*>(req.getRawBody().data()), req.getRawBody().size());
+		res.setText(http::StatusCode::OK_200, "File uploaded successfully\n");
 	} catch (const std::exception& e) {
 		res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 	}
