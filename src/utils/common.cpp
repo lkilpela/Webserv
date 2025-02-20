@@ -271,7 +271,7 @@ namespace utils {
 			<< "Request URL_query: " << request.getUrl().query << endl
 			<< "Request URL_fragment: " << request.getUrl().fragment << endl
 			<< "Request version: " << request.getVersion() << endl
-			<< "Request body size: " << request.getBody().size() << endl;
+			<< "Request body size: " << request.getRawBody().size() << endl;
 	}
 
 	void printServerConfig(const ServerConfig& server) {

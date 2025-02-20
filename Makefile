@@ -16,10 +16,16 @@ INCLUDES		=	./include
 M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/Error.hpp \
 					$(INCLUDES)/Router.hpp \
+					$(INCLUDES)/ServerManager.hpp \
 					$(INCLUDES)/utils/common.hpp \
 					$(INCLUDES)/utils/index.hpp \
 					$(INCLUDES)/utils/Payload.hpp \
-					$(INCLUDES)/http/utils.hpp \
+					$(INCLUDES)/utils/socket.hpp \
+					$(INCLUDES)/http/Connection.hpp \
+					$(INCLUDES)/http/constants.hpp \
+					$(INCLUDES)/http/data_types.hpp \
+					$(INCLUDES)/http/index.hpp \
+					$(INCLUDES)/http/parser.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \
 					$(INCLUDES)/http/Connection.hpp \
@@ -27,17 +33,17 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/http/constants.hpp \
 					$(INCLUDES)/http/index.hpp \
 					$(INCLUDES)/Server.hpp \
+					$(INCLUDES)/http/utils.hpp \
 					$(INCLUDES)/SignalHandle.hpp
-
  # Add more headers here
 
 OBJ_DIR			=	obj
 SRC_DIR			=	src
 SRCS			=	main.cpp \
 					Connection.cpp \
+					parser.cpp \
 					Request.cpp \
 					Response.cpp \
-					Url.cpp \
 					utils.cpp \
 					Config.cpp \
 					Server.cpp \
