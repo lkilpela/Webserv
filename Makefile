@@ -28,12 +28,8 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/http/parser.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \
-					$(INCLUDES)/http/Connection.hpp \
-					$(INCLUDES)/http/Url.hpp \
-					$(INCLUDES)/http/constants.hpp \
-					$(INCLUDES)/http/index.hpp \
-					$(INCLUDES)/Server.hpp \
 					$(INCLUDES)/http/utils.hpp \
+					$(INCLUDES)/Server.hpp \
 					$(INCLUDES)/SignalHandle.hpp
  # Add more headers here
 

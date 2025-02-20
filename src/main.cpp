@@ -1,7 +1,7 @@
 #include <iostream>
 #include "Config.hpp"
 #include "Error.hpp"
-//#include "Server.hpp"
+#include "Server.hpp"
 #include <exception>
 #include <thread>
 #include "SignalHandle.hpp"
