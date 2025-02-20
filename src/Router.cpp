@@ -16,6 +16,34 @@ namespace fs = std::filesystem;
 ** /uploads/
 */
 
+namespace {
+	void handleMultipartPostRequest(fs::path uploadPath, fs::path rootPath, Request& req, Response& res) {
+		auto elements = http::parseMultipart(req.getRawBody(), req.getBoundary());
+		std::string responseMessage;
+
+		for (auto& element : elements) {
+			try {
+				std::ofstream file(uploadPath.string() + utils::generate_random_string() + "_" + element.fileName, std::ios::binary);
+
+				if (!file) {
+					std::cerr<< YELLOW "Failed to open file" RESET << std::endl;
+					res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, rootPath / "500.html");
+					return;
+				}
+
+				file.write(reinterpret_cast<const char*>(element.rawData.data()), element.rawData.size());
+				file.close();
+				responseMessage += "File '" + element.fileName + "' uploaded successfully\n";
+			} catch (const std::exception& e) {
+				res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, rootPath / "500.html");
+				return;
+			}
+		}
+
+		res.setText(http::StatusCode::OK_200, responseMessage);
+	}
+}
+
 void Router::addLocations(const ServerConfig& serverConfig) {
 	_serverConfig = serverConfig;
 	for (const auto& location : serverConfig.locations) {
@@ -117,41 +145,26 @@ void handleGetRequest(const Location& loc, const string& requestPath, Request& r
 
 // Function to handle POST requests
 void handlePostRequest(const Location& loc, const string& requestPath, Request& req, Response& res) {
-	if (req.isMultipart()) {
-		auto elements = http::parseMultipart(req.getRawBody(), req.getBoundary());
-		std::string textResponse;
+	fs::path uploadPath = computeFilePath(loc, requestPath);
 
-		for (auto& element : elements) {
-			try {
-				fs::path uploadPath = computeFilePath(loc, requestPath);
-				std::ofstream file(uploadPath.string() + element.fileName, std::ios::binary);
-				if (!file) {
-					std::cerr<< YELLOW "Failed to open file" RESET << std::endl;
-					res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
-					return;
-				}
-				file.write(reinterpret_cast<const char*>(element.rawData.data()), element.rawData.size());
-				file.close();
-				textResponse += "File '" + element.fileName + "' uploaded successfully\n";
-			} catch (const std::exception& e) {
-				res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
-				return;
-			}
-		}
-		res.setText(http::StatusCode::OK_200, textResponse);
-		return;
+	if (req.isMultipart()) {
+		return handleMultipartPostRequest(uploadPath, loc.root, req, res);
 	}
 
 	try {
-		fs::path uploadPath = computeFilePath(loc, requestPath);
-		std::ofstream file(uploadPath.string() + "upload.jpg", std::ios::binary);
+		const std::string& contentType = req.getHeader(http::Header::CONTENT_TYPE).value_or("");
+		const std::string& ext = http::getExtensionFromMimeType(contentType);
+
+		std::ofstream file(uploadPath.string() + utils::generate_random_string() + ext, std::ios::binary);
+
 		if (!file) {
-			std::cerr<< YELLOW "Failed to open file" RESET << std::endl;
+			std::cerr << YELLOW "Failed to open file" RESET << std::endl;
 			res.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 			return;
 		}
+
 		file.write(reinterpret_cast<const char*>(req.getRawBody().data()), req.getRawBody().size());
-		res.setText(http::StatusCode::OK_200, "File uploaded successfully");
+		res.setText(http::StatusCode::OK_200, "File uploaded successfully\n");
 	} catch (const std::exception& e) {
 		res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
 	}
