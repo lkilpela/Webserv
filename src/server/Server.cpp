@@ -235,7 +235,7 @@ void Server::_cleanup() {
 void Server::_shutDownServer(){
 
 	auto cgiProcesses = getPipeProcess();
-	
+
 	for (auto& child : cgiProcesses){
 		kill(child.second.pid, SIGINT);
 		waitpid(child.second.pid, nullptr, 0);
