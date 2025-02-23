@@ -4,7 +4,7 @@
 ################################################################################
 CXX				=	g++
 CXX_STRICT		=	-Wall -Wextra -Werror -std=c++20 -Wno-pessimizing-move
-DB_FLAGS		=	-g
+DB_FLAGS		=	-g -fsanitize=address
 HEADERS			=	-I $(INCLUDES)
 CXX_FULL		=	$(CXX) $(CXX_STRICT) $(DB_FLAGS) $(HEADERS)
 
@@ -51,9 +51,6 @@ SRCS			=	main.cpp \
 					StringPayload.cpp \
 					Router.cpp \
 					SignalHandler.cpp
-#Server.cpp
-
-# SignalHandler.cpp \
 
 OBJECTS		:=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 

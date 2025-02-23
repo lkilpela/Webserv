@@ -6,11 +6,9 @@
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
 
-Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), _router(serverConfig) {
-	_router.get(handleGetRequest);
-	_router.post(handlePostRequest);
-	_router.del(handleDeleteRequest);
+using enum WorkerProcess::Status;
 
+Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig) , _router(serverConfig) {
 	_serverFds.reserve(serverConfig.ports.size());
 
 	for (const int port : serverConfig.ports) {
@@ -18,45 +16,91 @@ Server::Server(const ServerConfig& serverConfig) : _serverConfig(serverConfig), 
 		std::cout << "listening on " << serverConfig.host << ":" << port << std::endl;
 		_serverFds.emplace(serverFd);
 	}
+
+	_router.get(handleGetRequest);
+	_router.post(handlePostRequest);
+	_router.del(handleDeleteRequest);
+
+	// _router.setCgiHandler([this](const Location& loc, const std::string& requestPath, http::Request& req, http::Response& res) {
+	// 	std::cout << "this->_workerProcesses.size()=" << this->_workerProcesses.size() << std::endl;
+	// 	this->_handleCGI(loc, requestPath, req, res);
+	// });
 }
 
-void Server::addClientTo(int serverFd) {
+void Server::addCgiHandler() {
+	_router.setCgiHandler([this](const Location& loc, const std::string& requestPath, http::Request& req, http::Response& res) {
+		std::cout << "this->_workerProcesses.size()=" << this->_workerProcesses.size() << std::endl;
+		this->_handleCGI(loc, requestPath, req, res);
+	});
+}
+
+void Server::addConnection(int serverFd) {
 	sockaddr_in clientAddr {};
 	socklen_t addrLen = sizeof(clientAddr);
 
 	int clientFd = ::accept(serverFd, (struct sockaddr*)&clientAddr, &addrLen);
 
 	if (clientFd >= 0) {
-		_connectionByClientFd.emplace(clientFd, http::Connection(clientFd, _serverConfig));
+		_connections.emplace(clientFd, http::Connection(clientFd, _serverConfig));
 	}
 }
 
-void Server::close(int fd) {
-	if (_processByPipeFd.find(fd) != _processByPipeFd.end()) {
-		return _closePipeFd(fd);
-	}
+void Server::closeConnection(http::Connection& con) {
+	int clientFd = con.getClientFd();
+	con.close();
 
-	auto it = _connectionByClientFd.find(fd);
+	for (auto& [_, process] : _workerProcesses) {
+		if (process.clientFd == clientFd && process.status == RUNNING) {
+			::kill(process.pid, SIGTERM);
+			::close(process.pipeFds[0]);
+			process.pipeFds[0] = -1;
+			process.status = PENDING_TERMINATION;
+			pid_t pid = ::waitpid(process.pid, NULL, WNOHANG);
 
-	if (it == _connectionByClientFd.end() || it->second.isClosed()) {
-		return;
-	}
-
-	for (auto& [pipeFd, process] : _processByPipeFd) {
-		if (process.clientFd == fd) {
-			_closePipeFd(pipeFd);
-			if (process.isPipeClosed) {
-				it->second.close();
+			if (pid > 0 || (pid == -1 && errno == ECHILD)) {
+				process.status = TERMINATED;
 			}
 		}
 	}
 }
 
+void Server::close(int fd) {
+	(void)fd;
+}
+
 void Server::process(int fd, short& events) {
-	auto& con = _connectionByClientFd.at(fd);
+	std::cout << "process() fd = "<< fd << std::endl;
+	if (auto it = _connections.find(fd); it != _connections.end()) {
+		return _processConnection(it->second, events);
+	}
 
+	if (auto it = _workerProcesses.find(fd); it != _workerProcesses.end()) {
+		return _processWorkerProcess(it->second, events);
+	}
+}
+
+void Server::sendResponse(int fd, short& events) {
+	auto it = _connections.find(fd);
+
+	if (it != _connections.end() && it->second.sendResponse()) {
+		events &= ~POLLOUT;
+	}
+}
+
+const std::unordered_set<int>& Server::getServerFds() const {
+	return _serverFds;
+}
+
+std::unordered_map<int, http::Connection>& Server::getManagedConnections() {
+	return _connections;
+}
+
+std::unordered_map<int, WorkerProcess>& Server::getWorkerProcesses() {
+	return _workerProcesses;
+}
+
+void Server::_processConnection(http::Connection& con, short& events) {
 	con.read();
-
 	auto* req = con.getRequest();
 	auto* res = con.getResponse();
 
@@ -68,7 +112,7 @@ void Server::process(int fd, short& events) {
 
 	if (res->getStatus() == PENDING) {
 		res->setStatus(IN_PROGRESS);
-		std::cout << "Is chunked request? " << req->isChunkEncoding() << ", is BAD_REQUEST? " << (req->getStatus() == http::Request::Status::BAD) << std::endl;
+		std::cout << "_processConnection()" << con.getClientFd() << std::endl;
 		_router.handle(*req, *res);
 
 		if (res->getStatus() == READY) {
@@ -77,169 +121,143 @@ void Server::process(int fd, short& events) {
 	}
 }
 
-void Server::sendResponse(int fd, short& events) {
-	auto& con = _connectionByClientFd.at(fd);
+void Server::_processWorkerProcess(WorkerProcess& process, short& events) {
+	auto it = _connections.find(process.clientFd);
 
-	if (con.sendResponse()) {
-		events &= ~POLLOUT;
+	if (it == _connections.end() || it->second.isClosed()) {
+		return;
 	}
-}
 
-const std::unordered_set<int>& Server::getServerFds() const {
-	return _serverFds;
-}
+	http::Response* res = it->second.getResponse();
 
-std::unordered_map<int, http::Connection>& Server::getClients() {
-	return _connectionByClientFd;
-}
+	if (res == nullptr || res->getStatus() == http::Response::Status::READY) {
+		return;
+	}
 
-std::unordered_map<int, Process>& Server::getPipeProcess() {
-	return _processByPipeFd;
-}
+	unsigned char buffer[4096];
+	ssize_t bytesRead = ::read(process.pipeFds[0], buffer, sizeof(buffer));
 
-void Server::_closePipeFd(int fd) {
-	auto it = _processByPipeFd.find(fd);
-
-	if (it != _processByPipeFd.end()) {
-		auto& process = it->second;
-
-		if (!process.isPipeClosed) {
-			pid_t pid;
-
-			pid = ::waitpid(process.pid, NULL, WNOHANG);
-
-			if (pid > 0) {
-				::close(fd);
-				process.pipeFd = -1;
-				process.isPipeClosed = true;
-				return;
-			}
-
-			::kill(process.pid, SIGTERM);
+	if (bytesRead <= 0) {
+		if (bytesRead == 0) {
+			res->setStatusCode(http::StatusCode::OK_200).build();
+			std::cout << "bytesRead == 0" << std::endl;
 		}
+
+		if (bytesRead < 0) {
+			res->clear().setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, process.rootPath / "500.html");
+		}
+
+		events |= POLLOUT;
+		::close(process.pipeFds[0]);
+		process.pipeFds[0] = -1;
+		process.status = TERMINATED;
+		return;
 	}
-}
 
-std::vector<char*> makeEnv(http::Request& req){
-
-	http::Url url = req.getUrl();
-	std::vector<char*> res;
-
-	res.push_back(const_cast<char*>(req.getUrl().scheme.c_str()));
-	res.push_back(const_cast<char*>(req.getUrl().user.c_str()));
-	res.push_back(const_cast<char*>(req.getUrl().password.c_str()));
-	res.push_back(const_cast<char*>(req.getUrl().host.c_str()));
-	res.push_back(const_cast<char*>(req.getUrl().port.c_str()));
-	res.push_back(const_cast<char*>(req.getUrl().path.c_str()));
-	res.push_back(const_cast<char*>(req.getUrl().query.c_str()));
-	res.push_back(const_cast<char*>(req.getUrl().fragment.c_str()));
-	res.push_back(nullptr);
-
-	return res;
-}
-
-void Server::_cgiHandler(http::Request &req, http::Response &res) {
-
-	char* interpreter = "/usr/bin/python3";
-	// if (access(interpreter, X_OK) == -1 || access(script, X_OK) == -1){}
-		//return 403 forbidding
-	const char* script = req.getUrl().path.c_str();
-	char* scriptArray[2] = {const_cast<char*>(script), nullptr};
-	int pipefd[2];
-	if(pipe(pipefd) == -1)
-		perror("Pipe failed");
-	if (utils::setNonBlocking(pipefd[0]) == false)
-		perror("Pipe nonblocking failed");
-	pollfd cgiData { pipefd[0], POLLIN, 0 };
-	_pollfds.push_back(cgiData);
-	pid_t pid = fork();
-	if (pid == 0){
-		close(pipefd[0]);
-		if (dup2(pipefd[1], STDOUT_FILENO) == -1)
-			perror("Dup2 failed");
-		std::vector<char*> env = makeEnv(req);
-		execve(interpreter, scriptArray, env.data());
+	if (res->getBody() == nullptr) {
+		res->setBody(std::make_unique<utils::StringPayload>(res->getClientSocket(), ""));
 	}
-	pid_t result = waitpid(pid, NULL, WNOHANG);
-	if (result = pid)
-		close(pipefd[0]);
+
+	res->appendBody(buffer, bytesRead);
+	std::cout << res->getBody()->toString() << std::endl;
 }
 
-// void Server::_read(struct ::pollfd& pollFd, http::Connection& con) {
-// 	if (pollFd.revents & POLLIN == 0) {
-// 		return;
-// 	}
+// void Server::_closePipeFd(int fd) {
+// 	auto it = _workerProcesses.find(fd);
 
-// 	if (pollFd.fd) {
-// 		_readFromPipe(pollFd, con);
-// 	} else {
-// 		_readFromSocket(pollFd, con);
-// 	}
-// }
+// 	if (it != _workerProcesses.end()) {
+// 		auto& process = it->second;
 
-// void Server::_readFromPipe(struct ::pollfd& pollFd, http::Connection& con) {
-// 	unsigned char buffer[4096];
-// 	ssize_t bytesRead = ::read(pollFd.fd, buffer, sizeof(buffer));
+// 		if (!process.isPipeClosed) {
+// 			pid_t pid;
 
-// 	if (bytesRead < 0) {
-// 		con.close();
-// 		return;
-// 	}
+// 			pid = ::waitpid(process.pid, NULL, WNOHANG);
 
-// 	http::Response* res = con.getResponse();
-// 	if (res != nullptr) {
-// 		res->getBody()->append(buffer, bytesRead);
+// 			if (pid > 0) {
+// 				::close(fd);
+// 				process.pipeFd = -1;
+// 				process.isPipeClosed = true;
+// 				return;
+// 			}
+
+// 			::kill(process.pid, SIGTERM);
+// 		}
 // 	}
 // }
 
-// void Server::_readFromSocket(struct ::pollfd& pollFd, http::Connection& con) {
-// 	char buffer[4096];
-// 	ssize_t bytesRead = ::recv(pollFd.fd, buffer, sizeof(buffer), MSG_NOSIGNAL);
+void Server::_handleCGI(
+	const Location& loc,
+	const std::string& requestPath,
+	const http::Request& request,
+	http::Response& response
+) {
+	std::cout << YELLOW "Handling CGI request" RESET << std::endl;
+	// (void)loc;
+	// (void)requestPath;
+	(void)request;
+	(void)response;
+	std::string scriptPath = loc.root / requestPath.substr(loc.path.size());
+	std::cout << "scriptPath=" << scriptPath << std::endl;
+	// Validate CGI script
+	// if (!fs::exists(scriptPath) || !fs::is_regular_file(scriptPath)) {
+	// 	response.setFile(StatusCode::NOT_FOUND_404, loc.root / "404.html");
+	// 	return;
+	// }
 
-// 	if (bytesRead == 0) {
-// 		con.close();
-// 		return;
-// 	}
+	WorkerProcess process;
 
-// 	if (bytesRead > 0) {
-// 		con.append(buffer, bytesRead);
-// 	}
-// }
+	process.clientFd = response.getClientSocket();
+	process.rootPath = loc.root;
 
-// void Server::_handle(struct ::pollfd& pollFd, http::Connection& con) {
-// 	using enum http::Response::Status;
-// 	http::Request* req = con.getRequest();
-// 	http::Response* res = con.getResponse();
+	if (::pipe(process.pipeFds) == -1) {
+		response.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
+		return;
+	}
 
-// 	if (res == nullptr) {
-// 		return;
-// 	}
+	process.pid = ::fork();
 
-// 	if (res->getStatus() == PENDING) {
-// 		res->setStatus(IN_PROGRESS);
-// 		_router.handle(*req, *res);
-// 	}
-// }
+	if (process.pid == -1) {
+		response.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, loc.root / "500.html");
+		return;
+	}
 
+	if (process.pid == 0) {
+		::close(process.pipeFds[0]);
+		::dup2(process.pipeFds[1], STDOUT_FILENO);
+		::close(process.pipeFds[1]);
+
+		// auto envp = request.getCgiEnvp();
+		std::string interpreter("/usr/bin/python3");
+		char* argv[] = { interpreter.data(), scriptPath.data(), NULL };
+
+		::execve(argv[0], argv, NULL);
+		std::cerr << "Error execve()";
+		::exit(1);
+	}
+
+	::close(process.pipeFds[1]);
+	process.pipeFds[1] = -1;
+	_workerProcesses.emplace(process.pipeFds[0], process);
+	std::cout << "Read-End pipeFd " << process.pipeFds[0] << " has been added to pollfds" << std::endl;
+}
 
 Server::~Server() {
 	_cleanup();
 }
 
 void Server::_cleanup() {
-	for (auto& [fd, con] : _connectionByClientFd) {
+	for (auto& [fd, con] : _connections) {
 		con.close();
 	}
 }
 
-void Server::_shutDownServer(){
+void Server::shutdown() {
+	// auto cgiProcesses = getWorkerProcesses();
 
-	auto cgiProcesses = getPipeProcess();
-
-	for (auto& child : cgiProcesses){
-		kill(child.second.pid, SIGINT);
-		waitpid(child.second.pid, nullptr, 0);
-		child.second.isPipeClosed = true;
-		close(child.second.pipeFd);
-	}
+	// for (auto& child : cgiProcesses){
+	// 	kill(child.second.pid, SIGINT);
+	// 	waitpid(child.second.pid, nullptr, 0);
+	// 	child.second.isPipeClosed = true;
+	// 	close(child.second.pipeFd);
+	// }
 }

@@ -34,6 +34,8 @@ namespace http {
 			bool isChunkEncoding() const;
 			bool isMultipart() const;
 
+			std::vector<std::string> getCgiEnvp() const;
+
 			const std::string& getMethod() const;
 			const std::string& getUri() const;
 			const Url& getUrl() const;
@@ -42,7 +44,6 @@ namespace http {
 			std::size_t getContentLength() const;
 			std::optional<std::string> getHeader(Header header) const;
 			const std::vector<std::uint8_t>& getRawBody() const;
-			// MultipartFile getMultipartBody() const;
 			Request::Status getStatus() const;
 
 			Request& setRawBody(

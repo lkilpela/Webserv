@@ -1,14 +1,16 @@
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include "ServerManager.hpp"
 #include "utils/index.hpp"
 #include "SignalHandle.hpp"
 
 ServerManager::ServerManager(const Config& config) : _config(config) {
-	_servers.reserve(config.servers.size());
+	_servers.reserve(_config.servers.size());
 
-	for (std::size_t i = 0; i < config.servers.size(); i++) {
-		const ServerConfig serverConfig = config.servers[i];
+	for (std::size_t i = 0; i < _config.servers.size(); i++) {
+		const ServerConfig& serverConfig = _config.servers[i];
 		_servers.push_back(Server(serverConfig));
+		_servers.back().addCgiHandler();
     }
 
 	for (auto& server : _servers) {
@@ -50,7 +52,8 @@ void ServerManager::_addPollFd(int fd, Server& server) {
 
 	_pollFds.push_back({ fd, POLLIN, 0 });
 	_pollFdIndexByFd[fd] = _pollFds.size() - 1;
-	_serverByFd.emplace(fd, std::ref(server));
+	_serverByFd.emplace(fd, server);
+	std::cout << "Added fd " << fd << " to pollfds" << std::endl;
 }
 
 void ServerManager::_removePollFd(int fd) {
@@ -71,6 +74,7 @@ void ServerManager::_removePollFd(int fd) {
 	}
 
 	_pollFds.pop_back();
+	std::cout << "Removed fd " << fd << " to pollfds" << std::endl;
 }
 
 void ServerManager::_processPollFds() {
@@ -79,16 +83,17 @@ void ServerManager::_processPollFds() {
 		const bool isServerFd = server.getServerFds().contains(pollFd.fd);
 
 		if ((pollFd.revents & POLLHUP) && !isServerFd) {
-			server.close(pollFd.fd);
+			// server.close(pollFd.fd);
+			std::cout << "POLLHUP occurred to fd " << pollFd.fd << std::endl;
 			continue;
 		}
 
 		if (pollFd.revents & POLLIN) {
 			if (isServerFd) {
-				server.addClientTo(pollFd.fd);
+				server.addConnection(pollFd.fd);
 				continue;
 			}
-
+			std::cout << "POLLIN occurred to fd " << pollFd.fd << std::endl;
 			server.process(pollFd.fd, pollFd.events);
 		}
 
@@ -106,44 +111,68 @@ void ServerManager::_updatePollFds() {
 }
 
 void ServerManager::_updateClientConnections(Server& server) {
-	auto& clients = server.getClients();
+	auto& map = server.getManagedConnections();
 
-	for (auto it = clients.begin(); it != clients.end();) {
+	for (auto it = map.begin(); it != map.end();) {
 		auto& [fd, connection] = *it;
 
-		if (connection.isTimedOut()) {
-			connection.close();
+		if (!connection.isClosed() && !_pollFdIndexByFd.contains(fd)) {
+			_addPollFd(fd, server);
+			it++;
+			continue;
+		}
+
+		if (!connection.isClosed() && connection.isTimedOut()) {
+			server.closeConnection(connection);
 		}
 
 		if (connection.isClosed()) {
 			_removePollFd(fd);
-			it = clients.erase(it);
+			it = map.erase(it);
 			continue;
 		}
 
-		_addPollFd(fd, server);
 		it++;
 	}
 }
 
 void ServerManager::_updatePipeConnections(Server& server) {
-	auto& pipeConnections = server.getPipeProcess();
+	auto& map = server.getWorkerProcesses();
 
-	for (auto it = pipeConnections.begin(); it != pipeConnections.end();) {
-		auto& [pipeFd, process] = *it;
+	using enum WorkerProcess::Status;
 
-		if (process.isPipeClosed) {
-			_removePollFd(pipeFd);
-			it = pipeConnections.erase(it);
+	for (auto it = map.begin(); it != map.end();) {
+		auto& [fd, process] = *it;
+		const bool isInPollFds = _pollFdIndexByFd.contains(fd);
+
+		if (process.status == RUNNING && !isInPollFds) {
+			_addPollFd(fd, server);
+			it++;
 			continue;
 		}
 
-		_addPollFd(pipeFd, server);
+		if (process.status != RUNNING && process.pipeFds[0] == -1 && isInPollFds) {
+			_removePollFd(fd);
+		}
+
+		if (process.status == PENDING_TERMINATION) {
+			pid_t pid = ::waitpid(process.pid, NULL, WNOHANG);
+
+			if (pid > 0 || (pid == -1 && errno == ECHILD)) {
+				process.status = TERMINATED;
+			}
+		}
+
+		if (process.status == TERMINATED) {
+			it = map.erase(it);
+			continue;
+		}
+
 		it++;
 	}
 }
 
 void ServerManager::_shutDownServers(){
 	for (auto& server : _servers)
-		server._shutDownServer();
+		server.shutdown();
 }
